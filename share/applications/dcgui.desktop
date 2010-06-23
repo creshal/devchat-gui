@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Devchat GUI
+Exec=devchat-gui
+Icon=/usr/share/pixmaps/devchat/dcgui.png
+Categories=Network;InstantMessaging;Chat;

@@ -1,0 +1,66 @@
+#!/usr/bin/python
+import optparse,os,sys
+f = open("src/config.h","w")
+
+f.write('#define APPNAME "DevchatGUI"\n')
+f.write('#define VERSION "0.1.30"\n')
+
+libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
+
+makefile = """
+all:
+\tmkdir -p _build/bin
+\t$(CC) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+
+clean:
+\trm -rv _build
+
+distclean: clean
+\trm src/config.h
+
+install:
+\tinstall -Dm755 _build/bin/dcgui $(DESTDIR)/bin/devchat-gui
+\tinstall -Dm644 share/applications/dcgui.desktop $(DESTDIR)/share/applications/devchat-gui.desktop
+\tmkdir -m755 -p ${DESTDIR}/share/pixmaps/devchat
+\tinstall -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
+"""
+
+parser = optparse.OptionParser()
+parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local/bin",help="Installation prefix.")
+parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
+parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications.")
+parser.add_option("-a","--enable-audio",action="store_true",dest="audio",default=True,help="Enable audio notifications.")
+parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=True,help="Enable Off-The-Record encryption support.")
+parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=True,help="Enable translations.")
+
+(options,args) = parser.parse_args()
+
+if options.debug:
+  f.write('#define DEBUG\n')
+if options.notify:
+  libs += " libnotify"
+  f.write('#define NOTIFY\n')
+if options.audio:
+  libs += " alsa"
+  f.write('#define AUDIO\n')
+if options.otr:
+  libs += " libotr"
+  f.write('#define OTR\n')
+if options.l10n:
+  f.write('#define NLS\n')
+
+f.close()
+
+m = open("Makefile","w")
+
+if os.name == "posix":
+  m.write("CC = gcc\n")
+elif os.name == "nt":
+  print "Windows support unfinished!"
+  sys.exit()
+
+m.write("LIBS = %s\n"%libs)
+m.write("DESTDIR = %s\n"%options.prefix)
+
+m.write(makefile)
+m.close()
