@@ -16,18 +16,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
-  XXX: New features: user defineable shortcuts
-                     OTR integration
-                     replace chat stock colors (red,cyan,yellow,chatname_green,[...]
-                     color schemes (Tango,Yaki,Oblivion,Egosoft)
-                     ignore/filter (tags for each user and level (new ones spanning complete message))
-                     save userlist bar position
-                     search function
-                     14-jun-10: Arbitrary HTML problem
-                     Session reinitialisation after too long timeouts (re-open main page?)
-*/
-
 #include "devchat_window.h"
 
 int
