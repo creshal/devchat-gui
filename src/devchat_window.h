@@ -78,6 +78,7 @@ typedef struct dc_settings
   guint height;
   guint x;
   guint y;
+  guint update_time;
   GSList* keywords;
   gchar* presets[10];
   gboolean* showid;
@@ -147,6 +148,7 @@ struct _DevchatWindow
   GSList* users_without_avatar;
 
   gboolean firstrun;
+  gboolean no_halt_requested;
 
   gint lineno;
   guint lastid;
@@ -187,10 +189,6 @@ static void dbg(gchar* message)
 GType devchat_window_get_type (void);
 
 DevchatWindow* devchat_window_new (void);
-
-static void devchat_window_dispose (GObject* gobject);
-
-static void devchat_window_finalize (GObject* gobject);
 
 G_END_DECLS
 

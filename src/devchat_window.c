@@ -43,7 +43,10 @@ void next_tab (GtkWidget* widget, DevchatCBData* data);
 void prev_tab (GtkWidget* widget, DevchatCBData* data);
 void show_his (GtkWidget* widget, DevchatCBData* data);
 void about_cb (GtkWidget* widget, DevchatCBData* data);
+void at_cb (GtkWidget* widget, DevchatCBData* data);
+void pm_cb (GtkWidget* widget, DevchatCBData* data);
 
+gboolean user_list_poll (DevchatCBData* data);
 gchar* current_time ();
 
 
@@ -92,6 +95,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.height = 400;
   self->settings.x = 0;
   self->settings.y = 0;
+  self->settings.update_time = 500; /*Time between update requests in ms.*/
   self->settings.keywords = NULL; /*GSList*/
   self->settings.presets[0] = "";
   self->settings.presets[1] = "";
@@ -313,7 +317,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_paned_pack1 (GTK_PANED(hpaned1), scroller1, TRUE,TRUE);
 
   GtkWidget* scroller2 = gtk_scrolled_window_new (NULL, NULL);
-  self->userlist = gtk_vbox_new (TRUE,1);
+  self->userlist = gtk_vbox_new (FALSE,1);
   gtk_widget_set_size_request (self->userlist, 180, -1);
   if (self->settings.coloruser)
     gtk_widget_modify_bg (scroller2, GTK_STATE_NORMAL, &l1);
@@ -424,6 +428,8 @@ devchat_window_init (DevchatWindow* self)
 #endif
 
   self->users_without_avatar = NULL;
+  self->firstrun = FALSE;
+  self->no_halt_requested = TRUE;
 
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
@@ -435,34 +441,6 @@ static void
 devchat_window_class_init (DevchatWindowClass* klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  /*TODO: Simple Attribute wie lastid per g_object_class_install_property installieren.*/
-
-  gobject_class->dispose = devchat_window_dispose;
-  gobject_class->finalize = devchat_window_finalize;
-
-}
-
-static void
-devchat_window_dispose (GObject* gobject)
-{
-  DevchatWindow* self = DEVCHAT_WINDOW (gobject);
-
-  /*TODO: Deref all members.*/
-
-  /* Chain up to the parent class */
-  G_OBJECT_CLASS (devchat_window_parent_class)->dispose (gobject);
-}
-
-static void
-devchat_window_finalize (GObject* gobject)
-{
-  DevchatWindow* self = DEVCHAT_WINDOW (gobject);
-
-  /*TODO: g_free all vars, soup/alsa/notify/etc. uninit. */
-
-  /* Chain up to the parent class */
-  G_OBJECT_CLASS (devchat_window_parent_class)->finalize (gobject);
 }
 
 /*XXX: Guard all function calls with g_return_if_fail (DEVCHAT_IS_WINDOW (self)); */
@@ -470,6 +448,7 @@ devchat_window_finalize (GObject* gobject)
 void destroy (GtkWidget* widget, DevchatCBData* data)
 {
 #ifdef NOTIFY
+  data->window->no_halt_requested = FALSE;
   notify_uninit ();
 #endif
   soup_session_abort (data->window->session);
@@ -556,10 +535,17 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
   dbg ("Starting requests...");
-  SoupMessage* listusers = soup_message_new("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
-  soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+  g_timeout_add (data->window->settings.update_time, user_list_poll, data); /*XXX*/
   SoupMessage* listmessages = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%i",data->window->lastid));
   soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+}
+
+gboolean
+user_list_poll (DevchatCBData* data)
+{
+  SoupMessage* listusers = soup_message_new("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
+  soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+  return data->window->no_halt_requested;
 }
 
 void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
@@ -571,6 +557,11 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), g_strdup_printf("Last Update: %s",current_time()));
     xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
     int ret;
+
+    GdkColor l1;
+    gdk_color_parse (data->window->settings.color_l1, &l1);
+
+    /*TODO: Sizegroup für alle Userlisteneinträge? */
     while (xmlTextReaderRead (userparser) > 0)
     {
       gchar* node = xmlTextReaderLocalName(userparser);
@@ -599,11 +590,14 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           GtkWidget* container = gtk_hbox_new(FALSE,0);
           GtkWidget* at_btn = gtk_button_new();
           GtkWidget* profile_btn = gtk_button_new();
-          GtkWidget* pm_btn = gtk_button_new();
+          GtkWidget* pm_btn = gtk_button_new_with_label("PM");
 
           gulong real_level = strtoll(g_strndup(level,1),NULL,10);
           gchar* color;
           gchar* style;
+
+          gtk_widget_set_tooltip_text (at_btn, g_strdup_printf ("Poke %s",name));
+
 
           if (real_level > 5)
             color = data->window->settings.color_greens;
@@ -626,20 +620,29 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gtk_label_set_markup (GTK_LABEL (label),markup);
           g_free (markup);
 
-          /*g_signal_connect (at_btn, "clicked", G_CALLBACK (at_cb),*/
+          g_signal_connect (at_btn, "clicked", G_CALLBACK (at_cb), devchat_cb_data_new (data->window,name));
+          gtk_container_add (GTK_CONTAINER (at_btn), label);
+          gtk_button_set_relief (GTK_BUTTON(at_btn), GTK_RELIEF_NONE);
 
-          gtk_box_pack_start (GTK_BOX (container),label,TRUE,TRUE,0);
+          /*TODO: Avatar button*/
+
+          g_signal_connect (pm_btn, "clicked", G_CALLBACK (pm_cb), devchat_cb_data_new (data->window,name));
+
+          gtk_widget_set_tooltip_text (pm_btn, g_strdup_printf ("Open a conversation with %s.",name));
+
+          if (data->window->settings.coloruser)
+          {
+
+            gtk_widget_modify_bg (at_btn, GTK_STATE_PRELIGHT, &l1);
+            /*gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);*/
+          }
+
+          gtk_box_pack_start (GTK_BOX (container),at_btn,TRUE,TRUE,0);
+          gtk_box_pack_start (GTK_BOX (container),pm_btn,FALSE,FALSE,0);
 
           gtk_box_pack_start (GTK_BOX (data->window->userlist),container,FALSE,FALSE,0);
-
-          /*TODO: Buttons. */
         }
-        /*g_free (name);
-        g_free (uid);
-        g_free (level);
-        g_free (status);*/
       }
-      //g_free (node);
     }
 
     gtk_widget_show_all (data->window->userlist);
@@ -733,6 +736,14 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
 void about_cb (GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
+}
+
+void at_cb (GtkWidget* widget, DevchatCBData* data)
+{
+}
+
+void pm_cb (GtkWidget* widget, DevchatCBData* data)
+{
 }
 
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
