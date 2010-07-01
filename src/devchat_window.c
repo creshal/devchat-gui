@@ -45,8 +45,11 @@ void show_his (GtkWidget* widget, DevchatCBData* data);
 void about_cb (GtkWidget* widget, DevchatCBData* data);
 void at_cb (GtkWidget* widget, DevchatCBData* data);
 void pm_cb (GtkWidget* widget, DevchatCBData* data);
+void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
+void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 
 gboolean user_list_poll (DevchatCBData* data);
+gboolean message_list_poll (DevchatCBData* data);
 gchar* current_time ();
 
 
@@ -95,7 +98,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.height = 400;
   self->settings.x = 0;
   self->settings.y = 0;
-  self->settings.update_time = 500; /*Time between update requests in ms.*/
+  self->settings.update_time = 1; /*Time between update requests in seconds.*/
   self->settings.keywords = NULL; /*GSList*/
   self->settings.presets[0] = "";
   self->settings.presets[1] = "";
@@ -529,15 +532,14 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg (g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel));
 
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
-  gtk_widget_grab_focus(data->window->inputwidget);
+  //gtk_widget_grab_focus(data->window->inputwidget);
   gtk_widget_hide_all (data->window->loginbar);
   gtk_widget_show_all (data->window->inputbar);
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
   dbg ("Starting requests...");
-  g_timeout_add (data->window->settings.update_time, user_list_poll, data); /*XXX*/
-  SoupMessage* listmessages = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%i",data->window->lastid));
-  soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+  g_timeout_add_seconds ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+  g_timeout_add_seconds (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
 
 gboolean
@@ -545,7 +547,22 @@ user_list_poll (DevchatCBData* data)
 {
   SoupMessage* listusers = soup_message_new("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
   soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+
   return data->window->no_halt_requested;
+}
+
+gboolean
+message_list_poll (DevchatCBData* data)
+{
+  SoupMessage* listmessages = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%i",data->window->lastid));
+  soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+
+  return data->window->no_halt_requested;
+}
+
+void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
+{
+  gtk_container_remove (GTK_CONTAINER (data->window->userlist), child);
 }
 
 void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
@@ -560,6 +577,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     GdkColor l1;
     gdk_color_parse (data->window->settings.color_l1, &l1);
+
+    gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
 
     /*TODO: Sizegroup für alle Userlisteneinträge? */
     while (xmlTextReaderRead (userparser) > 0)
@@ -713,8 +732,37 @@ void level_changed (GtkWidget* widget, DevchatCBData* data)
 
 void btn_send (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  dbg ("Sending message...");
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+  gchar* text;
+  GtkTextIter* start;
+  GtkTextIter* end;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+    gtk_text_buffer_get_start_iter (buf,start);
+    gtk_text_buffer_get_end_iter (buf,end);
+    text = gtk_text_buffer_get_text (buf, start, end, FALSE);
+  }
+  else
+  {
+    /*TODO: PMs*/
+  }
+  text = g_strstrip (text);
+
+  if (g_strcmp0("",text) != 0)
+  {
+    /*TODO: Linebuffer füllen.*/
+    gtk_text_buffer_set_text (buf, "", 0);
+    SoupMessage* post = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=%i&textinput=%s",1,text));
+    soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (post_sent), data);
+  }
 }
+
+void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data)
+{}
 
 void btn_format (GtkWidget* widget, DevchatCBData* data)
 {
