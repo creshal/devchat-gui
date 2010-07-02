@@ -669,7 +669,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     }
 
     gtk_widget_show_all (data->window->userlist);
-
+    xmlFreeTextReader (reader);
     g_free(userlist);
   }
 }
