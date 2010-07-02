@@ -25,7 +25,7 @@ void user_list_get();
 void message_list_get();
 void login_cb ();
 void remote_level ();
-void hotkey_cb ();
+gboolean hotkey_cb ();
 void destroy (GtkWidget* widget, DevchatCBData* data);
 void login (GtkWidget* widget, DevchatCBData* data);
 void config_cb (GtkWidget* widget, DevchatCBData* data);
@@ -33,7 +33,7 @@ void go_forum (GtkWidget* widget, DevchatCBData* data);
 void close_tab (GtkWidget* widget, DevchatCBData* data);
 void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, DevchatCBData* data);
-void tab_changed_win (GtkWidget* widget, DevchatCBData* data);
+gboolean tab_changed_win (GtkWidget* widget, DevchatCBData* data);
 void on_motion (GtkWidget* widget, DevchatCBData* data);
 void on_mark_set (GtkWidget* widget, DevchatCBData* data);
 void level_changed (GtkWidget* widget, DevchatCBData* data);
@@ -91,7 +91,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.stealthjoin = FALSE;
   self->settings.autojoin = FALSE;
   self->settings.showhidden = FALSE;
-  self->settings.coloruser = FALSE;
+  self->settings.coloruser = TRUE;
   self->settings.notify = g_strdup("<native>");
   self->settings.vnotify = g_strdup("<native>");
   self->settings.width = 600;
@@ -322,9 +322,13 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* scroller2 = gtk_scrolled_window_new (NULL, NULL);
   self->userlist = gtk_vbox_new (FALSE,1);
   gtk_widget_set_size_request (self->userlist, 180, -1);
-  if (self->settings.coloruser)
-    gtk_widget_modify_bg (scroller2, GTK_STATE_NORMAL, &l1);
   gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW(scroller2), self->userlist);
+
+  if (self->settings.coloruser == TRUE)
+  {
+    gtk_widget_modify_bg (gtk_bin_get_child(GTK_BIN(scroller2)), GTK_STATE_NORMAL, &l1);
+  }
+
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller2),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller2),GTK_SHADOW_ETCHED_IN);
   gtk_paned_pack2 (GTK_PANED(hpaned1), scroller2, FALSE, FALSE);
@@ -382,8 +386,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller3),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller3),GTK_SHADOW_ETCHED_IN);
 
-  self->input = gtk_text_buffer_new (NULL);
-  self->inputwidget = gtk_text_view_new_with_buffer (self->input);
+  self->inputwidget = gtk_text_view_new ();
+  self->input = gtk_text_view_get_buffer (GTK_TEXT_VIEW (self->inputwidget));
   gtk_widget_modify_base (self->inputwidget, GTK_STATE_NORMAL, &l1);
   gtk_widget_modify_text (self->inputwidget, GTK_STATE_NORMAL, &font);
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->inputwidget), GTK_WRAP_WORD_CHAR);
@@ -434,10 +438,10 @@ devchat_window_init (DevchatWindow* self)
   self->firstrun = FALSE;
   self->no_halt_requested = TRUE;
 
+  dbg("Initalising libsoup...");
+
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
-  /*TODO: libxml2 init. */
-
 }
 
 static void
@@ -532,7 +536,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg (g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel));
 
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
-  //gtk_widget_grab_focus(data->window->inputwidget);
+  gtk_widget_grab_focus(data->window->inputwidget);
   gtk_widget_hide_all (data->window->loginbar);
   gtk_widget_show_all (data->window->inputbar);
   gtk_widget_hide (data->window->item_connect);
@@ -666,7 +670,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     gtk_widget_show_all (data->window->userlist);
 
-    xmlFreeTextReader (userparser);
     g_free(userlist);
   }
 }
@@ -675,10 +678,19 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
 /*TODO: Nachrichten parsen. */
 /*XXX: visited-Attribut von URL-Tags per g_object_set/get_data */
+  gchar* msglist = g_strdup (m->response_body->data);
+  if (msglist)
+  {
+    dbg ("Got non-empty userlist.");
+    GtkTextIter end;
+    gtk_text_buffer_get_end_iter (data->window->output, &end);
+    gtk_text_buffer_insert (data->window->output, &end, msglist, strlen(msglist)); /*XXX XXX XXX XXX*/
+  }
 }
 
-void hotkey_cb (GtkWidget* w, DevchatCBData* data)
+gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
 {
+  return FALSE;
 }
 
 void config_cb(GtkWidget* widget, DevchatCBData* data)
@@ -713,8 +725,9 @@ void tab_changed(GtkWidget* widget, DevchatCBData* data)
 {
 }
 
-void tab_changed_win(GtkWidget* widget, DevchatCBData* data)
+gboolean tab_changed_win(GtkWidget* widget, DevchatCBData* data)
 {
+  return FALSE;
 }
 
 void on_motion(GtkWidget* widget, DevchatCBData* data)
@@ -736,15 +749,17 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
   GtkTextBuffer* buf;
   gchar* text;
-  GtkTextIter* start;
-  GtkTextIter* end;
+  GtkTextIter start;
+  GtkTextIter end;
 
+  dbg ("Determining target...");
   if (pagenum == 0)
   {
+    dbg ("Sending message to main channel.");
     buf = data->window->input;
-    gtk_text_buffer_get_start_iter (buf,start);
-    gtk_text_buffer_get_end_iter (buf,end);
-    text = gtk_text_buffer_get_text (buf, start, end, FALSE);
+    gtk_text_buffer_get_start_iter (buf, &start);
+    gtk_text_buffer_get_end_iter (buf, &end);
+    text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
   }
   else
   {
@@ -756,8 +771,20 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   {
     /*TODO: Linebuffer füllen.*/
     gtk_text_buffer_set_text (buf, "", 0);
-    SoupMessage* post = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=%i&textinput=%s",1,text));
+    unsigned char enc_text[strlen(text)*7];
+    int il,ol;
+    ol = strlen(text)*7;
+    il = strlen(text);
+    dbg ("Encoding HTML Entities...");
+    if (htmlEncodeEntities (enc_text, &ol, text, &il, 0) < 0)
+      g_error ("Encoding failed!");
+    enc_text[ol] = 0;
+    dbg (g_strdup_printf("Encoded message: %s",enc_text));
+    /*TODO: Level ≠ 1*/
+    SoupMessage* post = soup_form_request_new("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj","cmd",
+      "post","chatlevel","1","textinput", enc_text, NULL);
     soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (post_sent), data);
+    g_free (text);
   }
 }
 
@@ -844,5 +871,5 @@ void notify_cb(NotifyNotification* note, gchar* action, DevchatCBData* data)
 gchar* current_time ()
 {
   /*TODO*/
-  return g_strdup("");
+  return g_strdup("Yesterday.");
 }

@@ -81,11 +81,11 @@ typedef struct dc_settings
   guint update_time;
   GSList* keywords;
   gchar* presets[10];
-  gboolean* showid;
-  gboolean* stealthjoin;
-  gboolean* autojoin;
-  gboolean* showhidden;
-  gboolean* coloruser;
+  gboolean showid;
+  gboolean stealthjoin;
+  gboolean autojoin;
+  gboolean showhidden;
+  gboolean coloruser;
 } dc_settings;
 
 enum
