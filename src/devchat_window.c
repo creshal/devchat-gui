@@ -105,16 +105,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.y = 0;
   self->settings.update_time = 1000; /*Time between update requests in ms.*/
   self->settings.keywords = NULL; /*GSList*/
-  self->settings.presets[0] = "";
-  self->settings.presets[1] = "";
-  self->settings.presets[2] = "";
-  self->settings.presets[3] = "";
-  self->settings.presets[4] = "";
-  self->settings.presets[5] = "";
-  self->settings.presets[6] = "";
-  self->settings.presets[7] = "";
-  self->settings.presets[8] = "";
-  self->settings.presets[9] = "";
+  self->settings.presets = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
 
@@ -553,6 +544,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_show (data->window->item_reconnect);
   dbg ("Starting requests...");
   g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+  g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
 
 gboolean
@@ -610,10 +602,23 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         gchar* level = xmlTextReaderGetAttribute(userparser,"l");
         gchar* status = xmlTextReaderGetAttribute(userparser,"s");
 
-        if ( (!g_slist_find(data->window->users_without_avatar,uid)) && (!g_file_test (g_build_filename (data->window->avadir, uid, NULL), G_FILE_TEST_EXISTS)))
+        if (!g_slist_find(data->window->users_without_avatar,uid))
         {
           /*TODO: Avatare suchen.*/
-          data->window->users_without_avatar = g_slist_prepend(data->window->users_without_avatar,uid);
+          gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
+
+          dbg (g_strdup_printf ("Searching for avatar %s...", ava_filename));
+
+          if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
+          {
+            /*TODO: Avatar lookup.*/
+            data->window->users_without_avatar = g_slist_prepend(data->window->users_without_avatar,uid);
+          }
+          else
+          {
+            dbg (g_strdup_printf ("Found avatar for %s",name));
+            g_hash_table_insert (data->window->avatars, uid, gdk_pixbuf_new_from_file_at_size (ava_filename,12,12,NULL));
+          }
         }
 
         /*TODO: Hashtable für n->uid-Zuordnung füllen, falls nötig. */
@@ -632,8 +637,15 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gchar* color;
           gchar* style;
 
-          gtk_widget_set_tooltip_text (at_btn, g_strdup_printf ("Poke %s",name));
+          gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
+          gtk_widget_set_tooltip_text (at_btn, g_strdup_printf ("View the forum profile of %s.",name));
 
+          GdkPixbuf* ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, uid);
+
+          if (!(ava))
+            ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, "default");
+
+          gtk_button_set_image (GTK_BUTTON (profile_btn), gtk_image_new_from_pixbuf (ava));
 
           if (real_level > 5)
             color = data->window->settings.color_greens;
@@ -660,8 +672,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gtk_container_add (GTK_CONTAINER (at_btn), label);
           gtk_button_set_relief (GTK_BUTTON(at_btn), GTK_RELIEF_NONE);
 
-          /*TODO: Avatar button*/
-
           g_signal_connect (pm_btn, "clicked", G_CALLBACK (pm_cb), devchat_cb_data_new (data->window,name));
 
           gtk_widget_set_tooltip_text (pm_btn, g_strdup_printf ("Open a conversation with %s.",name));
@@ -670,9 +680,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           {
 
             gtk_widget_modify_bg (at_btn, GTK_STATE_PRELIGHT, &l1);
-            /*gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);*/
+            gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);
           }
 
+          gtk_box_pack_start (GTK_BOX (container),profile_btn,FALSE,FALSE,0);
           gtk_box_pack_start (GTK_BOX (container),at_btn,TRUE,TRUE,0);
           gtk_box_pack_start (GTK_BOX (container),pm_btn,FALSE,FALSE,0);
 
@@ -680,6 +691,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         }
       }
     }
+
+    gtk_label_set_text (GTK_LABEL (data->window->userlabel), g_strdup_printf ("%i user(s) online", usercount));
 
     gtk_widget_show_all (data->window->userlist);
     xmlFreeTextReader (userparser);
@@ -691,7 +704,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
-/*TODO: Nachrichten parsen. */
 /*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
   gchar* msglist = g_strdup (m->response_body->data);
   if (msglist)
@@ -739,9 +751,18 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
         gtk_text_buffer_get_end_iter (self->window->output, &end);
 
-        gtk_text_buffer_insert_with_tags (self->window->output, &end, g_strdup (time), -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+        gtk_text_buffer_insert_with_tags (self->window->output, &end, g_strdup_printf ("\n%s ", time), -1, gtk_text_tag_table_lookup (table, "time"), NULL);
 
+        gchar* name_color_tag = "peasant";
+        if (user_level > 5)
+          name_color_tag = "greenie";
 
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gtk_text_buffer_insert_with_tags (self->window->output, &end, g_strdup (name), -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+
+        /*XXX: TODO: HTML parser! Also, check for keyword match and/or kick.*/
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gtk_text_buffer_insert (self->window->output, &end, g_strdup_printf (" %s", message), -1);
       }
 
       g_free (node);
@@ -984,6 +1005,13 @@ void notify_cb(NotifyNotification* note, gchar* action, DevchatCBData* data)
 
 gchar* current_time ()
 {
-  /*TODO*/
-  return g_strdup("Yesterday.");
+  time_t rawtime = time (NULL);
+  struct tm *tm_s;
+  char datestring[10];
+
+  tm_s = localtime (&rawtime);
+
+  strftime (datestring, 10, "%H:%M:%S", tm_s);
+
+  return g_strdup(datestring);
 }

@@ -92,7 +92,7 @@ main (int argc, char *argv[])
   g_hash_table_insert (self->smilies, ":wtf:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_wtf.gif", NULL),NULL));
   g_hash_table_insert (self->smilies, ":ugly:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "ugly.gif", NULL),NULL));
   g_hash_table_insert (self->smilies, ":wub:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "wub.gif", NULL),NULL));
-  g_hash_table_insert (self->avatars, "default",gdk_pixbuf_new_from_file_at_size (g_build_filename(self->workingdir, "default", NULL),16,16,NULL));
+  g_hash_table_insert (self->avatars, "default",gdk_pixbuf_new_from_file_at_size (g_build_filename(self->workingdir, "default", NULL),12,12,NULL));
 
   devchat_window_refresh_smilies (self);
 

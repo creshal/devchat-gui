@@ -80,7 +80,7 @@ typedef struct dc_settings
   guint y;
   guint update_time;
   GSList* keywords;
-  gchar* presets[10];
+  GSList* presets;
   gboolean showid;
   gboolean stealthjoin;
   gboolean autojoin;
