@@ -94,6 +94,8 @@ main (int argc, char *argv[])
   g_hash_table_insert (self->smilies, ":wub:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "wub.gif", NULL),NULL));
   g_hash_table_insert (self->avatars, "default",gdk_pixbuf_new_from_file_at_size (g_build_filename(self->workingdir, "default", NULL),16,16,NULL));
 
+  devchat_window_refresh_smilies (self);
+
   /*FIXME: gtk_window_set_icon_list */
   gtk_window_set_icon_from_file(GTK_WINDOW(self->window), g_build_filename(self->workingdir, "dcgui.png",NULL),NULL);
 

@@ -133,6 +133,7 @@ struct _DevchatWindow
   GtkWidget* item_l5;
   GtkWidget* item_reconnect;
   GtkWidget* item_texts;
+  GtkWidget* item_smilies;
 
   GtkTextBuffer* output;
   GtkTextBuffer* input;
@@ -151,7 +152,7 @@ struct _DevchatWindow
   gboolean no_halt_requested;
 
   gint lineno;
-  guint lastid;
+  gchar* lastid;
   guint userlevel;
 
   guchar* workingdir;
@@ -189,6 +190,8 @@ static void dbg(gchar* message)
 GType devchat_window_get_type (void);
 
 DevchatWindow* devchat_window_new (void);
+
+void devchat_window_refresh_smilies (DevchatWindow* self);
 
 G_END_DECLS
 

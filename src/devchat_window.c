@@ -48,8 +48,13 @@ void pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
 void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 
+void create_tags (GtkTextBuffer* buf, DevchatCBData* data);
+void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
+void ins_smilie (GtkWidget* widget, DevchatCBData* data);
+
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
+void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
 gchar* current_time ();
 
 
@@ -73,14 +78,14 @@ devchat_window_init (DevchatWindow* self)
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
   self->avatars = g_hash_table_new (g_str_hash, g_str_equal);
   self->settings.browser = g_strdup("<native>");
-  self->settings.color_font = g_strdup("#a1aab2");
+  self->settings.color_font = g_strdup("#eeeeec");
   self->settings.color_l1 = g_strdup("#2e3436");
   self->settings.color_l3 = g_strdup("#543535");
   self->settings.color_l5 = g_strdup("#354254");
   self->settings.color_l6 = g_strdup("#45513a");
   self->settings.color_greens = g_strdup("#8ae234");
   self->settings.color_blues = g_strdup("#729fcf");
-  self->settings.color_time = g_strdup("#eeeeec");
+  self->settings.color_time = g_strdup("#babdb6");
   self->settings.color_url = g_strdup("#fce94f");
   self->settings.color_url_visited = g_strdup("#fcaf3e");
   self->settings.color_url_hover = g_strdup("#e9b96e");
@@ -98,7 +103,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.height = 400;
   self->settings.x = 0;
   self->settings.y = 0;
-  self->settings.update_time = 1; /*Time between update requests in seconds.*/
+  self->settings.update_time = 1000; /*Time between update requests in ms.*/
   self->settings.keywords = NULL; /*GSList*/
   self->settings.presets[0] = "";
   self->settings.presets[1] = "";
@@ -114,6 +119,7 @@ devchat_window_init (DevchatWindow* self)
   self->hovertag = NULL;
 
   self->settings_backup = self->settings;
+
 
   DevchatCBData* self_data = devchat_cb_data_new (self, NULL);
 
@@ -228,8 +234,7 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect (item_link, "activate", G_CALLBACK (btn_format), format_url);
   gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  GtkWidget* item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
-  /*TODO: Smilie-Menü füllen.*/
+  self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
   GtkWidget* item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
   /*TODO: Preset-Menü füllen.*/
 
@@ -248,7 +253,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_shell_append(insert_sub, item_pict);
   gtk_menu_shell_append(insert_sub, item_link);
   gtk_menu_shell_append(insert_sub, gtk_menu_item_new());
-  gtk_menu_shell_append(insert_sub, item_smilies);
+  gtk_menu_shell_append(insert_sub, self->item_smilies);
   gtk_menu_shell_append(insert_sub, item_presets);
   gtk_menu_item_set_submenu(menu_insert,GTK_WIDGET(insert_sub));
 
@@ -396,7 +401,7 @@ devchat_window_init (DevchatWindow* self)
 
   gtk_box_pack_start (GTK_BOX(vbox2),scroller3,TRUE,TRUE,0);
 
-  /*TODO: Texttags für output erzeugen.*/
+  create_tags (self->output, self_data);
 
   self->loginbar = gtk_vbox_new (FALSE,0);
   GtkWidget* hbox2 = gtk_hbox_new (FALSE,0);
@@ -437,6 +442,7 @@ devchat_window_init (DevchatWindow* self)
   self->users_without_avatar = NULL;
   self->firstrun = FALSE;
   self->no_halt_requested = TRUE;
+  self->lastid = g_strdup("1");
 
   dbg("Initalising libsoup...");
 
@@ -454,19 +460,23 @@ devchat_window_class_init (DevchatWindowClass* klass)
 
 void destroy (GtkWidget* widget, DevchatCBData* data)
 {
-#ifdef NOTIFY
   data->window->no_halt_requested = FALSE;
+#ifdef NOTIFY
   notify_uninit ();
 #endif
-  soup_session_abort (data->window->session);
+  if (!(data->window->firstrun))
+  {
+    soup_session_abort (data->window->session);
+  }
   /*TODO: libxml2 uninit*/
   gtk_main_quit ();
 }
 
 void login (GtkWidget* widget, DevchatCBData* data)
 {
-  if ( !(DEVCHAT_IS_CB_DATA (data)))
-    g_print("You're doing it wrong.");
+  gtk_widget_set_sensitive(data->window->btn_connect,FALSE);
+  gtk_widget_set_sensitive(data->window->user_entry,FALSE);
+  gtk_widget_set_sensitive(data->window->pass_entry,FALSE);
   dbg ("Logging in...");
   data->window->settings.user = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->user_entry)));
   data->window->settings.pass = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->pass_entry)));
@@ -481,18 +491,18 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   if ( g_strrstr(msg->response_body->data,"invalid password"))
   {
     err ("Login failed."); /*TODO: Fallback-Server, Fehlerdialog.*/
+    gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
+    gtk_widget_set_sensitive(data->window->user_entry,TRUE);
+    gtk_widget_set_sensitive(data->window->pass_entry,TRUE);
   }
   else
   {
     dbg ("This was a triumph.");
-    gtk_widget_set_sensitive(data->window->btn_connect,FALSE);
     SoupMessage* step2 = soup_message_new("GET","http://www.egosoft.com");
     dbg ("Trying to determine userlevel...");
     soup_session_queue_message (data->window->session, step2, SOUP_SESSION_CALLBACK(remote_level), data);
   }
 }
-
-
 
 void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
@@ -500,8 +510,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->userlevel = 5;
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3/DevNet");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 5/Betatest");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 5");
     gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->item_l3);
@@ -511,7 +521,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->userlevel = 3;
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3/DevNet");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3");
     gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->item_l3);
@@ -542,26 +552,29 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
   dbg ("Starting requests...");
-  g_timeout_add_seconds ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
-  g_timeout_add_seconds (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
+  g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
 }
 
 gboolean
 user_list_poll (DevchatCBData* data)
 {
-  SoupMessage* listusers = soup_message_new("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
-  soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
-
+  if (data->window->no_halt_requested)
+  {
+    SoupMessage* listusers = soup_message_new("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
+    soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+  }
   return data->window->no_halt_requested;
 }
 
 gboolean
 message_list_poll (DevchatCBData* data)
 {
-  SoupMessage* listmessages = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%i",data->window->lastid));
-  soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
-
-  return data->window->no_halt_requested;
+  if (data->window->no_halt_requested)
+  {
+    SoupMessage* listmessages = soup_message_new("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
+    soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+  }
+  return FALSE;
 }
 
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
@@ -577,18 +590,18 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     dbg ("Got non-empty userlist.");
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), g_strdup_printf("Last Update: %s",current_time()));
     xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
-    int ret;
 
     GdkColor l1;
     gdk_color_parse (data->window->settings.color_l1, &l1);
 
     gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
 
+    guint usercount = 0;
     /*TODO: Sizegroup für alle Userlisteneinträge? */
     while (xmlTextReaderRead (userparser) > 0)
     {
       gchar* node = xmlTextReaderLocalName(userparser);
-      guint usercount = 0;
+
       if (node && (g_strcmp0 (node,"cu") == 0))
       {
         usercount++;
@@ -669,24 +682,98 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     }
 
     gtk_widget_show_all (data->window->userlist);
-    xmlFreeTextReader (reader);
-    g_free(userlist);
+    xmlFreeTextReader (userparser);
+    g_free (userlist);
   }
 }
+
+
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
 /*TODO: Nachrichten parsen. */
-/*XXX: visited-Attribut von URL-Tags per g_object_set/get_data */
+/*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
   gchar* msglist = g_strdup (m->response_body->data);
   if (msglist)
   {
-    dbg ("Got non-empty userlist.");
-    GtkTextIter end;
-    gtk_text_buffer_get_end_iter (data->window->output, &end);
-    gtk_text_buffer_insert (data->window->output, &end, msglist, strlen(msglist)); /*XXX XXX XXX XXX*/
+    ce_parse (msglist, data, "");
+    dbg ("Parsing done.");
   }
+  g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
+
+void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
+{
+  if (g_strcmp0 (date, "") == 0)
+  {
+    gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
+    gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
+    xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, (XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
+
+    while (xmlTextReaderRead (msgparser) == 1)
+    {
+      gchar* node = xmlTextReaderLocalName(msgparser);
+
+      if (node && (g_strcmp0 (node,"ce") == 0))
+      {
+        dbg ("Processing message node...");
+        gchar* name = xmlTextReaderGetAttribute(msgparser,"a");
+        gchar* mode = xmlTextReaderGetAttribute(msgparser,"u");
+        gchar* time = xmlTextReaderGetAttribute(msgparser,"t");
+        gchar* lid = xmlTextReaderGetAttribute(msgparser,"i");
+        gchar* message = xmlTextReaderGetAttribute(msgparser,"m");
+
+        self->window->lastid = lid;
+
+        /*TODO: Tag für Userlevel zwecks Filterung.*/
+
+        dbg (g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.\n", name, mode, time, lid, message));
+
+        gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
+        gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
+        gulong msg_level = strtoll (mode+2,NULL,10);
+
+        dbg (g_strdup_printf ("Message mode: showName %s, userLevel %s, messageLevel %s.\n", g_strndup(mode,1), g_strndup(mode+1,1),mode+2));
+
+        GtkTextIter end;
+        GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
+
+        gtk_text_buffer_insert_with_tags (self->window->output, &end, g_strdup (time), -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+
+
+      }
+
+      g_free (node);
+    }
+    dbg ("Message list parsed.");
+
+    self->window->firstrun = FALSE;
+    xmlFreeTextReader (msgparser);
+  }
+  else
+  {
+    dbg ("Creating history window...");
+    /* TODO */
+  }
+  g_free (msglist);
+}
+
+void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
+{
+  gtk_text_buffer_create_tag (buf, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
+  gtk_text_buffer_create_tag (buf, "italic", "style", PANGO_STYLE_ITALIC, NULL);
+  gtk_text_buffer_create_tag (buf, "underline", "underline", PANGO_UNDERLINE_SINGLE, NULL);
+  gtk_text_buffer_create_tag (buf, "time", "foreground", data->window->settings.color_time, NULL);
+  gtk_text_buffer_create_tag (buf, "peasant", "foreground", data->window->settings.color_blues, NULL);
+  gtk_text_buffer_create_tag (buf, "greenie", "foreground", data->window->settings.color_greens, NULL);
+  gtk_text_buffer_create_tag (buf, "l1", "background", data->window->settings.color_l1, NULL);
+  gtk_text_buffer_create_tag (buf, "l3", "background", data->window->settings.color_l3, NULL);
+  gtk_text_buffer_create_tag (buf, "l5", "background", data->window->settings.color_l5, NULL);
+  gtk_text_buffer_create_tag (buf, "l6", "background", data->window->settings.color_l6, NULL);
+  /*TODO: Tags für Userlevel zwecks Filterung.*/
+}
+
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
 {
@@ -819,6 +906,33 @@ void at_cb (GtkWidget* widget, DevchatCBData* data)
 
 void pm_cb (GtkWidget* widget, DevchatCBData* data)
 {
+}
+
+void devchat_window_refresh_smilies (DevchatWindow* self)
+{
+  GtkWidget* smilie_sub = gtk_menu_new();
+  g_hash_table_foreach (self->smilies, (GHFunc) add_smilie_cb, devchat_cb_data_new (self, smilie_sub));
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_smilies), smilie_sub);
+  gtk_widget_show_all (self->item_smilies);
+}
+
+void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
+{
+  gchar* name = (gchar*) key;
+  GdkPixbuf* icon = (GdkPixbuf*) value;
+
+  dbg (g_strdup_printf ("Adding smilie %s.", name));
+
+  GtkWidget* item = gtk_image_menu_item_new_with_label (name);
+  gtk_image_menu_item_set_image ( GTK_IMAGE_MENU_ITEM (item), gtk_image_new_from_pixbuf (icon));
+
+  g_signal_connect (item, "activate", G_CALLBACK (ins_smilie), devchat_cb_data_new (data->window, name));
+  gtk_menu_shell_append (data->data, item);
+}
+
+void ins_smilie (GtkWidget* widget, DevchatCBData* data)
+{
+  dbg (g_strdup_printf ("Inserting smilie %s.", data->data));
 }
 
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
