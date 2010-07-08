@@ -44,6 +44,8 @@
   #endif
 #endif
 
+#define DEVCHAT_AVATAR_SIZE 12
+
 #define SOUP_SESSION_CALLBACK(f)  ((SoupSessionCallback) (f))
 
 G_BEGIN_DECLS
@@ -79,6 +81,7 @@ typedef struct dc_settings
   guint x;
   guint y;
   guint update_time;
+  guint avatar_size;
   GSList* keywords;
   GSList* presets;
   gboolean showid;

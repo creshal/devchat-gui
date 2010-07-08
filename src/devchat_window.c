@@ -103,6 +103,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.height = 400;
   self->settings.x = 0;
   self->settings.y = 0;
+  self->settings.avatar_size = 12;
   self->settings.update_time = 1000; /*Time between update requests in ms.*/
   self->settings.keywords = NULL; /*GSList*/
   self->settings.presets = NULL;
@@ -589,7 +590,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
 
     guint usercount = 0;
-    /*TODO: Sizegroup für alle Userlisteneinträge? */
     while (xmlTextReaderRead (userparser) > 0)
     {
       gchar* node = xmlTextReaderLocalName(userparser);
@@ -617,7 +617,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           else
           {
             dbg (g_strdup_printf ("Found avatar for %s",name));
-            g_hash_table_insert (data->window->avatars, uid, gdk_pixbuf_new_from_file_at_size (ava_filename,12,12,NULL));
+            g_hash_table_insert (data->window->avatars, uid, gdk_pixbuf_new_from_file_at_size (ava_filename,data->window->settings.avatar_size,data->window->settings.avatar_size,NULL));
           }
         }
 
