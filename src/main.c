@@ -112,5 +112,5 @@ main (int argc, char *argv[])
   /*TODO: Restliche Avatare ergänzen.*/
 
   gtk_main ();
-  return 42;
+  return 0;
 }
