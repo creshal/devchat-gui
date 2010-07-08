@@ -44,8 +44,6 @@
   #endif
 #endif
 
-#define DEVCHAT_AVATAR_SIZE 12
-
 #define SOUP_SESSION_CALLBACK(f)  ((SoupSessionCallback) (f))
 
 G_BEGIN_DECLS
