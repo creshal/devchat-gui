@@ -27,6 +27,7 @@
 #include <gdk/gdkkeysyms.h>
 
 #include <libxml/xmlreader.h>
+#include <libxml/HTMLparser.h>
 
 #include <libsoup-2.4/libsoup/soup.h>
 

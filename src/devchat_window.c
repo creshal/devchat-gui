@@ -53,6 +53,7 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
 void ins_smilie (GtkWidget* widget, DevchatCBData* data);
 
 gint user_lookup (gchar* a, gchar* b);
+void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
@@ -632,10 +633,13 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
             if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
             {
-              dbg_msg = g_strdup_printf ("Avatar %s not found.",uid);
+              dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
               dbg (dbg_msg);
               g_free (dbg_msg);
 
+              SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+              soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
+              dbg ("Search request queued, will be executed when idling.");
               data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
             }
             else
@@ -747,6 +751,25 @@ gint user_lookup (gchar* a, gchar* b)
   return g_strcmp0 (a,b);
 }
 
+
+void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
+{
+  gchar* profile = g_strdup (m->response_body->data);
+
+  if (profile)
+  {
+
+    /*TODO: Parse profile. libxml2 is useless.
+
+    if(found)
+    {
+      data->window->users_without_avatar = g_slist_delete_link (data->window->users_without_avatar,
+        g_slist_find_custom (data->window->users_without_avatar,data->data, (GCompareFunc) user_lookup));
+    }*/
+
+    g_free (profile);
+  }
+}
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
