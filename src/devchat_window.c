@@ -757,19 +757,75 @@ gint user_lookup (gchar* a, gchar* b)
 void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
   gchar* profile = g_strdup (m->response_body->data);
+  gboolean found = FALSE;
 
   if (profile)
   {
+    gchar* dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...",data->data);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
 
-    /*TODO: Parse profile. libxml2 is useless.
+    GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
+    gchar** profile_lines = g_strsplit (profile, "\n",-1);
+
+    gchar* line;
+    guint i;
+    gchar* ava_url;
+
+    for (i = 0; profile_lines[i] != NULL && !found; i++)
+    {
+      line = profile_lines[i];
+      GMatchInfo* result;
+      if (g_regex_match (regex, line, 0, &result))
+      {
+        gchar* match = g_match_info_fetch(result,0);
+
+        if (!g_str_has_prefix(match,"<img src=\"http://www.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
+        {
+          gchar* dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
+          found = TRUE;
+          ava_url = match+10;
+        }
+        g_free (match);
+      }
+      g_match_info_free (result);
+    }
 
     if(found)
     {
+      dbg ("Now commencing avatar write...");
       data->window->users_without_avatar = g_slist_delete_link (data->window->users_without_avatar,
         g_slist_find_custom (data->window->users_without_avatar,data->data, (GCompareFunc) user_lookup));
-    }*/
+      SoupMessage* a_m = soup_message_new ("GET", ava_url);
+      if (soup_session_send_message (s, a_m) == 200)
+      {
+        /*XXX: Workaround for imageshack being TOO MOTHERFUCKING RETARDED to return a 404.*/
+        if (g_strcmp0 ("404", a_m->response_body->data) != 0)
+        {
+          GError* err;
+          gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
+          if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &err))
+          {
+            dbg (err->message);
+            g_error_free (err);
+          }
+          g_free (filename);
+        }
+      }
+      else
+      {
+        dbg ("Error downloading avatar!");
+      }
+    }
+
+    g_regex_unref (regex);
+    g_strfreev (profile_lines);
 
     g_free (profile);
+
+    dbg ("Avatar search done.");
   }
 }
 
