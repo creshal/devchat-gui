@@ -14,4 +14,4 @@ New:
     - Option to deactivate sending raw html for greenies (active by default)
 
 
-• guard libnotify-calls with #ifdef G_OS_UNIX, search for an alternative under windows
+• search for an libnotify-alternative under windows

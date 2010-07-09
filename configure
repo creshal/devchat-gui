@@ -39,7 +39,7 @@ if options.debug:
   f.write('#define DEBUG\n')
 if options.notify:
   libs += " libnotify"
-  f.write('#define NOTIFY\n')
+  f.write('#ifndef G_OS_WIN32\n#define NOTIFY\n#endif\n')
 if options.audio:
   libs += " alsa"
   f.write('#define AUDIO\n')

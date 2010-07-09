@@ -809,8 +809,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (self->window->lastid);
         self->window->lastid = g_strdup (lid);
 
-        /*TODO: Tag für Userlevel zwecks Filterung.*/
-
         gchar* dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.\n", name, mode, time, lid, message);
         dbg (dbg_msg);
         g_free (dbg_msg);
@@ -827,6 +825,16 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
         gtk_text_buffer_get_end_iter (self->window->output, &end);
 
+        GtkTextMark* old_start = gtk_text_mark_new (name, TRUE);
+        gtk_text_buffer_add_mark (self->window->output, old_start, &end);
+
+        gchar* tagname = g_strconcat ("user-", name, NULL);
+
+        if (!gtk_text_tag_table_lookup (table, tagname))
+          gtk_text_buffer_create_tag (self->window->output, tagname, NULL);
+
+
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
         gchar* time_t = g_strdup_printf ("\n%s ", time);
         gtk_text_buffer_insert_with_tags (self->window->output, &end, time_t, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
         g_free (time_t);
@@ -846,7 +854,43 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gtk_text_buffer_insert (self->window->output, &end, message_t, -1);
         g_free (message_t);
 
+        GtkTextIter start;
+        gtk_text_buffer_get_iter_at_mark (self->window->output, &start, old_start);
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
+
+        gchar* taglevel;
+        gchar* tagulevel;
+
+        switch (user_level)
+        {
+          case 1: tagulevel = g_strdup ("ul1"); break;
+          case 3: tagulevel = g_strdup ("ul3"); break;
+          case 5: tagulevel = g_strdup ("ul5"); break;
+          default: tagulevel = g_strdup ("ul6"); break;
+        }
+
+        switch (msg_level)
+        {
+          case 1: taglevel = g_strdup ("l1"); break;
+          case 3: taglevel = g_strdup ("l3"); break;
+          case 5: taglevel = g_strdup ("l5"); break;
+          default: taglevel = g_strdup ("l6"); break;
+        }
+
+        dbg_msg = g_strdup_printf ("Tags to apply: Userlevel %s, Message Level %s, Username %s.", tagulevel, taglevel, tagname);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
+
+        gtk_text_buffer_apply_tag_by_name (self->window->output, taglevel, &start, &end);
+        if (tagulevel)
+          gtk_text_buffer_apply_tag_by_name (self->window->output, tagulevel, &start, &end);
+        gtk_text_buffer_apply_tag_by_name (self->window->output, tagname, &start, &end);
+
+        g_free (taglevel);
+        g_free (tagulevel);
+        gtk_text_buffer_delete_mark (self->window->output, old_start);
         g_free (name);
+        g_free (tagname);
         g_free (mode);
         g_free (time);
         g_free (lid);
@@ -880,7 +924,10 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "l3", "background", data->window->settings.color_l3, NULL);
   gtk_text_buffer_create_tag (buf, "l5", "background", data->window->settings.color_l5, NULL);
   gtk_text_buffer_create_tag (buf, "l6", "background", data->window->settings.color_l6, NULL);
-  /*TODO: Tags für Userlevel zwecks Filterung.*/
+  gtk_text_buffer_create_tag (buf, "ul1", NULL);
+  gtk_text_buffer_create_tag (buf, "ul3", NULL);
+  gtk_text_buffer_create_tag (buf, "ul5", NULL);
+  gtk_text_buffer_create_tag (buf, "ul6", NULL);
 }
 
 
@@ -975,7 +1022,6 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       g_error ("Encoding failed!");
     enc_text[ol] = 0;
     dbg (g_strdup_printf("Encoded message: %s",enc_text));
-    /*TODO: Level ≠ 1*/
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
 
@@ -985,7 +1031,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       case 0: sendlevel = "1"; break;
       case 1: sendlevel = "3"; break;
       case 2: sendlevel = "5"; break;
-      default: sendlevel = "6";
+      default: sendlevel = "6"; break;
     }
 
     SoupMessage* post = soup_form_request_new("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj","cmd",
