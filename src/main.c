@@ -68,7 +68,9 @@ main (int argc, char *argv[])
   #endif
 #endif
 
-  dbg( g_strdup_printf ("Working dir determined to be %s \n",self->workingdir) );
+  g_char dbg_msg = g_strdup_printf ("Working dir determined to be %s \n",self->workingdir);
+  dbg (dbg_msg);
+  g_free (dbg_msg);
 
   g_hash_table_insert (self->smilies, ":keks:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "atomkeks.png", NULL),NULL));
   g_hash_table_insert (self->smilies, ":cube:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "cube.png", NULL),NULL));

@@ -782,11 +782,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
         if (!g_str_has_prefix(match,"<img src=\"http://www.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
         {
-          gchar* dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
+          dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
           dbg (dbg_msg);
           g_free (dbg_msg);
           found = TRUE;
-          ava_url = match+10;
+          ava_url = g_strdup (match+10);
         }
         g_free (match);
       }
@@ -795,7 +795,9 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     if(found)
     {
-      dbg ("Now commencing avatar write...");
+      dbg_msg = g_strdup_printf ("Now commencing avatar write: %s", ava_url);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
       data->window->users_without_avatar = g_slist_delete_link (data->window->users_without_avatar,
         g_slist_find_custom (data->window->users_without_avatar,data->data, (GCompareFunc) user_lookup));
       SoupMessage* a_m = soup_message_new ("GET", ava_url);
@@ -804,7 +806,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         /*XXX: Workaround for imageshack being TOO MOTHERFUCKING RETARDED to return a 404.*/
         if (g_strcmp0 ("404", a_m->response_body->data) != 0)
         {
-          GError* err;
+          GError* err = NULL;
           gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
           if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &err))
           {
