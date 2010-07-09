@@ -567,7 +567,7 @@ user_list_poll (DevchatCBData* data)
     SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
     soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
   }
-  return data->window->no_halt_requested;
+  return FALSE;
 }
 
 gboolean
@@ -589,6 +589,8 @@ void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
 
 void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+  g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+
   gchar* userlist = g_strdup (m->response_body->data);
   if (userlist)
   {
@@ -791,6 +793,11 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
     g_free (labeltext);
 
+    GtkTextIter old_end;
+    gtk_text_buffer_get_end_iter (self->window->output, &old_end);
+    GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
+    gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
+
     xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, (XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
 
     while (xmlTextReaderRead (msgparser) == 1)
@@ -900,6 +907,10 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       g_free (node);
     }
     dbg ("Message list parsed.");
+
+    /*Nur scrollen, wenn firstrun oder User nicht manuell hochgescrollt hat!*/
+    gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
+    gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
     self->window->firstrun = FALSE;
     xmlFreeTextReader (msgparser);
