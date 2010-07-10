@@ -29,11 +29,17 @@ main (int argc, char *argv[])
 
   settingsfile = g_build_filename(g_get_user_config_dir(),"devchat", NULL);
   if (!g_file_test (settingsfile, G_FILE_TEST_EXISTS))
+  {
+#ifdef DEBUG
     dbg("Settings file not found.\n");
+#endif
+  }
   else
   {
     GKeyFile* keyfile = g_key_file_new ();
+#ifdef DEBUG
     dbg("Loading settings...\n");
+#endif
     if (!g_key_file_load_from_file (keyfile, settingsfile, G_KEY_FILE_NONE, NULL))
       err("Error loading settings file. Possibly insufficient rights or corrupted content.\n");
     else
@@ -68,9 +74,11 @@ main (int argc, char *argv[])
   #endif
 #endif
 
+#ifdef DEBUG
   gchar* dbg_msg = g_strdup_printf ("Working dir determined to be %s \n", self->workingdir);
   dbg (dbg_msg);
   g_free (dbg_msg);
+#endif
 
   g_hash_table_insert (self->smilies, ":keks:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "atomkeks.png", NULL),NULL));
   g_hash_table_insert (self->smilies, ":cube:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "cube.png", NULL),NULL));

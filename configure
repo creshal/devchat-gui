@@ -10,7 +10,7 @@ libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 makefile = """
 all:
 \tmkdir -p _build/bin
-\t$(CC) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+\t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 \trm -rv _build
@@ -35,8 +35,11 @@ parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=Tr
 
 (options,args) = parser.parse_args()
 
+ccargs = "-O2 -Wall"
+
 if options.debug:
   f.write('#define DEBUG\n')
+  ccargs = "-g -O0"
 if options.notify:
   libs += " libnotify"
   f.write('#ifndef G_OS_WIN32\n#define NOTIFY\n#endif\n')
@@ -61,6 +64,7 @@ elif os.name == "nt":
 
 m.write("LIBS = %s\n"%libs)
 m.write("DESTDIR = %s\n"%options.prefix)
+m.write("CCARGS = %s\n"%ccargs)
 
 m.write(makefile)
 m.close()

@@ -59,6 +59,8 @@ gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
 void parse_message (htmlNodePtr element, DevchatCBData* self, htmlDocPtr doc, htmlParserCtxtPtr ptr);
+gchar* color_lookup (gchar* color);
+
 gchar* current_time ();
 
 
@@ -441,9 +443,9 @@ devchat_window_init (DevchatWindow* self)
   self->firstrun = TRUE;
   self->no_halt_requested = TRUE;
   self->lastid = g_strdup("1");
-
+#ifdef DEBUG
   dbg("Initalising libsoup...");
-
+#endif
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
 }
@@ -472,7 +474,9 @@ void login (GtkWidget* widget, DevchatCBData* data)
   gtk_widget_set_sensitive(data->window->btn_connect,FALSE);
   gtk_widget_set_sensitive(data->window->user_entry,FALSE);
   gtk_widget_set_sensitive(data->window->pass_entry,FALSE);
+#ifdef DEBUG
   dbg ("Logging in...");
+#endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Logging in...");
   data->window->settings.user = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->user_entry)));
   data->window->settings.pass = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->pass_entry)));
@@ -482,7 +486,9 @@ void login (GtkWidget* widget, DevchatCBData* data)
 
 void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
 {
+#ifdef DEBUG
   dbg ("Got login response from server.");
+#endif
   if (g_strrstr(msg->response_body->data,"invalid password"))
   {
     err ("Login failed.");
@@ -493,10 +499,14 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   }
   else
   {
+  #ifdef DEBUG
     dbg ("Login successful.");
+  #endif
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login successful! Determining user level...");
     SoupMessage* step2 = soup_message_new("GET","http://www.egosoft.com");
+  #ifdef DEBUG
     dbg ("Trying to determine userlevel...");
+  #endif
     soup_session_queue_message (data->window->session, step2, SOUP_SESSION_CALLBACK(remote_level), data);
   }
 }
@@ -539,10 +549,11 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->userlevel = 1;
   }
-
+#ifdef DEBUG
   gchar* dbg_msg = g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel);
   dbg (dbg_msg);
   g_free (dbg_msg);
+#endif
 
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
   gtk_widget_grab_focus(data->window->inputwidget);
@@ -550,7 +561,9 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_show_all (data->window->inputbar);
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
+#ifdef DEBUG
   dbg ("Starting requests...");
+#endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
   g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
   g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
@@ -561,7 +574,9 @@ user_list_poll (DevchatCBData* data)
 {
   if (data->window->no_halt_requested)
   {
+  #ifdef DEBUG
     dbg ("Starting user list poll...");
+  #endif
     SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
     soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
   }
@@ -573,7 +588,9 @@ message_list_poll (DevchatCBData* data)
 {
   if (data->window->no_halt_requested)
   {
+  #ifdef DEBUG
     dbg ("Starting message list poll...");
+  #endif
     SoupMessage* listmessages = soup_message_new ("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
   }
@@ -592,7 +609,9 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gchar* userlist = g_strdup (m->response_body->data);
   if (userlist)
   {
+  #ifdef DEBUG
     dbg ("Got non-empty userlist.");
+  #endif
     gchar* dbg_msg = g_strdup_printf("Last Update: %s",current_time());
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
     g_free (dbg_msg);
@@ -629,35 +648,44 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           {
             gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
 
+          #ifdef DEBUG
             dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
             dbg (dbg_msg);
             g_free (dbg_msg);
+          #endif
 
             if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
             {
+            #ifdef DEBUG
               dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
               dbg (dbg_msg);
               g_free (dbg_msg);
+            #endif
 
               SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
               soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
+            #ifdef DEBUG
               dbg ("Search request queued, will be executed when idling.");
+            #endif
               data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
             }
             else
             {
+            #ifdef DEBUG
               dbg_msg = g_strdup_printf ("Found avatar for %s",name);
               dbg (dbg_msg);
               g_free (dbg_msg);
+            #endif
 
               g_hash_table_insert (data->window->avatars, g_strdup(uid), gdk_pixbuf_new_from_file_at_size (ava_filename,data->window->settings.avatar_size,data->window->settings.avatar_size,NULL));
             }
             g_free (ava_filename);
           }
-
+        #ifdef DEBUG
           dbg_msg = g_strdup_printf("Adding user %s.",name);
           dbg (dbg_msg);
           g_free (dbg_msg);
+        #endif
 
           GtkWidget* label = gtk_label_new(NULL);
           GtkWidget* container = gtk_hbox_new(FALSE,0);
@@ -775,9 +803,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
   if (profile)
   {
+  #ifdef DEBUG
     gchar* dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...",data->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
+  #endif
 
     GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
@@ -796,9 +826,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
         if (!g_str_has_prefix(match,"<img src=\"http://www.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
         {
+        #ifdef DEBUG
           dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
           dbg (dbg_msg);
           g_free (dbg_msg);
+        #endif
           found = TRUE;
           ava_url = g_strdup (match+10);
         }
@@ -809,9 +841,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     if(found)
     {
+    #ifdef DEBUG
       dbg_msg = g_strdup_printf ("Now commencing avatar write: %s", ava_url);
       dbg (dbg_msg);
       g_free (dbg_msg);
+    #endif
       data->window->users_without_avatar = g_slist_delete_link (data->window->users_without_avatar,
         g_slist_find_custom (data->window->users_without_avatar,data->data, (GCompareFunc) user_lookup));
       SoupMessage* a_m = soup_message_new ("GET", ava_url);
@@ -824,16 +858,18 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
           if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &err))
           {
-            dbg (err->message);
+            g_warning (err->message);
             g_error_free (err);
           }
           g_free (filename);
         }
       }
+    #ifdef DEBUG
       else
       {
         dbg ("Error downloading avatar!");
       }
+    #endif
     }
 
     g_regex_unref (regex);
@@ -841,7 +877,9 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     g_free (profile);
 
+  #ifdef DEBUG
     dbg ("Avatar search done.");
+  #endif
   }
 }
 
@@ -851,7 +889,9 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (msglist)
   {
     ce_parse (msglist, data, "");
+  #ifdef DEBUG
     dbg ("Parsing done.");
+  #endif
   }
   g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
@@ -877,7 +917,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       if (node && (g_strcmp0 (node,"ce") == 0))
       {
+      #ifdef DEBUG
         dbg ("Processing message node...");
+      #endif
         gchar* name = xmlTextReaderGetAttribute(msgparser,"a");
         gchar* mode = xmlTextReaderGetAttribute(msgparser,"u");
         gchar* time = xmlTextReaderGetAttribute(msgparser,"t");
@@ -894,10 +936,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
         gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
         gulong msg_level = strtoll (mode+2,NULL,10);
-
-        dbg_msg = g_strdup_printf ("Message mode: showName %s, userLevel %s, messageLevel %s.\n", g_strndup(mode,1), g_strndup(mode+1,1),mode+2);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
 
         GtkTextIter end;
         GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
@@ -921,12 +959,16 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         if (user_level > 5)
           name_color_tag = "greenie";
 
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* name_t = g_strdup_printf (" %s: ",name);
-        gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
-        g_free (name_t);
+        if (show_name != 0)
+        {
+          gtk_text_buffer_get_end_iter (self->window->output, &end);
+          gchar* name_t = g_strdup_printf (" %s: ",name);
 
-        /*XXX: TODO: HTML parser! Also, check for keyword match and/or kick. Pass the current output buffer as argument.*/
+          gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+          g_free (name_t);
+        }
+
+        /*XXX: TODO: Check for keyword match and/or kick. Pass the current output buffer as argument.*/
         gtk_text_buffer_get_end_iter (self->window->output, &end);
         gchar* message_t = g_strdup_printf ("<html><body>%s</body></html>", message);
         htmlDocPtr doc = htmlParseDoc (message_t, "utf8");
@@ -935,7 +977,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         parse_message (root, devchat_cb_data_new (self->window, self->window->output), doc, ptr);
         xmlFreeDoc (doc);
         xmlFreeParserCtxt (ptr);
-        //gtk_text_buffer_insert (self->window->output, &end, message_t, -1);
         g_free (message_t);
 
         GtkTextIter start;
@@ -961,10 +1002,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           default: taglevel = g_strdup ("l6"); break;
         }
 
-        dbg_msg = g_strdup_printf ("Tags to apply: Userlevel %s, Message Level %s, Username %s.", tagulevel, taglevel, tagname);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-
         gtk_text_buffer_apply_tag_by_name (self->window->output, taglevel, &start, &end);
         if (tagulevel)
           gtk_text_buffer_apply_tag_by_name (self->window->output, tagulevel, &start, &end);
@@ -983,9 +1020,11 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       g_free (node);
     }
+  #ifdef DEBUG
     dbg ("Message list parsed.");
+  #endif
 
-    /*Nur scrollen, wenn firstrun oder User nicht manuell hochgescrollt hat!*/
+    /*TODO: Nur scrollen, wenn firstrun oder User nicht manuell hochgescrollt hat!*/
     gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
     gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
@@ -994,7 +1033,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   }
   else
   {
-    dbg ("Creating history window...");
+    //dbg ("Creating history window...");
     /* TODO */
   }
   g_free (msglist);
@@ -1033,7 +1072,7 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
       GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
       gtk_text_buffer_add_mark (data->data, old_start, &end);
 
-      gchar* tag;
+      gchar* tag = NULL;
 
       if (g_ascii_strcasecmp (node->name, "img") == 0)
       {
@@ -1048,24 +1087,97 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
           {
             src = attr->children->content;
 
+          #ifdef DEBUG
             gchar* dbg_msg = g_strdup_printf ("Found image source: %s", src);
             dbg (dbg_msg);
             g_free (dbg_msg);
+          #endif
           }
           else if (g_ascii_strcasecmp (attr->name, "alt") == 0)
           {
             alt = attr->children->content;
 
+          #ifdef DEBUG
             gchar* dbg_msg = g_strdup_printf ("Found image description: %s", alt);
             dbg (dbg_msg);
             g_free (dbg_msg);
+          #endif
           }
         }
 
         /*TODO: Lookup alt in avatar table, add avatar to buffer / dl image and add that.*/
       }
+      else if (g_ascii_strcasecmp (node->name, "br") == 0)
+      {
+        /*TODO*/
+      }
+      else if (g_ascii_strcasecmp (node->name, "b") == 0)
+      {
+        tag = "bold";
+      }
+      else if (g_ascii_strcasecmp (node->name, "i") == 0)
+      {
+        tag = "italic";
+      }
+      else if (g_ascii_strcasecmp (node->name, "u") == 0)
+      {
+        tag = "underline";
+      }
+      else if (g_ascii_strcasecmp (node->name, "font") == 0)
+      {
+        gchar* colorname;
 
-      /*TODO: Apply searched tag! */
+        xmlAttrPtr attr;
+        for (attr = node->properties; attr != NULL; attr = attr->next)
+        {
+          if (g_ascii_strcasecmp (attr->name, "color") == 0)
+            colorname = g_strndup (attr->children->content,7);
+        }
+
+        if (colorname)
+        {
+          colorname = color_lookup (colorname);
+          tag = g_strconcat ("color-", colorname, NULL);
+
+          if (!gtk_text_tag_table_lookup (table, tag))
+            gtk_text_buffer_create_tag (data->data, tag, "foreground", colorname, NULL);
+          g_free (colorname);
+        }
+
+      }
+      else if (g_ascii_strcasecmp (node->name, "span") == 0)
+      {
+        gchar* style;
+
+        xmlAttrPtr attr;
+        for (attr = node->properties; attr != NULL; attr = attr->next)
+        {
+          if (g_ascii_strcasecmp (attr->name, "class") == 0)
+          {
+            style = g_strdup (attr->children->content);
+
+          #ifdef DEBUG
+            gchar* dbg_msg = g_strdup_printf ("Found span style: %s", style);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          #endif
+          }
+        }
+
+        if (style)
+        {
+          if (g_strcmp0 (style, "chatname_green") == 0)
+          {
+            tag = g_strdup ("greenie");
+          }
+          g_free (style);
+        }
+      }
+      else if (g_ascii_strcasecmp (node->name, "a") == 0)
+      {
+        /*TODO: Build URL.
+          XXX: Atm, URLs appear too far in the front.*/
+      }
 
       if (node->children)
       {
@@ -1076,50 +1188,69 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
         {
           GtkTextIter cur_end;
           gtk_text_buffer_get_end_iter (data->data, &cur_end);
-          gtk_text_buffer_insert (data->data, &cur_end, content, -1);
+          if (tag)
+          {
+            gtk_text_buffer_insert_with_tags_by_name (data->data, &cur_end, content, -1, tag, NULL);
+          }
+          else
+            gtk_text_buffer_insert (data->data, &cur_end, content, -1);
           g_free (content);
         }
       }
-      /*TODO: Apply tag determined above onto old_start..current_end. */
     }
   }
 }
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
 {
+  /* TODO */
   return FALSE;
+}
+
+gchar* color_lookup (gchar* color)
+{
+  /*TODO: Substitute colors based on current theme.*/
+  return color;
 }
 
 void config_cb(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void go_forum(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void go_forump(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void go_forum3(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void go_forum5(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void close_tab(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void reconnect(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void tab_changed(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 gboolean tab_changed_win(GtkWidget* widget, DevchatCBData* data)
@@ -1129,29 +1260,35 @@ gboolean tab_changed_win(GtkWidget* widget, DevchatCBData* data)
 
 void on_motion(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void on_mark_set(GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void level_changed (GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void btn_send (GtkWidget* widget, DevchatCBData* data)
 {
+#ifdef DEBUG
   dbg ("Sending message...");
+#endif
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
   GtkTextBuffer* buf;
   gchar* text;
   GtkTextIter start;
   GtkTextIter end;
 
-  dbg ("Determining target...");
   if (pagenum == 0)
   {
+  #ifdef DEBUG
     dbg ("Sending message to main channel.");
+  #endif
     buf = data->window->input;
     gtk_text_buffer_get_start_iter (buf, &start);
     gtk_text_buffer_get_end_iter (buf, &end);
@@ -1159,7 +1296,9 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
+  #ifdef DEBUG
     dbg ("Sending PM.");
+  #endif
   }
   text = g_strstrip (text);
 
@@ -1171,11 +1310,10 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     int il,ol;
     ol = strlen(text)*7;
     il = strlen(text);
-    dbg ("Encoding HTML Entities...");
     if (htmlEncodeEntities (enc_text, &ol, text, &il, 0) < 0)
       g_error ("Encoding failed!");
     enc_text[ol] = 0;
-    dbg (g_strdup_printf("Encoded message: %s",enc_text));
+
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
 
@@ -1197,8 +1335,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
 }
 
 void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data)
-{
-}
+{}
 
 void btn_format (GtkWidget* widget, DevchatCBData* data)
 {
@@ -1224,10 +1361,12 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
 
 void at_cb (GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void pm_cb (GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO*/
 }
 
 void devchat_window_refresh_smilies (DevchatWindow* self)
@@ -1243,7 +1382,9 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
   gchar* name = (gchar*) key;
   GdkPixbuf* icon = (GdkPixbuf*) value;
 
+#ifdef DEBUG
   dbg (g_strdup_printf ("Adding smilie %s.", name));
+#endif
 
   GtkWidget* item = gtk_image_menu_item_new_with_label (name);
   gtk_image_menu_item_set_image ( GTK_IMAGE_MENU_ITEM (item), gtk_image_new_from_pixbuf (icon));
@@ -1254,7 +1395,7 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 
 void ins_smilie (GtkWidget* widget, DevchatCBData* data)
 {
-  dbg (g_strdup_printf ("Inserting smilie %s.", data->data));
+  /*TODO*/
 }
 
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)

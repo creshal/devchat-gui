@@ -1,10 +1,11 @@
 CC = gcc
 LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4 libnotify alsa libotr
 DESTDIR = /usr/local/bin
+CCARGS = -O2
 
 all:
 	mkdir -p _build/bin
-	$(CC) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+	$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 	rm -rv _build
