@@ -68,7 +68,7 @@ main (int argc, char *argv[])
   #endif
 #endif
 
-  g_char dbg_msg = g_strdup_printf ("Working dir determined to be %s \n",self->workingdir);
+  gchar* dbg_msg = g_strdup_printf ("Working dir determined to be %s \n", self->workingdir);
   dbg (dbg_msg);
   g_free (dbg_msg);
 

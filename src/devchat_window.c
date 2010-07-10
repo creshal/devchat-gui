@@ -58,6 +58,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
+void parse_message (htmlNodePtr element, DevchatCBData* self, htmlDocPtr doc, htmlParserCtxtPtr ptr);
 gchar* current_time ();
 
 
@@ -600,11 +601,14 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
 
     xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
+    xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt (userlist);
 
     GdkColor l1;
     gdk_color_parse (data->window->settings.color_l1, &l1);
 
     gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
+
+    /*TODO: Sizegroup for all Avatar buttons (to enforce fixed width).*/
 
     guint usercount = 0;
     while (xmlTextReaderRead (userparser) > 0)
@@ -626,7 +630,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
           if (!g_slist_find_custom (data->window->users_without_avatar,uid, (GCompareFunc) user_lookup) && !g_hash_table_lookup (data->window->avatars, uid))
           {
-            /*TODO: Avatare suchen.*/
             gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
 
             dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
@@ -692,8 +695,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           {
             style = "italic";
             gtk_widget_set_has_tooltip(label, TRUE);
-            /*TODO: status dekodieren.*/
-            gtk_widget_set_tooltip_text(at_btn, status);
+            gchar* status_d = xmlStringDecodeEntities (ctxt, status, XML_SUBSTITUTE_BOTH, 0,0,0);
+            g_print (status_d);
+            gtk_widget_set_tooltip_text(at_btn, status_d);
+            g_free (status_d);
           }
           else
           {
@@ -744,6 +749,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     gtk_widget_show_all (data->window->userlist);
     xmlFreeTextReader (userparser);
+    xmlFreeParserCtxt (ctxt);
     g_free (userlist);
   }
 }
@@ -833,7 +839,6 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
-/*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
   gchar* msglist = g_strdup (m->response_body->data);
   if (msglist)
   {
@@ -900,7 +905,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
 
         gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* time_t = g_strdup_printf ("\n%s ", time);
+        gchar* time_t = g_strdup_printf ("\n%s", time);
         gtk_text_buffer_insert_with_tags (self->window->output, &end, time_t, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
         g_free (time_t);
 
@@ -909,14 +914,20 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           name_color_tag = "greenie";
 
         gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* name_t = g_strdup (name);
+        gchar* name_t = g_strdup_printf (" %s: ",name);
         gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
         g_free (name_t);
 
-        /*XXX: TODO: HTML parser! Also, check for keyword match and/or kick.*/
+        /*XXX: TODO: HTML parser! Also, check for keyword match and/or kick. Pass the current output buffer as argument.*/
         gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* message_t = g_strdup_printf (" %s", message);
-        gtk_text_buffer_insert (self->window->output, &end, message_t, -1);
+        gchar* message_t = g_strdup_printf ("<html><body>%s</body></html>", message);
+        htmlDocPtr doc = htmlParseDoc (message_t, "utf8");
+        htmlParserCtxtPtr ptr = htmlCreateMemoryParserCtxt (message_t, strlen(message_t));
+        htmlNodePtr root = xmlDocGetRootElement(doc);
+        parse_message (root, devchat_cb_data_new (self->window, self->window->output), doc, ptr);
+        xmlFreeDoc (doc);
+        xmlFreeParserCtxt (ptr);
+        //gtk_text_buffer_insert (self->window->output, &end, message_t, -1);
         g_free (message_t);
 
         GtkTextIter start;
@@ -999,6 +1010,73 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "ul6", NULL);
 }
 
+void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, htmlParserCtxtPtr ptr)
+{
+  /*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
+  htmlNodePtr node;
+  GtkTextTagTable* table = gtk_text_buffer_get_tag_table (data->data);
+
+  for (node = element; node != NULL; node = node->next)
+  {
+    if (node->type == XML_ELEMENT_NODE)
+    {
+      GtkTextIter end;
+      gtk_text_buffer_get_end_iter (data->data, &end);
+      GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
+      gtk_text_buffer_add_mark (data->data, old_start, &end);
+
+      gchar* tag;
+
+      if (g_ascii_strcasecmp (node->name, "img") == 0)
+      {
+        gchar* alt;
+        gchar* src;
+        /*TODO: Search for alt tag first, if exists, replace by local smilie. Else, check whether downloaded, if yes,
+                load, else download and load. */
+        xmlAttrPtr attr;
+        for (attr = node->properties; attr != NULL; attr = attr->next)
+        {
+          if (g_ascii_strcasecmp (attr->name, "src") == 0)
+          {
+            src = attr->children->content;
+
+            gchar* dbg_msg = g_strdup_printf ("Found image source: %s", src);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          }
+          else if (g_ascii_strcasecmp (attr->name, "alt") == 0)
+          {
+            alt = attr->children->content;
+
+            gchar* dbg_msg = g_strdup_printf ("Found image description: %s", alt);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          }
+        }
+
+        /*TODO: Lookup alt in avatar table, add avatar to buffer / dl image and add that.*/
+      }
+
+      /*TODO: Apply searched tag! */
+
+      if (node->children)
+      {
+        parse_message (node->children, data, doc, ptr);
+
+        gchar* content = xmlNodeListGetString (doc, node->children, 1);
+        dbg (g_strdup_printf ("Inserting content »%s« of node %s.", content, node->name));
+        if (content)
+        {
+          GtkTextIter cur_end;
+          gtk_text_buffer_get_end_iter (data->data, &cur_end);
+          gtk_text_buffer_insert (data->data, &cur_end, content, -1);
+          g_free (content);
+        }
+      }
+      /*TODO: Apply tag determined above onto old_start..current_end. */
+    }
+  }
+}
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
 {
@@ -1082,7 +1160,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   {
     /*TODO: Linebuffer füllen.*/
     gtk_text_buffer_set_text (buf, "", 0);
-    unsigned char enc_text[strlen(text)*7];
+    unsigned char enc_text[strlen(text)*10];
     int il,ol;
     ol = strlen(text)*7;
     il = strlen(text);
