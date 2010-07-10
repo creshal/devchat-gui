@@ -454,8 +454,6 @@ devchat_window_class_init (DevchatWindowClass* klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 }
 
-/*XXX: Guard all function calls with g_return_if_fail (DEVCHAT_IS_WINDOW (self)); */
-
 void destroy (GtkWidget* widget, DevchatCBData* data)
 {
   data->window->no_halt_requested = FALSE;
@@ -466,7 +464,6 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
   {
     soup_session_abort (data->window->session);
   }
-  /*TODO: libxml2 uninit*/
   gtk_main_quit ();
 }
 
@@ -671,6 +668,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gulong real_level = strtoll(g_strndup(level,1),NULL,10);
           gchar* color;
           gchar* style;
+          gchar* strike;
 
 
           gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
@@ -691,23 +689,33 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           else
             color = data->window->settings.color_blues;
 
-          if ( g_strcmp0("",status) != 0)
+          if (g_strcmp0("",status) != 0)
           {
             style = "italic";
             gtk_widget_set_has_tooltip(label, TRUE);
-            gchar* status_d = xmlStringDecodeEntities (ctxt, status, XML_SUBSTITUTE_BOTH, 0,0,0);
-            g_print (status_d);
+            gchar* status_d;
+            if (g_strcmp0 ("DND",status) == 0)
+            {
+              strike = "true";
+              status_d = g_strdup ("Do NOT disturb.");
+            }
+            else
+            {
+              status_d = xmlStringDecodeEntities (ctxt, status, XML_SUBSTITUTE_BOTH, 0,0,0);
+              strike = "false";
+            }
             gtk_widget_set_tooltip_text(at_btn, status_d);
             g_free (status_d);
           }
           else
           {
             style = "normal";
+            strike = "false";
             gchar* at_text = g_strdup_printf ("Poke %s",name);
             gtk_widget_set_tooltip_text(at_btn, at_text);
             g_free (at_text);
           }
-          gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,name,data->window->settings.color_font,level);
+          gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s' strikethrough='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,strike,name,data->window->settings.color_font,level);
           gtk_label_set_markup (GTK_LABEL (label),markup);
           g_free (markup);
 
@@ -1064,7 +1072,6 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
         parse_message (node->children, data, doc, ptr);
 
         gchar* content = xmlNodeListGetString (doc, node->children, 1);
-        dbg (g_strdup_printf ("Inserting content »%s« of node %s.", content, node->name));
         if (content)
         {
           GtkTextIter cur_end;
