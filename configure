@@ -35,7 +35,7 @@ parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=Tr
 
 (options,args) = parser.parse_args()
 
-ccargs = "-O2 -Wall"
+ccargs = "-O2"
 
 if options.debug:
   f.write('#define DEBUG\n')

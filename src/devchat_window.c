@@ -929,9 +929,11 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (self->window->lastid);
         self->window->lastid = g_strdup (lid);
 
+      #ifdef DEBUG
         gchar* dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.\n", name, mode, time, lid, message);
         dbg (dbg_msg);
         g_free (dbg_msg);
+      #endif
 
         gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
         gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
@@ -1072,12 +1074,14 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
       GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
       gtk_text_buffer_add_mark (data->data, old_start, &end);
 
+      GSList* smilie_list = NULL;
+
       gchar* tag = NULL;
 
       if (g_ascii_strcasecmp (node->name, "img") == 0)
       {
-        gchar* alt;
-        gchar* src;
+        gchar* alt = NULL;
+        gchar* src = NULL;
         /*TODO: Search for alt tag first, if exists, replace by local smilie. Else, check whether downloaded, if yes,
                 load, else download and load. */
         xmlAttrPtr attr;
@@ -1095,7 +1099,7 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
           }
           else if (g_ascii_strcasecmp (attr->name, "alt") == 0)
           {
-            alt = attr->children->content;
+            alt = g_strstrip (g_strdup (attr->children->content));
 
           #ifdef DEBUG
             gchar* dbg_msg = g_strdup_printf ("Found image description: %s", alt);
@@ -1106,6 +1110,16 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
         }
 
         /*TODO: Lookup alt in avatar table, add avatar to buffer / dl image and add that.*/
+        if (alt)
+        {
+          GdkPixbuf* smilie = g_hash_table_lookup (data->window->smilies, alt);
+
+          if (smilie)
+          {
+            smilie_list = g_slist_prepend (smilie_list, smilie);
+            g_printf ("Added smilie %s\n", alt);
+          }
+        }
       }
       else if (g_ascii_strcasecmp (node->name, "br") == 0)
       {
@@ -1172,31 +1186,48 @@ void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, ht
           }
           g_free (style);
         }
+
       }
       else if (g_ascii_strcasecmp (node->name, "a") == 0)
       {
-        /*TODO: Build URL.
-          XXX: Atm, URLs appear too far in the front.*/
+        /* TODO: Build URL. */
       }
 
-      if (node->children)
+      /* Find a way to get the position of the child elements inside the content and insert them in that position. */
+      parse_message (node->children, data, doc, ptr);
+
+      gchar* content = xmlNodeListGetString (doc, node->children, 1);
+      if (content)
       {
-        parse_message (node->children, data, doc, ptr);
-
-        gchar* content = xmlNodeListGetString (doc, node->children, 1);
-        if (content)
+        GtkTextIter cur_end;
+        gtk_text_buffer_get_end_iter (data->data, &cur_end);
+        if (tag)
         {
-          GtkTextIter cur_end;
-          gtk_text_buffer_get_end_iter (data->data, &cur_end);
-          if (tag)
-          {
-            gtk_text_buffer_insert_with_tags_by_name (data->data, &cur_end, content, -1, tag, NULL);
-          }
-          else
-            gtk_text_buffer_insert (data->data, &cur_end, content, -1);
-          g_free (content);
+          gtk_text_buffer_insert_with_tags_by_name (data->data, &cur_end, content, -1, tag, NULL);
         }
+        else
+          gtk_text_buffer_insert (data->data, &cur_end, content, -1);
+        g_free (content);
       }
+
+      if (smilie_list)
+      {
+        smilie_list = g_slist_reverse (smilie_list);
+
+        for (smilie_list; smilie_list != NULL; smilie_list = g_slist_next (smilie_list))
+        {
+          GtkTextIter pos;
+          gtk_text_buffer_get_end_iter (data->data, &pos);
+          g_print ("Inserting smilie...");
+
+          gtk_text_buffer_insert_pixbuf (data->data, &pos, smilie_list->data);
+        }
+
+        //g_slist_free (smilie_list);
+      }
+
+
+
     }
   }
 }
@@ -1219,21 +1250,6 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 }
 
 void go_forum(GtkWidget* widget, DevchatCBData* data)
-{
-  /*TODO*/
-}
-
-void go_forump(GtkWidget* widget, DevchatCBData* data)
-{
-  /*TODO*/
-}
-
-void go_forum3(GtkWidget* widget, DevchatCBData* data)
-{
-  /*TODO*/
-}
-
-void go_forum5(GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
 }

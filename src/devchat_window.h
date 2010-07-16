@@ -182,13 +182,13 @@ static void err(gchar* message)
   g_warning (message);
 }
 
+#ifdef DEBUG
 static void dbg(gchar* message)
 {
-#ifdef DEBUG
   g_print (message);
   g_print ("\n");
-#endif
 }
+#endif
 
 GType devchat_window_get_type (void);
 
