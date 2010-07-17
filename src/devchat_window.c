@@ -58,7 +58,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (htmlNodePtr element, DevchatCBData* self, htmlDocPtr doc, htmlParserCtxtPtr ptr);
+void parse_message (gchar* message, DevchatCBData* self);
 gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
@@ -453,7 +453,6 @@ devchat_window_init (DevchatWindow* self)
 static void
 devchat_window_class_init (DevchatWindowClass* klass)
 {
-  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 }
 
 void destroy (GtkWidget* widget, DevchatCBData* data)
@@ -617,7 +616,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
 
     xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
-    xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt (userlist);
+    xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
 
     GdkColor l1;
     gdk_color_parse (data->window->settings.color_l1, &l1);
@@ -629,15 +628,15 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     guint usercount = 0;
     while (xmlTextReaderRead (userparser) > 0)
     {
-      gchar* node = xmlTextReaderLocalName(userparser);
+      gchar* node = (gchar*) xmlTextReaderLocalName(userparser);
 
       if (node && (g_strcmp0 (node,"cu") == 0))
       {
         usercount++;
-        gchar* name = xmlTextReaderGetAttribute(userparser,"n");
-        gchar* uid = xmlTextReaderGetAttribute(userparser,"uid");
-        gchar* level = xmlTextReaderGetAttribute(userparser,"l");
-        gchar* status = xmlTextReaderGetAttribute(userparser,"s");
+        gchar* name = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "n");
+        gchar* uid = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "uid");
+        gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
+        gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
         /*TODO: Hashtable für n->uid-Zuordnung füllen, falls nötig. */
 
@@ -729,7 +728,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             }
             else
             {
-              status_d = xmlStringDecodeEntities (ctxt, status, XML_SUBSTITUTE_BOTH, 0,0,0);
+              status_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) status, XML_SUBSTITUTE_BOTH, 0,0,0);
               strike = "false";
             }
             gtk_widget_set_tooltip_text(at_btn, status_d);
@@ -779,7 +778,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       }
     }
 
-    gchar* ul_text = g_strdup_printf ("%i user(s) online", usercount);
+    gchar* ul_text = g_strdup_printf ("%i user%s online", usercount, usercount==1?"":"s");
     gtk_label_set_text (GTK_LABEL (data->window->userlabel), ul_text);
     g_free (ul_text);
 
@@ -814,7 +813,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     gchar* line;
     guint i;
-    gchar* ava_url;
+    gchar* ava_url = NULL;
 
     for (i = 0; profile_lines[i] != NULL && !found; i++)
     {
@@ -913,18 +912,18 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
     while (xmlTextReaderRead (msgparser) == 1)
     {
-      gchar* node = xmlTextReaderLocalName(msgparser);
+      gchar* node = (gchar*) xmlTextReaderLocalName(msgparser);
 
       if (node && (g_strcmp0 (node,"ce") == 0))
       {
       #ifdef DEBUG
         dbg ("Processing message node...");
       #endif
-        gchar* name = xmlTextReaderGetAttribute(msgparser,"a");
-        gchar* mode = xmlTextReaderGetAttribute(msgparser,"u");
-        gchar* time = xmlTextReaderGetAttribute(msgparser,"t");
-        gchar* lid = xmlTextReaderGetAttribute(msgparser,"i");
-        gchar* message = xmlTextReaderGetAttribute(msgparser,"m");
+        gchar* name = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "a");
+        gchar* mode = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "u");
+        gchar* time = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
+        gchar* lid = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "i");
+        gchar* message = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "m");
 
         g_free (self->window->lastid);
         self->window->lastid = g_strdup (lid);
@@ -972,13 +971,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
         /*XXX: TODO: Check for keyword match and/or kick. Pass the current output buffer as argument.*/
         gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* message_t = g_strdup_printf ("<html><body>%s</body></html>", message);
-        htmlDocPtr doc = htmlParseDoc (message_t, "utf8");
-        htmlParserCtxtPtr ptr = htmlCreateMemoryParserCtxt (message_t, strlen(message_t));
-        htmlNodePtr root = xmlDocGetRootElement(doc);
-        parse_message (root, devchat_cb_data_new (self->window, self->window->output), doc, ptr);
-        xmlFreeDoc (doc);
-        xmlFreeParserCtxt (ptr);
+        gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
+        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output));
         g_free (message_t);
 
         GtkTextIter start;
@@ -1035,7 +1029,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   }
   else
   {
-    //dbg ("Creating history window...");
+  #ifdef DEBUG
+    dbg ("Creating history window...");
+  #endif
     /* TODO */
   }
   g_free (msglist);
@@ -1059,177 +1055,10 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "ul6", NULL);
 }
 
-void parse_message (htmlNodePtr element, DevchatCBData* data, htmlDocPtr doc, htmlParserCtxtPtr ptr)
+void parse_message (gchar* message, DevchatCBData* data)
 {
   /*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
-  htmlNodePtr node;
-  GtkTextTagTable* table = gtk_text_buffer_get_tag_table (data->data);
 
-  for (node = element; node != NULL; node = node->next)
-  {
-    if (node->type == XML_ELEMENT_NODE)
-    {
-      GtkTextIter end;
-      gtk_text_buffer_get_end_iter (data->data, &end);
-      GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
-      gtk_text_buffer_add_mark (data->data, old_start, &end);
-
-      GSList* smilie_list = NULL;
-
-      gchar* tag = NULL;
-
-      if (g_ascii_strcasecmp (node->name, "img") == 0)
-      {
-        gchar* alt = NULL;
-        gchar* src = NULL;
-        /*TODO: Search for alt tag first, if exists, replace by local smilie. Else, check whether downloaded, if yes,
-                load, else download and load. */
-        xmlAttrPtr attr;
-        for (attr = node->properties; attr != NULL; attr = attr->next)
-        {
-          if (g_ascii_strcasecmp (attr->name, "src") == 0)
-          {
-            src = attr->children->content;
-
-          #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Found image source: %s", src);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
-          }
-          else if (g_ascii_strcasecmp (attr->name, "alt") == 0)
-          {
-            alt = g_strstrip (g_strdup (attr->children->content));
-
-          #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Found image description: %s", alt);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
-          }
-        }
-
-        /*TODO: Lookup alt in avatar table, add avatar to buffer / dl image and add that.*/
-        if (alt)
-        {
-          GdkPixbuf* smilie = g_hash_table_lookup (data->window->smilies, alt);
-
-          if (smilie)
-          {
-            smilie_list = g_slist_prepend (smilie_list, smilie);
-            g_printf ("Added smilie %s\n", alt);
-          }
-        }
-      }
-      else if (g_ascii_strcasecmp (node->name, "br") == 0)
-      {
-        /*TODO*/
-      }
-      else if (g_ascii_strcasecmp (node->name, "b") == 0)
-      {
-        tag = "bold";
-      }
-      else if (g_ascii_strcasecmp (node->name, "i") == 0)
-      {
-        tag = "italic";
-      }
-      else if (g_ascii_strcasecmp (node->name, "u") == 0)
-      {
-        tag = "underline";
-      }
-      else if (g_ascii_strcasecmp (node->name, "font") == 0)
-      {
-        gchar* colorname;
-
-        xmlAttrPtr attr;
-        for (attr = node->properties; attr != NULL; attr = attr->next)
-        {
-          if (g_ascii_strcasecmp (attr->name, "color") == 0)
-            colorname = g_strndup (attr->children->content,7);
-        }
-
-        if (colorname)
-        {
-          colorname = color_lookup (colorname);
-          tag = g_strconcat ("color-", colorname, NULL);
-
-          if (!gtk_text_tag_table_lookup (table, tag))
-            gtk_text_buffer_create_tag (data->data, tag, "foreground", colorname, NULL);
-          g_free (colorname);
-        }
-
-      }
-      else if (g_ascii_strcasecmp (node->name, "span") == 0)
-      {
-        gchar* style;
-
-        xmlAttrPtr attr;
-        for (attr = node->properties; attr != NULL; attr = attr->next)
-        {
-          if (g_ascii_strcasecmp (attr->name, "class") == 0)
-          {
-            style = g_strdup (attr->children->content);
-
-          #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Found span style: %s", style);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
-          }
-        }
-
-        if (style)
-        {
-          if (g_strcmp0 (style, "chatname_green") == 0)
-          {
-            tag = g_strdup ("greenie");
-          }
-          g_free (style);
-        }
-
-      }
-      else if (g_ascii_strcasecmp (node->name, "a") == 0)
-      {
-        /* TODO: Build URL. */
-      }
-
-      /* Find a way to get the position of the child elements inside the content and insert them in that position. */
-      parse_message (node->children, data, doc, ptr);
-
-      gchar* content = xmlNodeListGetString (doc, node->children, 1);
-      if (content)
-      {
-        GtkTextIter cur_end;
-        gtk_text_buffer_get_end_iter (data->data, &cur_end);
-        if (tag)
-        {
-          gtk_text_buffer_insert_with_tags_by_name (data->data, &cur_end, content, -1, tag, NULL);
-        }
-        else
-          gtk_text_buffer_insert (data->data, &cur_end, content, -1);
-        g_free (content);
-      }
-
-      if (smilie_list)
-      {
-        smilie_list = g_slist_reverse (smilie_list);
-
-        for (smilie_list; smilie_list != NULL; smilie_list = g_slist_next (smilie_list))
-        {
-          GtkTextIter pos;
-          gtk_text_buffer_get_end_iter (data->data, &pos);
-          g_print ("Inserting smilie...");
-
-          gtk_text_buffer_insert_pixbuf (data->data, &pos, smilie_list->data);
-        }
-
-        //g_slist_free (smilie_list);
-      }
-
-
-
-    }
-  }
 }
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
@@ -1315,6 +1144,8 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   #ifdef DEBUG
     dbg ("Sending PM.");
   #endif
+    buf = data->window->input;
+    text = ""; /*TODO*/
   }
   text = g_strstrip (text);
 
@@ -1326,7 +1157,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     int il,ol;
     ol = strlen(text)*7;
     il = strlen(text);
-    if (htmlEncodeEntities (enc_text, &ol, text, &il, 0) < 0)
+    if (htmlEncodeEntities ((unsigned char*) enc_text, &ol, (unsigned char*) text, &il, 0) < 0)
       g_error ("Encoding failed!");
     enc_text[ol] = 0;
 
@@ -1473,3 +1304,16 @@ gchar* current_time ()
 
   return g_strdup(datestring);
 }
+
+void err(gchar* message)
+{
+  g_warning (message);
+}
+
+#ifdef DEBUG
+void dbg(gchar* message)
+{
+  g_print (message);
+  g_print ("\n");
+}
+#endif

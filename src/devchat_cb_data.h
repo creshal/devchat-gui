@@ -46,9 +46,6 @@ struct _DevchatCBDataClass
 
 DevchatCBData* devchat_cb_data_new (DevchatWindow* window, gpointer data);
 
-static void devchat_cb_data_dispose (GObject* gobject);
-
-static void devchat_cb_data_finalize (GObject* gobject);
 
 GType devchat_cb_data_get_type (void);
 

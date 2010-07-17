@@ -21,7 +21,9 @@
 
 #include "config.h"
 
+#include <glib.h>
 #include <glib-2.0/glib-object.h>
+#include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
@@ -158,8 +160,8 @@ struct _DevchatWindow
   gchar* lastid;
   guint userlevel;
 
-  guchar* workingdir;
-  guchar* avadir;
+  gchar* workingdir;
+  gchar* avadir;
 
   /*< private >*/
 };
@@ -177,17 +179,10 @@ typedef struct devchat_cb_data
   gpointer data;
 } devchat_cb_data;
 
-static void err(gchar* message)
-{
-  g_warning (message);
-}
+void err(gchar* message);
 
 #ifdef DEBUG
-static void dbg(gchar* message)
-{
-  g_print (message);
-  g_print ("\n");
-}
+void dbg(gchar* message);
 #endif
 
 GType devchat_window_get_type (void);

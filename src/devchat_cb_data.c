@@ -39,25 +39,4 @@ devchat_cb_data_init (DevchatCBData* self)
 static void
 devchat_cb_data_class_init (DevchatCBDataClass* klass)
 {
-  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  gobject_class->dispose = devchat_cb_data_dispose;
-  gobject_class->finalize = devchat_cb_data_finalize;
-
-}
-
-static void
-devchat_cb_data_dispose (GObject* gobject)
-{
-  DevchatCBData* self = DEVCHAT_CB_DATA (gobject);
-
-  G_OBJECT_CLASS (devchat_cb_data_parent_class)->dispose (gobject);
-}
-
-static void
-devchat_cb_data_finalize (GObject* gobject)
-{
-  DevchatCBData* self = DEVCHAT_CB_DATA (gobject);
-
-  G_OBJECT_CLASS (devchat_cb_data_parent_class)->finalize (gobject);
 }

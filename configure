@@ -35,11 +35,11 @@ parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=Tr
 
 (options,args) = parser.parse_args()
 
-ccargs = "-O2"
+ccargs = "-O2 -Wall"
 
 if options.debug:
   f.write('#define DEBUG\n')
-  ccargs = "-g -O0"
+  ccargs = "-g -O0 -Wall"
 if options.notify:
   libs += " libnotify"
   f.write('#ifndef G_OS_WIN32\n#define NOTIFY\n#endif\n')
