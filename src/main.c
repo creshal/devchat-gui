@@ -44,7 +44,7 @@ main (int argc, char *argv[])
       err("Error loading settings file. Possibly insufficient rights or corrupted content.\n");
     else
     {
-      /*TODO Einstellungen lesen. */
+      /*TODO Read settings. */
     }
     g_key_file_free (keyfile);
   }
@@ -118,8 +118,6 @@ main (int argc, char *argv[])
       err (g_strdup_printf ("Error creating avatar directory %s.",self->avadir));
     }
   }
-
-  /*TODO: Restliche Avatare ergänzen.*/
 
   gtk_main ();
   return 0;

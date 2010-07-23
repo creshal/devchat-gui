@@ -10,7 +10,7 @@ libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 makefile = """
 all:
 \tmkdir -p _build/bin
-\t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+\t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 \trm -rv _build

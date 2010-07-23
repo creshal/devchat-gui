@@ -109,8 +109,6 @@ struct _DevchatWindow
 {
   GObject parent_instance;
 
-  /*< public >*/
-
   dc_settings settings;
   dc_settings settings_backup;
 
@@ -163,14 +161,11 @@ struct _DevchatWindow
   gchar* workingdir;
   gchar* avadir;
 
-  /*< private >*/
 };
 
 struct _DevchatWindowClass
 {
   GObjectClass parent_class;
-
-  /* class members */
 };
 
 typedef struct devchat_cb_data

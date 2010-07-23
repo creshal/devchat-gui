@@ -63,7 +63,6 @@ gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
 
-
 G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT);
 
 DevchatWindow*
@@ -236,7 +235,7 @@ devchat_window_init (DevchatWindow* self)
 
   self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
   GtkWidget* item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
-  /*TODO: Preset-Menü füllen.*/
+  /*TODO: Fill preset menu.*/
 
   GtkMenuShell* main_sub = GTK_MENU_SHELL(gtk_menu_new());
   gtk_menu_shell_append(main_sub, self->item_connect);
@@ -638,7 +637,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
         gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
-        /*TODO: Hashtable für n->uid-Zuordnung füllen, falls nötig. */
+        /*TODO: Fill n->uid hashtable*/
 
         if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
         {
@@ -803,7 +802,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (profile)
   {
   #ifdef DEBUG
-    gchar* dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...",data->data);
+    gchar* dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...", (gchar*) data->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
   #endif
@@ -970,7 +969,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         }
 
         /*XXX: TODO: Check for keyword match and/or kick. Pass the current output buffer as argument.*/
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
         parse_message (message_t, devchat_cb_data_new (self->window, self->window->output));
         g_free (message_t);
@@ -1020,7 +1018,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     dbg ("Message list parsed.");
   #endif
 
-    /*TODO: Nur scrollen, wenn firstrun oder User nicht manuell hochgescrollt hat!*/
+    /*TODO: Scroll only if firstrun oder user has not scrolled manually!*/
     gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
     gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
@@ -1057,8 +1055,128 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
 
 void parse_message (gchar* message, DevchatCBData* data)
 {
-  /*XXX: visited-Attribut von URL-Tags per g_object_set/get_data*/
 
+  enum
+  {
+    STATE_DATA,
+    STATE_TYPECHECK,
+    STATE_CLOSETAG,
+    STATE_OPENTAG,
+    STATE_ATTR,
+    STATE_ATTRCONT
+  };
+
+
+  /*TODO &nbsp; isn't correctly parsed by libxml. Do manually.*/
+
+  xmlParserCtxtPtr narf = xmlNewParserCtxt();
+
+  xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
+
+  gchar* message_d = (gchar*) xmlStringDecodeEntities (narf, (xmlChar*) message, XML_SUBSTITUTE_BOTH, 0, 0, 0);
+  xmlFreeParserCtxt (narf);
+
+#ifdef DEBUG
+  gchar* dbg_msg = g_strdup_printf ("(!!) Decoded message: %s", message_d);
+  dbg (dbg_msg);
+  g_free (dbg_msg);
+#endif
+
+  /*XXX: set visited-attribute of links via g_object_set/get_data.*/
+  gchar current[2];
+  current[0] = 32;
+  current[1] = 0;
+  gchar* content = "";
+  GSList* taglist = NULL;
+  GSList* stack = g_slist_prepend (NULL, "Γ");
+
+  GObject* current_tag = g_object_new (G_TYPE_OBJECT, NULL);
+  g_object_set_data (current_tag, "name", NULL);
+  g_object_set_data (current_tag, "attrs", NULL);
+
+  gint state = STATE_DATA;
+
+  gint i;
+
+  for (i=0; i < strlen (message_d); i++)
+  {
+    current[0] = message_d[i];
+
+    if (state == STATE_DATA)
+    {
+      if (g_strcmp0 (current, "<") == 0)
+      {
+
+        GtkTextIter end;
+
+        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
+        content = "";
+
+        state = STATE_TYPECHECK;
+      }
+      else
+      {
+        content = g_strconcat (content, current, NULL);
+      }
+    }
+    else if (state == STATE_TYPECHECK)
+    {
+      if (g_strcmp0 (current, "/") == 0 && g_strcmp0(stack->data, "O") == 0)
+      {
+        GSList* tmp = stack;
+        stack = stack->next;
+        g_slist_free_1 (tmp);
+
+        state = STATE_CLOSETAG;
+      }
+      else
+      {
+        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+
+        stack = g_slist_prepend (stack, "O");
+        state = STATE_OPENTAG;
+      }
+    }
+    else if (state == STATE_CLOSETAG)
+    {
+      if (g_strcmp0 (current, ">") == 0)
+      {
+        GSList* tmp = taglist;
+        taglist = taglist->next;
+
+        GObject* top = tmp->data;
+
+        g_printf ("Closing Tag %s.", g_object_get_data(top,"name"));
+
+        if (g_strcmp0 (g_object_get_data(top,"name"),"font"))
+          g_print ("Found font tag!");
+        /*TODO: Apply matching tag and remove tag from list.*/
+        state = STATE_DATA;
+      }
+      else
+      {
+        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+      }
+    }
+    else if (state == STATE_OPENTAG)
+    {
+      if (g_strcmp0 (current, ">") == 0)
+      {
+        state = STATE_DATA;
+        taglist = g_slist_prepend (taglist, current_tag);
+      }
+      else if (g_strcmp0 (current, " ") == 0)
+      {
+        //state = STATE_ATTR;
+      }
+      else
+      {
+        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+      }
+    }
+    /*TODO: States attr, attrcont*/
+  }
 }
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
@@ -1151,7 +1269,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
 
   if (g_strcmp0("",text) != 0)
   {
-    /*TODO: Linebuffer füllen.*/
+    /*TODO: Fill linebuffer.*/
     gtk_text_buffer_set_text (buf, "", 0);
     unsigned char enc_text[strlen(text)*10];
     int il,ol;

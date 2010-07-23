@@ -5,7 +5,7 @@ CCARGS = -O2 -Wall
 
 all:
 	mkdir -p _build/bin
-	$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+	$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 	rm -rv _build

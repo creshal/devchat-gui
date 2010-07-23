@@ -17,7 +17,7 @@
  */
 
 #ifndef __DEVCHAT_CB_DATA_H__
-#define __DEVCHAT_DB_DATA_H__
+#define __DEVCHAT_CB_DATA_H__
 
 #include "devchat_window.h"
 
