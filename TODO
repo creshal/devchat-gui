@@ -1,7 +1,7 @@
 Only *new* features/bugfixes relative to python devchat-gui 1.30:
 
 Fix:
-    - 14 jun 2010: fubard greenie pseudohtml breaks chat
+    - 14 jun 2010: fubard greenie pseudohtml breaks chat (should be fixed by new parser)
     - Session reinitialisation after long timeouts, e.g. due to standby/network down (I hate you, eduroam). Probably reopen main site?
 
 New:
