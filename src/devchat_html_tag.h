@@ -19,7 +19,9 @@
 #ifndef __DEVCHAT_HTML_TAG_H__
 #define __DEVCHAT_HTML_TAG_H__
 
-#include "devchat_html_attr.h"
+#include <glib.h>
+#include <gtk/gtk.h>
+#include <glib-2.0/glib-object.h>
 
 #define DEVCHAT_TYPE_HTML_TAG            (devchat_html_tag_get_type ())
 #define DEVCHAT_HTML_TAG(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), DEVCHAT_TYPE_HTML_TAG, DevchatHTMLTag))
@@ -36,7 +38,8 @@ struct _DevchatHTMLTag
   GObject parent_instance;
 
   gchar* name;
-  DevchatHTMLAttribute[] attrs;
+  GtkTextMark* start_mark;
+  GSList* attrs;
 };
 
 struct _DevchatHTMLTagClass
@@ -44,7 +47,7 @@ struct _DevchatHTMLTagClass
   GObjectClass parent_class;
 };
 
-DevchatHTMLTag* devchat_html_tag_new (gchar* name);
+DevchatHTMLTag* devchat_html_tag_new ();
 
 
 GType devchat_html_tag_get_type (void);

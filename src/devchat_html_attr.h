@@ -45,7 +45,7 @@ struct _DevchatHTMLAttrClass
   GObjectClass parent_class;
 };
 
-DevchatHTMLAttr* devchat_html_attr_new (gchar* name, gchar* value);
+DevchatHTMLAttr* devchat_html_attr_new ();
 
 
 GType devchat_html_attr_get_type (void);

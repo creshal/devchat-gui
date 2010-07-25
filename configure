@@ -28,6 +28,7 @@ install:
 parser = optparse.OptionParser()
 parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local/bin",help="Installation prefix.")
 parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
+parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Like debug, but without the textwalls of doom(tm). Useful for automated debugging.")
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications.")
 parser.add_option("-a","--enable-audio",action="store_true",dest="audio",default=True,help="Enable audio notifications.")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=True,help="Enable Off-The-Record encryption support.")
@@ -39,6 +40,8 @@ ccargs = "-O2 -Wall"
 
 if options.debug:
   f.write('#define DEBUG\n')
+  ccargs = "-g -O0 -Wall"
+if options.debugS:
   ccargs = "-g -O0 -Wall"
 if options.notify:
   libs += " libnotify"

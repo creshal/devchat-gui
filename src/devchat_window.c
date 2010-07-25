@@ -18,6 +18,8 @@
 
 #include "devchat_window.h"
 #include "devchat_cb_data.h"
+#include "devchat_html_tag.h"
+#include "devchat_html_attr.h"
 
 void notify_cb ();
 void urlopen ();
@@ -58,7 +60,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (gchar* message, DevchatCBData* self);
+void parse_message (gchar* message, DevchatCBData* self, xmlParserCtxtPtr ctxt);
 gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
@@ -959,19 +961,26 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         if (user_level > 5)
           name_color_tag = "greenie";
 
-        if (show_name != 0)
-        {
-          gtk_text_buffer_get_end_iter (self->window->output, &end);
-          gchar* name_t = g_strdup_printf (" %s: ",name);
-
-          gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
-          g_free (name_t);
-        }
+        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
+        gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+        g_free (name_t);
 
         /*XXX: TODO: Check for keyword match and/or kick. Pass the current output buffer as argument.*/
+
+        xmlParserCtxtPtr narf = xmlNewParserCtxt();
+        xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
+
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
-        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output));
+
+        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output),narf);
+
         g_free (message_t);
+        xmlFreeParserCtxt (narf);
+
+      #ifdef DEBUG
+        dbg ("Message parsed, applying level tags...");
+      #endif
 
         GtkTextIter start;
         gtk_text_buffer_get_iter_at_mark (self->window->output, &start, old_start);
@@ -1053,7 +1062,7 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "ul6", NULL);
 }
 
-void parse_message (gchar* message, DevchatCBData* data)
+void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
 {
 
   enum
@@ -1069,16 +1078,15 @@ void parse_message (gchar* message, DevchatCBData* data)
 
   /*TODO &nbsp; isn't correctly parsed by libxml. Do manually.*/
 
-  xmlParserCtxtPtr narf = xmlNewParserCtxt();
+  gchar* message_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) message, XML_SUBSTITUTE_BOTH, 0, 0, 0);
 
-  xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
+  GtkTextIter old_end;
 
-  gchar* message_d = (gchar*) xmlStringDecodeEntities (narf, (xmlChar*) message, XML_SUBSTITUTE_BOTH, 0, 0, 0);
-  xmlFreeParserCtxt (narf);
+  GtkTextTagTable* table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (data->data));
 
 #ifdef DEBUG
-  gchar* dbg_msg = g_strdup_printf ("(!!) Decoded message: %s", message_d);
-  dbg (dbg_msg);
+  gchar* dbg_msg = g_strdup_printf ("(!!) Decoded message: %s\n", message_d);
+  g_print (dbg_msg);
   g_free (dbg_msg);
 #endif
 
@@ -1090,26 +1098,42 @@ void parse_message (gchar* message, DevchatCBData* data)
   GSList* taglist = NULL;
   GSList* stack = g_slist_prepend (NULL, "Γ");
 
-  GObject* current_tag = g_object_new (G_TYPE_OBJECT, NULL);
-  g_object_set_data (current_tag, "name", NULL);
-  g_object_set_data (current_tag, "attrs", NULL);
+  DevchatHTMLTag* current_tag = devchat_html_tag_new ();
+  DevchatHTMLAttr* current_attr = devchat_html_attr_new ();
 
   gint state = STATE_DATA;
 
   gint i;
 
+#ifdef DEBUG
+  dbg ("Starting parser loop...\n");
+#endif
+
+  /*TODO: Create a textmark for every tag.*/
+
   for (i=0; i < strlen (message_d); i++)
   {
     current[0] = message_d[i];
 
+  #ifdef DEBUG
+    g_printf ("Current char: %s.\n", current);
+  #endif
+
     if (state == STATE_DATA)
     {
+    #ifdef DEBUG
+      g_print ("State: Data\n");
+    #endif
+
       if (g_strcmp0 (current, "<") == 0)
       {
+      #ifdef DEBUG
+        g_printf ("Detected <, switching to state typecheck and dumping content %s.\n", content);
+      #endif
 
         GtkTextIter end;
-
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+
         gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
         content = "";
 
@@ -1117,13 +1141,26 @@ void parse_message (gchar* message, DevchatCBData* data)
       }
       else
       {
+      #ifdef DEBUG
+        g_print ("Adding char to content.\n");
+      #endif
+
         content = g_strconcat (content, current, NULL);
+
       }
     }
     else if (state == STATE_TYPECHECK)
     {
-      if (g_strcmp0 (current, "/") == 0 && g_strcmp0(stack->data, "O") == 0)
+    #ifdef DEBUG
+      g_print ("State: Type check.\n");
+    #endif
+
+      if (g_strcmp0 (current, "/") == 0 && g_strcmp0 (stack->data, "O") == 0)
       {
+      #ifdef DEBUG
+        g_print ("Detecting closing tag.\n");
+      #endif
+
         GSList* tmp = stack;
         stack = stack->next;
         g_slist_free_1 (tmp);
@@ -1132,51 +1169,212 @@ void parse_message (gchar* message, DevchatCBData* data)
       }
       else
       {
-        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+      #ifdef DEBUG
+        g_print ("Adding current to tag name and switching to state open tag.\n");
+      #endif
 
-        stack = g_slist_prepend (stack, "O");
+        current_tag->name = g_strconcat (current_tag->name, current, NULL);
+
+        stack = g_slist_prepend (stack, g_strdup("O"));
         state = STATE_OPENTAG;
       }
     }
     else if (state == STATE_CLOSETAG)
     {
+    #ifdef DEBUG
+      g_print ("State: Close tag.\n");
+    #endif
+
       if (g_strcmp0 (current, ">") == 0)
       {
         GSList* tmp = taglist;
-        taglist = taglist->next;
+        if (taglist->next)
+        {
+          taglist = taglist->next;
+        }
 
-        GObject* top = tmp->data;
+        DevchatHTMLTag* top = tmp->data;
+        /*XXX: Close actually closed tag, not the last one.*/
 
-        g_printf ("Closing Tag %s.", g_object_get_data(top,"name"));
+      #ifdef DEBUG
+        g_printf ("Closing Tag %s.\n", top->name);
+      #endif
 
-        if (g_strcmp0 (g_object_get_data(top,"name"),"font"))
-          g_print ("Found font tag!");
-        /*TODO: Apply matching tag and remove tag from list.*/
+        gchar* tagname = NULL;
+
+        if (g_strcmp0 (top->name,"font")==0)
+        {
+        #ifdef DEBUG
+          g_print ("Found font tag!\n");
+        #endif
+
+          if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "color") == 0)
+          {
+            tagname = color_lookup (((DevchatHTMLAttr*) top->attrs->data)->value);
+
+          #ifdef DEBUG
+            g_printf ("Color attribute with value %s.\n", tagname);
+          #endif
+
+            if (!gtk_text_tag_table_lookup (table, tagname))
+              gtk_text_buffer_create_tag (GTK_TEXT_BUFFER (data->data), tagname, "foreground", tagname, NULL);
+          }
+        }
+        else if (g_strcmp0 (top->name,"i")==0)
+        {
+          tagname = "italic";
+        }
+        /*TODO: Apply matching tag.*/
+
+
+        if (tagname)
+        {
+        #ifdef DEBUG
+          g_printf ("Applying tag %s.\n", tagname);
+        #endif
+
+          GtkTextIter end;
+          GtkTextIter start;
+          gtk_text_buffer_get_iter_at_mark (GTK_TEXT_BUFFER (data->data), &start, top->start_mark);
+          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+
+          gtk_text_buffer_apply_tag_by_name (GTK_TEXT_BUFFER (data->data), tagname, &start, &end);
+        }
+
+        gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (data->data), top->start_mark);
+        g_slist_free_1 (tmp);
+
+
+        current_tag = devchat_html_tag_new ();
+
         state = STATE_DATA;
       }
       else
       {
-        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+      #ifdef DEBUG
+        g_print ("Adding current to tag name.\n");
+      #endif
+
+        current_tag->name = g_strconcat (current_tag->name, current, NULL);
       }
     }
     else if (state == STATE_OPENTAG)
     {
+    #ifdef DEBUG
+      g_print ("State: Open tag.\n");
+    #endif
+
       if (g_strcmp0 (current, ">") == 0)
       {
+      #ifdef DEBUG
+        g_print ("Detecting closing of tag definition, going back to data state.\n");
+      #endif
+
         state = STATE_DATA;
+
+        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
+        current_tag->start_mark = gtk_text_mark_new (NULL, TRUE);
+        gtk_text_buffer_add_mark (GTK_TEXT_BUFFER (data->data), current_tag->start_mark, &old_end);
+
         taglist = g_slist_prepend (taglist, current_tag);
+        current_tag = devchat_html_tag_new ();
       }
       else if (g_strcmp0 (current, " ") == 0)
       {
-        //state = STATE_ATTR;
+      #ifdef DEBUG
+        g_print ("Detecting end of tag name definition, switching to state attribute.\n");
+      #endif
+        state = STATE_ATTR;
       }
       else
       {
-        g_object_set_data (current_tag, "name", g_strconcat (current_tag->name, current, NULL));
+      #ifdef DEBUG
+        g_print ("Adding current to tag name.\n");
+      #endif
+
+        current_tag->name = g_strconcat (current_tag->name, current, NULL);
       }
     }
-    /*TODO: States attr, attrcont*/
+    else if (state == STATE_ATTR)
+    {
+    #ifdef DEBUG
+      g_print ("State: Attribute.\n");
+    #endif
+
+      if (g_strcmp0 (current, "=") == 0)
+      {
+      #ifdef DEBUG
+        g_print ("Detecting value definition start. Switching to state attribute content.\n");
+      #endif
+
+        i++;
+        stack = g_slist_prepend (stack, g_strdup ("\""));
+        state = STATE_ATTRCONT;
+      }
+      else if (g_strcmp0 (current, " ") == 0)
+      {
+      #ifdef DEBUG
+        g_print ("Detecting end of attribute, switching back to state open tag.\n");
+      #endif
+
+        current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
+        current_attr = devchat_html_attr_new ();
+        state = STATE_OPENTAG;
+        i--;
+      }
+      else if (g_strcmp0 (current, ">") == 0)
+      {
+      #ifdef DEBUG
+        g_print ("Detected tag end, switching back to state data.\n");
+      #endif
+
+        current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
+        current_attr = devchat_html_attr_new ();
+
+        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
+        current_tag->start_mark = gtk_text_mark_new (NULL, TRUE);
+        gtk_text_buffer_add_mark (GTK_TEXT_BUFFER (data->data), current_tag->start_mark, &old_end);
+
+        taglist = g_slist_prepend (taglist, current_tag);
+        current_tag = devchat_html_tag_new ();
+
+        state = STATE_DATA;
+      }
+      else
+      {
+      #ifdef DEBUG
+        g_print ("Adding current to attribute name.\n");
+      #endif
+        current_attr->name = g_strconcat (current_attr->name, current, NULL);
+      }
+    }
+    else if (state == STATE_ATTRCONT)
+    {
+      if (g_strcmp0 (current, "\"") == 0)
+      {
+      #ifdef DEBUG
+        g_print ("Detected \", switching back to state attribute and pop()'ing stack.\n");
+      #endif
+
+        state = STATE_ATTR;
+
+        GSList* tmp = stack;
+        stack = stack->next;
+        g_slist_free_1 (tmp);
+      }
+      else
+      {
+      #ifdef DEBUG
+        g_print ("Adding current to attribute valute.\n");
+      #endif
+
+        current_attr->value = g_strconcat (current_attr->value, current, NULL);
+      }
+    }
   }
+#ifdef DEBUG
+  g_print ("Parsing done.");
+#endif
 }
 
 gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
@@ -1278,6 +1476,8 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     if (htmlEncodeEntities ((unsigned char*) enc_text, &ol, (unsigned char*) text, &il, 0) < 0)
       g_error ("Encoding failed!");
     enc_text[ol] = 0;
+
+    /*TODO: s/CR/CRLF/ */
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;

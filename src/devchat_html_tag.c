@@ -20,11 +20,12 @@
 
 G_DEFINE_TYPE (DevchatHTMLTag, devchat_html_tag, G_TYPE_OBJECT);
 
-DevchatHTMLTag* devchat_html_tag_new (gchar* name)
+DevchatHTMLTag* devchat_html_tag_new ()
 {
   DevchatHTMLTag* obj = g_object_new (DEVCHAT_TYPE_HTML_TAG, NULL);
 
-  obj->name = name;
+  obj->name = "";
+  obj->attrs = NULL;
 
   return obj;
 }

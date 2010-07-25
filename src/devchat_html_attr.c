@@ -20,12 +20,12 @@
 
 G_DEFINE_TYPE (DevchatHTMLAttr, devchat_html_attr, G_TYPE_OBJECT);
 
-DevchatHTMLAttr* devchat_html_attr_new (gchar* name, gchar* value)
+DevchatHTMLAttr* devchat_html_attr_new ()
 {
   DevchatHTMLAttr* obj = g_object_new (DEVCHAT_TYPE_HTML_ATTR, NULL);
 
-  obj->name = name;
-  obj->value = value;
+  obj->name = "";
+  obj->value = "";
 
   return obj;
 }
