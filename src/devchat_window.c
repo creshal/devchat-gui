@@ -1225,7 +1225,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         if (g_strcmp0 (top->name,"font")==0)
         {
         #ifdef DEBUG
-          g_print ("Found font tag!\n");
+          g_printf ("Found font tag! Attribute:%s \n",((DevchatHTMLAttr*) top->attrs->data)->name);
         #endif
 
           if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "color") == 0)
@@ -1398,7 +1398,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         state = STATE_OPENTAG;
         i--;
       }
-      if (g_strcmp0 (current, ">") == 0)
+      else if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
         g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
