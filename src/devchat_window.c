@@ -48,7 +48,6 @@ void about_cb (GtkWidget* widget, DevchatCBData* data);
 void at_cb (GtkWidget* widget, DevchatCBData* data);
 void pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
-void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 
 void create_tags (GtkTextBuffer* buf, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
@@ -60,7 +59,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (gchar* message, DevchatCBData* self, xmlParserCtxtPtr ctxt);
+void parse_message (gchar* message, DevchatCBData* self, xmlParserCtxtPtr ctxt, GRegex* regex);
 gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
@@ -462,6 +461,10 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
 #ifdef NOTIFY
   notify_uninit ();
 #endif
+
+  SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
+  soup_session_send_message (data->window->session, msg);
+
   if (!(data->window->firstrun))
   {
     soup_session_abort (data->window->session);
@@ -851,7 +854,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       SoupMessage* a_m = soup_message_new ("GET", ava_url);
       if (soup_session_send_message (s, a_m) == 200)
       {
-        /*XXX: Workaround for imageshack being TOO MOTHERFUCKING RETARDED to return a 404.*/
+        /*Workaround for imageshack being TOO MOTHERFUCKING RETARDED to return a 404.*/
         if (g_strcmp0 ("404", a_m->response_body->data) != 0)
         {
           GError* err = NULL;
@@ -966,14 +969,32 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
         g_free (name_t);
 
-        /*XXX: TODO: Check for keyword match and/or kick. Pass the current output buffer as argument.*/
+        /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
+
+        gchar* kickmsg = g_strconcat ("!KICK ",self->window->settings.user,NULL);
+
+        if (g_strstr_len (message, -1, kickmsg) && user_level > 5 && !(self->window->firstrun))
+        {
+        #ifdef DEBUG
+          dbg ("IN SOVIET RUSSIA, CHAT KICKS YOU.");
+        #endif
+          gtk_text_buffer_set_text (self->window->input, "[red](SovietServer):[/red] In Soviet Russia, chat kicks /me" ,-1);
+          btn_send (NULL, self);
+          destroy (NULL, self);
+        }
+
+        g_free (kickmsg);
 
         xmlParserCtxtPtr narf = xmlNewParserCtxt();
         xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
 
+        GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
+
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
-        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output),narf);
+        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output), narf, regex);
+
+        g_free (regex);
 
         g_free (message_t);
         xmlFreeParserCtxt (narf);
@@ -1062,7 +1083,7 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "ul6", NULL);
 }
 
-void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
+void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, GRegex* regex)
 {
 
   enum
@@ -1075,10 +1096,12 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
     STATE_ATTRCONT
   };
 
+  gchar* message_r = g_regex_replace (regex, message, -1, 0, "\xc2\xa0", 0 , NULL);
 
-  /*TODO &nbsp; isn't correctly parsed by libxml. Do manually.*/
+  gchar* message_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) message_r, XML_SUBSTITUTE_BOTH, 0, 0, 0);
 
-  gchar* message_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) message, XML_SUBSTITUTE_BOTH, 0, 0, 0);
+  g_free (message_r);
+
 
   GtkTextIter old_end;
 
@@ -1090,7 +1113,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
   g_free (dbg_msg);
 #endif
 
-  /*XXX: set visited-attribute of links via g_object_set/get_data.*/
   gchar current[2];
   current[0] = 32;
   current[1] = 0;
@@ -1108,8 +1130,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
 #ifdef DEBUG
   dbg ("Starting parser loop...\n");
 #endif
-
-  /*TODO: Create a textmark for every tag.*/
 
   for (i=0; i < strlen (message_d); i++)
   {
@@ -1224,7 +1244,49 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
         {
           tagname = "italic";
         }
-        /*TODO: Apply matching tag.*/
+        else if (g_strcmp0 (top->name,"u")==0)
+        {
+          tagname = "underline";
+        }
+        else if (g_strcmp0 (top->name,"b")==0)
+        {
+          tagname = "bold";
+        }
+        else if (g_strcmp0 (top->name,"BR")==0)
+        {
+          GtkTextIter fnord;
+
+          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
+
+          gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &fnord, "\n", -1);
+        }
+        else if (g_strcmp0 (top->name,"span")==0)
+        {
+          if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "class") == 0
+              && g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->value, "chatname_green") == 0)
+            tagname = "greenie";
+        }
+        else if (g_strcmp0 (top->name,"img")==0)
+        {
+          /*TODO: Not always working. The hell.*/
+          GtkTextIter fnord;
+
+          GdkPixbuf* smilie = (GdkPixbuf*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
+          if (smilie)
+          {
+            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
+            gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
+          }
+          else
+          {
+            /*TODO: Download & import.*/
+          }
+        }
+        else if (g_strcmp0 (top->name,"a")==0)
+        {
+          /*TODO: Class URLTag.*/
+        }
+        /*TODO: other tags.*/
 
 
         if (tagname)
@@ -1241,7 +1303,8 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
           gtk_text_buffer_apply_tag_by_name (GTK_TEXT_BUFFER (data->data), tagname, &start, &end);
         }
 
-        gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (data->data), top->start_mark);
+        if (top->start_mark)
+          gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (data->data), top->start_mark);
         g_slist_free_1 (tmp);
 
 
@@ -1267,10 +1330,23 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
       if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detecting closing of tag definition, going back to data state.\n");
+        g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
       #endif
+        /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
+        if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
+        {
+        #ifdef DEBUG
+          g_print ("Closing void tag.\n");
+        #endif
+          state = STATE_CLOSETAG;
+          i--;
+        }
+        else
+        {
+          state = STATE_DATA;
 
-        state = STATE_DATA;
+          /*TODO: HTML comments.*/
+        }
 
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
         current_tag->start_mark = gtk_text_mark_new (NULL, TRUE);
@@ -1322,11 +1398,24 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
         state = STATE_OPENTAG;
         i--;
       }
-      else if (g_strcmp0 (current, ">") == 0)
+      if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detected tag end, switching back to state data.\n");
+        g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
       #endif
+        /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
+        if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
+        {
+        #ifdef DEBUG
+          g_print ("Closing void tag.\n");
+        #endif
+          state = STATE_CLOSETAG;
+          i--;
+        }
+        else
+        {
+          state = STATE_DATA;
+        }
 
         current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
         current_attr = devchat_html_attr_new ();
@@ -1337,8 +1426,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt)
 
         taglist = g_slist_prepend (taglist, current_tag);
         current_tag = devchat_html_tag_new ();
-
-        state = STATE_DATA;
       }
       else
       {
@@ -1469,7 +1556,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   {
     /*TODO: Fill linebuffer.*/
     gtk_text_buffer_set_text (buf, "", 0);
-    unsigned char enc_text[strlen(text)*10];
+    char enc_text[strlen(text)*10];
     int il,ol;
     ol = strlen(text)*7;
     il = strlen(text);
@@ -1477,7 +1564,9 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       g_error ("Encoding failed!");
     enc_text[ol] = 0;
 
-    /*TODO: s/CR/CRLF/ */
+    GRegex* re = g_regex_new ("\n", 0, 0, NULL);
+
+    gchar* re_text = g_regex_replace (re, enc_text, -1, 0, "\r\n", 0, NULL);
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
@@ -1492,15 +1581,14 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     }
 
     SoupMessage* post = soup_form_request_new("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj","cmd",
-      "post","chatlevel",sendlevel,"textinput", enc_text, NULL);
-    soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (post_sent), data);
+      "post","chatlevel",sendlevel,"textinput", re_text, NULL);
+    soup_session_send_message (data->window->session, post);
 
     g_free (text);
+    g_free (re);
+    g_free (re_text);
   }
 }
-
-void post_sent (SoupSession* s, SoupMessage* m, DevchatCBData* data)
-{}
 
 void btn_format (GtkWidget* widget, DevchatCBData* data)
 {
