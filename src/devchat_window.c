@@ -20,6 +20,7 @@
 #include "devchat_cb_data.h"
 #include "devchat_html_tag.h"
 #include "devchat_html_attr.h"
+#include "devchat_url_tag.h"
 
 void notify_cb ();
 void urlopen ();
@@ -861,7 +862,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
           if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &err))
           {
-            g_warning (err->message);
+            g_printf ("Error while saving avatar: %s.", err->message);
             g_error_free (err);
           }
           g_free (filename);
@@ -942,6 +943,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
         gulong msg_level = strtoll (mode+2,NULL,10);
 
+        /*TODO: Private message windows. */
+
         GtkTextIter end;
         GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
         gtk_text_buffer_get_end_iter (self->window->output, &end);
@@ -1020,6 +1023,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
         switch (msg_level)
         {
+          case 0:
           case 1: taglevel = g_strdup ("l1"); break;
           case 3: taglevel = g_strdup ("l3"); break;
           case 5: taglevel = g_strdup ("l5"); break;
@@ -1268,17 +1272,30 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         }
         else if (g_strcmp0 (top->name,"img")==0)
         {
-          /*TODO: Not always working. The hell.*/
+        #ifdef DEBUG
+          g_print ("Parsing img tag...\n");
+        #endif
           GtkTextIter fnord;
+          GdkPixbuf* smilie = NULL;
 
-          GdkPixbuf* smilie = (GdkPixbuf*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
+          if (top->attrs->next && top->attrs->next->next)
+            smilie = (GdkPixbuf*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
+
+
           if (smilie)
           {
+          #ifdef DEBUG
+            g_print ("Found smilie in database. \n");
+          #endif
             gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
             gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
           }
+
           else
           {
+          #ifdef DEBUG
+            g_print ("Downloading image... \n");
+          #endif
             /*TODO: Download & import.*/
           }
         }
@@ -1713,7 +1730,7 @@ gchar* current_time ()
 
 void err(gchar* message)
 {
-  g_warning (message);
+  g_warning ("ERROR: %s.", message);
 }
 
 #ifdef DEBUG

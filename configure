@@ -10,7 +10,7 @@ libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 makefile = """
 all:
 \tmkdir -p _build/bin
-\t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+\t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_url_tag.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 \trm -rv _build
@@ -60,7 +60,11 @@ f.close()
 m = open("Makefile","w")
 
 if os.name == "posix":
-  m.write("CC = gcc\n")
+  if os.path.exists("/usr/bin/clang") or os.path.exists("/usr/local/bin/clang"):
+    print "Detected CLang compiler, using it."
+    m.write ("CC = clang\n")
+  else:
+    m.write("CC = clang\n")
 elif os.name == "nt":
   print "Windows support unfinished!"
   sys.exit()
