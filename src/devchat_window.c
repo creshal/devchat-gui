@@ -629,6 +629,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
 
     /*TODO: Sizegroup for all Avatar buttons (to enforce fixed width).*/
+    GtkSizeGroup* sg = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
 
     guint usercount = 0;
     while (xmlTextReaderRead (userparser) > 0)
@@ -715,6 +716,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, "default");
 
           gtk_button_set_image (GTK_BUTTON (profile_btn), gtk_image_new_from_pixbuf (ava));
+          gtk_size_group_add_widget (sg, profile_btn);
 
           if (real_level > 5)
             color = data->window->settings.color_greens;
@@ -1307,8 +1309,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           g_printf ("Inserting link to %s.\n", tagname);
         #endif
 
-
-
           if (!gtk_text_tag_table_lookup (table, tagname))
           {
             DevchatURLTag* tag = devchat_url_tag_new (tagname, data->window->settings.color_url);
@@ -1316,7 +1316,12 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
           }
         }
-        /*TODO: other tags.*/
+        #ifdef DEBUG
+        else
+        {
+          g_warning ("Tag %s not implemented.", top->name);
+        }
+        #endif
 
 
         if (tagname)

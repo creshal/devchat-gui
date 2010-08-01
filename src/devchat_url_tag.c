@@ -25,7 +25,7 @@ G_DEFINE_TYPE (DevchatURLTag, devchat_url_tag, GTK_TYPE_TEXT_TAG);
 
 DevchatURLTag* devchat_url_tag_new (gchar* name, gchar* color)
 {
-  return g_object_new (DEVCHAT_TYPE_URL_TAG, "name", name, "foreground", color, NULL);
+  return g_object_new (DEVCHAT_TYPE_URL_TAG, "name", name, "foreground", color, "underline", PANGO_UNDERLINE_SINGLE, NULL);
 }
 
 static void
