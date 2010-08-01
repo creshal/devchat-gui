@@ -23,6 +23,8 @@
 #include <glib-2.0/glib-object.h>
 #include <gtk/gtktexttag.h>
 
+G_BEGIN_DECLS
+
 #define DEVCHAT_TYPE_URL_TAG            (devchat_url_tag_get_type ())
 #define DEVCHAT_URL_TAG(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), DEVCHAT_TYPE_URL_TAG, DevchatURLTag))
 #define DEVCHAT_IS_URL_TAG(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), DEVCHAT_TYPE_URL_TAG))
@@ -45,8 +47,10 @@ struct _DevchatURLTagClass
   GtkTextTagClass parent_class;
 };
 
-DevchatURLTag* devchat_url_tag_new ();
+DevchatURLTag* devchat_url_tag_new (gchar* name, gchar* color);
 
-GType devchat_url_tag_get_type (void);
+GType devchat_url_tag_get_type (void) G_GNUC_CONST;
+
+G_END_DECLS;
 
 #endif /* __DEVCHAT_URL_TAG_H__ */

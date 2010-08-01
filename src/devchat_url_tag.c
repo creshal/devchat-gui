@@ -18,23 +18,53 @@
 
 #include "devchat_url_tag.h"
 
-G_DEFINE_TYPE (DevchatURLTag, devchat_url_tag, G_TYPE_OBJECT);
+static void devchat_url_tag_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
+static void devchat_url_tag_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
 
-DevchatURLTag* devchat_url_tag_new ()
+G_DEFINE_TYPE (DevchatURLTag, devchat_url_tag, GTK_TYPE_TEXT_TAG);
+
+DevchatURLTag* devchat_url_tag_new (gchar* name, gchar* color)
 {
-  DevchatURLTag* obj = g_object_new (DEVCHAT_TYPE_URL_TAG, NULL);
-
-  obj->visited = FALSE;
-
-  return obj;
+  return g_object_new (DEVCHAT_TYPE_URL_TAG, "name", name, "foreground", color, NULL);
 }
 
 static void
 devchat_url_tag_init (DevchatURLTag* self)
 {
+
+  self->visited = FALSE;
 }
 
 static void
 devchat_url_tag_class_init (DevchatURLTagClass* klass)
 {
+  GObjectClass* gobject_class = G_OBJECT_CLASS (klass);
+
+  gobject_class->set_property = devchat_url_tag_set_property;
+  gobject_class->get_property = devchat_url_tag_get_property;
+
+  g_object_class_install_property (gobject_class, 1, g_param_spec_boolean
+                                                     ( "visited", "Visited",
+                                                       "Indicates whether the URL was visited.", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+
+}
+
+static void devchat_url_tag_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec)
+{
+  if (id == 1)
+  {
+    DevchatURLTag* tag = DEVCHAT_URL_TAG (object);
+    tag->visited = g_value_get_boolean (value);
+  }
+}
+
+static void devchat_url_tag_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec)
+{
+  if (id == 1)
+  {
+    DevchatURLTag* tag = DEVCHAT_URL_TAG (object);
+    g_value_set_boolean (value, tag->visited);
+  }
 }

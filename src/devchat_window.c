@@ -1301,7 +1301,20 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         }
         else if (g_strcmp0 (top->name,"a")==0)
         {
-          /*TODO: Class URLTag.*/
+          tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL);
+
+        #ifdef DEBUG
+          g_printf ("Inserting link to %s.\n", tagname);
+        #endif
+
+
+
+          if (!gtk_text_tag_table_lookup (table, tagname))
+          {
+            DevchatURLTag* tag = devchat_url_tag_new (tagname, data->window->settings.color_url);
+
+            gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
+          }
         }
         /*TODO: other tags.*/
 
