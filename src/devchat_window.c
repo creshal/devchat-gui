@@ -1710,10 +1710,12 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
   }
 }
 
+#ifdef NOTIFY
 void notify_cb(NotifyNotification* note, gchar* action, DevchatCBData* data)
 {
   gtk_window_present(GTK_WINDOW(data->window->window));
 }
+#endif
 
 gchar* current_time ()
 {
