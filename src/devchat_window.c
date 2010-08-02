@@ -643,7 +643,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
         gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
-        /*TODO: Fill n->uid hashtable*/
+        g_hash_table_insert (data->window->users, name, uid);
 
         if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
         {
@@ -1599,8 +1599,6 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
 
     gchar* re_text_a = g_regex_replace (re, enc_text, -1, 0, "\r\n", 0, NULL);
     gchar* re_text = g_regex_replace (plus, re_text_a, -1, 0, "&#43;", 0, NULL);
-
-
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
