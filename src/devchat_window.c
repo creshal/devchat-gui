@@ -644,7 +644,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
         gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
-        g_hash_table_insert (data->window->users, name, uid);
+        g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
 
         if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
         {
