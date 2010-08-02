@@ -1053,8 +1053,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     dbg ("Message list parsed.");
   #endif
 
-    /*TODO: Scroll only if firstrun oder user has not scrolled manually!*/
-    gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
+    GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
+    if (((a->value + a->page_size) / a->upper) > 0.9)
+      gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
     gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
     self->window->firstrun = FALSE;
