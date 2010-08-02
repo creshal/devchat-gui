@@ -83,6 +83,7 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* hpaned1 = gtk_hpaned_new();
 
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
+  self->users = g_hash_table_new (g_str_hash, g_str_equal);
   self->avatars = g_hash_table_new (g_str_hash, g_str_equal);
   self->settings.browser = g_strdup("<native>");
   self->settings.color_font = g_strdup("#eeeeec");
