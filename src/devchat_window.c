@@ -1591,13 +1591,9 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   {
     /*TODO: Fill linebuffer.*/
     gtk_text_buffer_set_text (buf, "", 0);
-    char enc_text[strlen(text)*10];
-    int il,ol;
-    ol = strlen(text)*7;
-    il = strlen(text);
-    if (htmlEncodeEntities ((unsigned char*) enc_text, &ol, (unsigned char*) text, &il, 0) < 0)
-      g_error ("Encoding failed!");
-    enc_text[ol] = 0;
+
+    xmlDocPtr p = xmlNewDoc("1.0");
+    gchar* enc_text = (gchar*) xmlEncodeEntitiesReentrant (p, (unsigned char*) text);
 
     GRegex* re = g_regex_new ("\n", 0, 0, NULL);
 
@@ -1618,6 +1614,10 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     SoupMessage* post = soup_form_request_new("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj","cmd",
       "post","chatlevel",sendlevel,"textinput", re_text, NULL);
     soup_session_send_message (data->window->session, post);
+
+
+    g_free (enc_text);
+    xmlFree (p);
 
     g_free (text);
     g_free (re);
