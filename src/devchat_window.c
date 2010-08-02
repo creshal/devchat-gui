@@ -628,7 +628,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
 
-    /*TODO: Sizegroup for all Avatar buttons (to enforce fixed width).*/
     GtkSizeGroup* sg = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
 
     guint usercount = 0;
@@ -1592,12 +1591,16 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     /*TODO: Fill linebuffer.*/
     gtk_text_buffer_set_text (buf, "", 0);
 
-    xmlDocPtr p = xmlNewDoc("1.0");
+    xmlDocPtr p = xmlNewDoc(BAD_CAST "1.0");
     gchar* enc_text = (gchar*) xmlEncodeEntitiesReentrant (p, (unsigned char*) text);
 
     GRegex* re = g_regex_new ("\n", 0, 0, NULL);
+    GRegex* plus = g_regex_new ("\\+", 0, 0, NULL);
 
-    gchar* re_text = g_regex_replace (re, enc_text, -1, 0, "\r\n", 0, NULL);
+    gchar* re_text_a = g_regex_replace (re, enc_text, -1, 0, "\r\n", 0, NULL);
+    gchar* re_text = g_regex_replace (plus, re_text_a, -1, 0, "&#43;", 0, NULL);
+
+
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
@@ -1618,7 +1621,8 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
 
     g_free (enc_text);
     xmlFree (p);
-
+    g_free (re_text_a);
+    g_free (plus);
     g_free (text);
     g_free (re);
     g_free (re_text);
