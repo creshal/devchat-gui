@@ -28,7 +28,7 @@ void user_list_get();
 void message_list_get();
 void login_cb ();
 void remote_level ();
-gboolean hotkey_cb ();
+gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data);
 void destroy (GtkWidget* widget, DevchatCBData* data);
 void login (GtkWidget* widget, DevchatCBData* data);
 void config_cb (GtkWidget* widget, DevchatCBData* data);
@@ -1301,7 +1301,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           //#ifdef DEBUG
             g_printf ("Searching for image %s... \n", uri);
           //#endif
-            /*TODO: Download & import.*/
 
             gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
 
@@ -1565,9 +1564,50 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 #endif
 }
 
-gboolean hotkey_cb (GtkWidget* w, DevchatCBData* data)
+gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
 {
-  /* TODO */
+  if (key->type == GDK_KEY_PRESS && (key->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
+  {
+    if (key->keyval == GDK_Up)
+    {
+      /*TODO: linebuffer.*/
+    }
+    else if (key->keyval == GDK_Down)
+    {
+      /*same*/
+    }
+    else if (data->window->userlevel > 1)
+    {
+      GdkColor new_bg;
+      if (key->keyval == GDK_1 || key->keyval == GDK_KP_1)
+      {
+        gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 0);
+        gdk_color_parse (data->window->settings.color_l1, &new_bg);
+        gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+      }
+      else if (key->keyval == GDK_3 || key->keyval == GDK_KP_3)
+      {
+        gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 1);
+        gdk_color_parse (data->window->settings.color_l3, &new_bg);
+        gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+      }
+      else if (data->window->userlevel > 3)
+      {
+        if (key->keyval == GDK_5 || key->keyval == GDK_KP_5)
+        {
+          gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 2);
+          gdk_color_parse (data->window->settings.color_l5, &new_bg);
+          gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+        }
+        else if (data->window->userlevel > 5 && (key->keyval == GDK_6 || key->keyval == GDK_KP_6))
+        {
+          gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 3);
+          gdk_color_parse (data->window->settings.color_l6, &new_bg);
+          gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+        }
+      }
+    }
+  }
   return FALSE;
 }
 
