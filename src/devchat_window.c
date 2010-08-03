@@ -1280,9 +1280,11 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         #endif
           GtkTextIter fnord;
           GdkPixbuf* smilie = NULL;
+          gchar* uri = NULL;
 
           if (top->attrs->next && top->attrs->next->next)
             smilie = (GdkPixbuf*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
+          uri = (gchar*) ((DevchatHTMLAttr*) top->attrs->next->data)->value;
 
 
           if (smilie)
@@ -1294,12 +1296,75 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
           }
 
-          else
+          else if (uri)
           {
-          #ifdef DEBUG
-            g_print ("Downloading image... \n");
-          #endif
+          //#ifdef DEBUG
+            g_printf ("Searching for image %s... \n", uri);
+          //#endif
             /*TODO: Download & import.*/
+
+            gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
+
+            gchar* filename = NULL;
+
+        #ifdef G_OS_WIN32
+          #ifdef FOLDERID_InternetCache
+            filename = g_build_filename (FOLDERID_InternetCache, g_strjoinv ("_",uri_parts), NULL);
+          #else
+            #ifdef CSIDL_INTERNET_CACHE
+            filename = g_build_filename (CSIDL_INTERNET_CACHE, g_strjoinv ("_",uri_parts), NULL);
+            #else
+            err ("Your system is fucked up.\n");
+            #endif
+          #endif
+        #else
+            filename = g_build_filename ("/tmp", g_strjoinv ("_",uri_parts), NULL);
+        #endif
+            g_strfreev (uri_parts);
+
+          #ifdef DEBUG
+            g_printf ("Writing image to %s.\n", filename);
+          #endif
+
+            if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+            {
+            #ifdef DEBUG
+              g_print ("File not in cache, downloading...\n");
+            #endif
+              SoupMessage* i_m = soup_message_new ("GET", uri);
+              if (soup_session_send_message (data->window->session, i_m) == 200)
+              {
+                GError* err = NULL;
+                if (!g_file_set_contents (filename, i_m->response_body->data, i_m->response_body->length, &err))
+                {
+                  g_printf ("Error while saving avatar: %s.", err->message);
+                  g_error_free (err);
+                }
+              }
+            }
+
+            GdkPixbuf* img = gdk_pixbuf_new_from_file (filename, NULL);
+
+            if (gdk_pixbuf_get_width (img) > 320)
+            {
+              GdkPixbuf* tmp = img;
+              img = gdk_pixbuf_scale_simple (img, 320, gdk_pixbuf_get_height (img) / (gdk_pixbuf_get_width (img)/320), GDK_INTERP_BILINEAR);
+              g_free (tmp);
+            }
+            else if (gdk_pixbuf_get_height (img) > 240)
+            {
+              GdkPixbuf* tmp = img;
+              img = gdk_pixbuf_scale_simple (img, gdk_pixbuf_get_width (img) / (gdk_pixbuf_get_height (img)/240), 240, GDK_INTERP_BILINEAR);
+              g_free (tmp);
+            }
+
+            GtkTextIter fnord;
+
+            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
+
+            gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, img);
+
+            g_free (filename);
           }
         }
         else if (g_strcmp0 (top->name,"a")==0)
