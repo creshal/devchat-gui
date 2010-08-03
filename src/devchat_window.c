@@ -37,8 +37,8 @@ void close_tab (GtkWidget* widget, DevchatCBData* data);
 void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, DevchatCBData* data);
 gboolean tab_changed_win (GtkWidget* widget, DevchatCBData* data);
-void on_motion (GtkWidget* widget, DevchatCBData* data);
-void on_mark_set (GtkWidget* widget, DevchatCBData* data);
+gboolean on_motion (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data);
+void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data);
 void level_changed (GtkWidget* widget, DevchatCBData* data);
 void btn_format (GtkWidget* widget, DevchatCBData* data);
 void btn_send (GtkWidget* widget, DevchatCBData* data);
@@ -317,7 +317,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->outputwidget), GTK_WRAP_WORD_CHAR);
   gtk_widget_set_size_request(self->outputwidget, 300,100);
   gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->outputwidget), 2);
-  g_signal_connect (self->output, "mark-set", G_CALLBACK(on_mark_set),self);
+  g_signal_connect (self->output, "mark-set", G_CALLBACK(on_mark_set),self_data);
   g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(on_motion),self_data);
 
   GtkWidget* scroller1 = gtk_scrolled_window_new (NULL, NULL);
@@ -1368,7 +1368,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         }
         else if (g_strcmp0 (top->name,"a")==0)
         {
-          tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL);
+          tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->next->data)->value, NULL);
 
         #ifdef DEBUG
           g_printf ("Inserting link to %s.\n", tagname);
@@ -1647,14 +1647,112 @@ gboolean tab_changed_win(GtkWidget* widget, DevchatCBData* data)
   return FALSE;
 }
 
-void on_motion(GtkWidget* widget, DevchatCBData* data)
+gboolean on_motion (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data)
 {
-  /*TODO*/
+  gint buf_x;
+  gint buf_y;
+
+  gtk_text_view_window_to_buffer_coords (GTK_TEXT_VIEW (widget), GTK_TEXT_WINDOW_TEXT, m->x, m->y, &buf_x, &buf_y);
+
+  GtkTextIter iter;
+  gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW (widget), &iter, buf_x, buf_y);
+
+  gboolean found = FALSE;
+
+  GSList* tag = gtk_text_iter_get_tags (&iter);
+
+  while (tag && !(found))
+  {
+    gchar* name;
+    g_object_get (tag->data, "name", &name, NULL);
+
+    if (name && g_str_has_prefix (name, "url::"))
+    {
+      gtk_widget_set_tooltip_text (widget, name+5);
+      g_object_set (tag->data, "foreground", data->window->settings.color_url_hover, NULL);
+      found = TRUE;
+      data->window->hovertag = tag->data;
+      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link")
+                        );
+      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link"),
+                          name+5
+                         );
+    }
+
+    tag = tag->next;
+  }
+
+  if (!found)
+  {
+    gtk_widget_set_has_tooltip (widget, FALSE);
+    gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                       gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link")
+                      );
+    if (data->window->hovertag)
+    {
+      gboolean visited;
+      g_object_get (data->window->hovertag, "visited", &visited, NULL);
+
+      g_object_set (data->window->hovertag, "foreground", visited? data->window->settings.color_url_visited:data->window->settings.color_url, NULL);
+      data->window->hovertag = NULL;
+    }
+  }
+
+  return FALSE;
 }
 
-void on_mark_set(GtkWidget* widget, DevchatCBData* data)
+void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data)
 {
-  /*TODO*/
+  if (g_strcmp0 (gtk_text_mark_get_name (mark), "selection_bound") == 0)
+  {
+    GSList* tag = gtk_text_iter_get_tags (iter);
+
+    while (tag)
+    {
+      gchar* name;
+      g_object_get (tag->data, "name", &name, NULL);
+
+      if (name && g_str_has_prefix (name, "url::"))
+      {
+        gchar* uri = g_shell_quote (name+5);
+
+      #ifdef DEBUG
+        g_printf ("Quoted URI: %s\n", uri);
+      #endif
+        if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
+        {
+        #ifdef G_OS_WIN32
+          ShellExecute (NULL, NULL, uri, NULL, NULL, SW_SHOWNORMAL);
+          /*TODO: Win32 default browser.*/
+        #else
+          if (!g_file_test ("/usr/bin/x-www-browser", G_FILE_TEST_EXISTS))
+          {
+            err ("Your system doesn't have a native browser!");
+            data->window->settings.browser = "<none>";
+          }
+          else
+          {
+            gchar* commandline = g_strconcat ("/usr/bin/x-www-browser ", uri, NULL);
+            g_spawn_command_line_async (commandline, NULL);
+            g_free (commandline);
+          }
+        #endif
+        }
+        else if (g_strcmp0 (data->window->settings.browser,"<none>") != 0)
+        {
+          gchar* commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
+          g_spawn_command_line_async (commandline, NULL);
+          g_free (commandline);
+        }
+
+        g_object_set (tag->data, "visited", TRUE, NULL);
+        g_object_set (tag->data, "foreground", data->window->settings.color_url_visited, NULL);
+      }
+      tag = tag->next;
+    }
+  }
 }
 
 void level_changed (GtkWidget* widget, DevchatCBData* data)

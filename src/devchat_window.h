@@ -20,6 +20,7 @@
 #define __DEVCHAT_WINDOW_H__
 
 #include "config.h"
+#include "devchat_url_tag.h"
 
 #include <glib.h>
 #include <glib-2.0/glib-object.h>
@@ -33,6 +34,10 @@
 #include <libxml/parserInternals.h>
 
 #include <libsoup-2.4/libsoup/soup.h>
+
+#ifdef G_OS_WIN32
+#include <Shellapi.h>
+#endif
 
 #ifdef NOTIFY
   #include <libnotify/notify.h>
@@ -147,7 +152,7 @@ struct _DevchatWindow
   GHashTable* old_conversations;
   GHashTable* users;
 
-  GtkTextTag* hovertag;
+  DevchatURLTag* hovertag;
 
   GSList* users_without_avatar;
 
