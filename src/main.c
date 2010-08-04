@@ -44,7 +44,57 @@ main (int argc, char *argv[])
       err("Error loading settings file. Possibly insufficient rights or corrupted content.\n");
     else
     {
-      /*TODO Read settings. */
+      gchar* g = "Devchat";
+      GError* e = NULL;
+      self->settings.browser = g_key_file_get_string (keyfile, g, "BROWSER", &e);
+      self->settings.color_font = g_key_file_get_string (keyfile, g, "COLOR_FONT", &e);
+      self->settings.color_l1 = g_key_file_get_string (keyfile, g, "COLOR_L1", &e);
+      self->settings.color_l3 = g_key_file_get_string (keyfile, g, "COLOR_L3", &e);
+      self->settings.color_l5 = g_key_file_get_string (keyfile, g, "COLOR_L5", &e);
+      self->settings.color_l6 = g_key_file_get_string (keyfile, g, "COLOR_L6", &e);
+      self->settings.color_greens = g_key_file_get_string (keyfile, g, "COLOR_GREENS", &e);
+      self->settings.color_blues = g_key_file_get_string (keyfile, g, "COLOR_BLUES", &e);
+      self->settings.color_time = g_key_file_get_string (keyfile, g, "COLOR_TIME", &e);
+      self->settings.color_url = g_key_file_get_string (keyfile, g, "COLOR_URL", &e);
+      self->settings.color_url_visited = g_key_file_get_string (keyfile, g, "COLOR_URL_VISITED", &e);
+      self->settings.color_url_hover = g_key_file_get_string (keyfile, g, "COLOR_URL_HOVER", &e);
+      self->settings.color_highlight = g_key_file_get_string (keyfile, g, "COLOR_HIGHLIGHT", &e);
+      self->settings.user = g_key_file_get_string (keyfile, g, "USER", &e);
+      self->settings.pass = g_key_file_get_string (keyfile, g, "PASS", &e);
+      self->settings.showid = g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWID", &e),"true") == 0;
+      self->settings.stealthjoin =  g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "STEALTHJOIN", &e),"true") == 0;
+      self->settings.autojoin =  g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0;
+      self->settings.showhidden =  g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWHIDDEN", &e),"true") == 0;
+      self->settings.coloruser =  g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0;
+      self->settings.notify = g_key_file_get_string (keyfile, g, "NOTIFY", &e);
+      self->settings.vnotify = g_key_file_get_string (keyfile, g, "VNOTIFY", &e);
+      self->settings.width = g_key_file_get_integer (keyfile, g, "WIDTH", &e);
+      self->settings.height = g_key_file_get_integer (keyfile, g, "HEIGHT", &e);
+      self->settings.x = g_key_file_get_integer (keyfile, g, "X", &e);
+      self->settings.y = g_key_file_get_integer (keyfile, g, "Y", &e);
+      self->settings.avatar_size = 12;
+      self->settings.update_time = 1000;
+
+g_print ("Sup?");
+
+      gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
+      int i;
+      for (i = 0; keywords[i] != NULL; i++)
+        self->settings.keywords = g_slist_prepend (self->settings.keywords, g_strdup(keywords[i]));
+      g_strfreev (keywords);
+g_print ("Sup?");
+      gchar** presets = g_strsplit (g_key_file_get_string (keyfile, g, "BOILERPLATES", &e), "|", 0);
+      int j;
+      for (j = 0; presets[j] != NULL; j++)
+        self->settings.presets = g_slist_prepend (self->settings.presets, g_strdup(presets[j]));
+      g_strfreev (presets);
+g_print ("Sup?");
+      if (e)
+        g_error ("Errors occured while loading settings: %s.", e->message);
+      else
+      {
+        g_print ("Settings loaded successfully.\n");
+      }
     }
     g_key_file_free (keyfile);
   }

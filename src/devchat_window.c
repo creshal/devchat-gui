@@ -22,6 +22,36 @@
 #include "devchat_html_attr.h"
 #include "devchat_url_tag.h"
 
+enum {
+  SETTINGS_BROWSER,
+  SETTINGS_COLOR_FONT,
+  SETTINGS_COLOR_L1,
+  SETTINGS_COLOR_L3,
+  SETTINGS_COLOR_L5,
+  SETTINGS_COLOR_L6,
+  //SETTINGS_COLOR_L7,
+  SETTINGS_COLOR_GREENS,
+  SETTINGS_COLOR_BLUES,
+  SETTINGS_COLOR_TIME,
+  SETTINGS_COLOR_URL,
+  SETTINGS_COLOR_URL_VISITED,
+  SETTINGS_COLOR_URL_HOVER,
+  SETTINGS_COLOR_HIGHLIGHT,
+  SETTINGS_USER,
+  SETTINGS_PASS,
+  SETTINGS_SHOWID,
+  SETTINGS_STEALTHJOIN,
+  SETTINGS_AUTOJOIN,
+  SETTINGS_SHOWHIDDEN,
+  SETTINGS_COLORUSER,
+  SETTINGS_NOTIFY,
+  SETTINGS_VNOTIFY,
+  SETTINGS_WIDTH,
+  SETTINGS_HEIGHT,
+  SETTINGS_X,
+  SETTINGS_Y
+} params;
+
 void notify_cb ();
 void urlopen ();
 void user_list_get();
@@ -81,6 +111,9 @@ devchat_window_init (DevchatWindow* self)
   GtkVBox* vbox0 = GTK_VBOX(gtk_vbox_new(FALSE,0));
   GtkWidget* menu = gtk_menu_bar_new();
   GtkWidget* hpaned1 = gtk_hpaned_new();
+
+  /*XXX: TODO: Store configurable settings as properties. Do whatever needed when changing per set_property (apply color etc.
+    Allows both nicer settings dialog code and changing settings from main method.*/
 
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
   self->users = g_hash_table_new (g_str_hash, g_str_equal);
@@ -1757,7 +1790,30 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
 
 void level_changed (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  if (data->window->userlevel > 1)
+  {
+    GdkColor new_bg;
+    if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 0)
+    {
+      gdk_color_parse (data->window->settings.color_l1, &new_bg);
+      gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+    }
+    else if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 1)
+    {
+      gdk_color_parse (data->window->settings.color_l3, &new_bg);
+      gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+    }
+    else if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 2)
+    {
+      gdk_color_parse (data->window->settings.color_l5, &new_bg);
+      gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+    }
+    else if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 3)
+    {
+      gdk_color_parse (data->window->settings.color_l6, &new_bg);
+      gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
+    }
+  }
 }
 
 void btn_send (GtkWidget* widget, DevchatCBData* data)
