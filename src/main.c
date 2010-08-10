@@ -46,6 +46,7 @@ main (int argc, char *argv[])
     {
       gchar* g = "Devchat";
       GError* e = NULL;
+      /*TODO: Use g_object_set to apply changes. */
       self->settings.browser = g_key_file_get_string (keyfile, g, "BROWSER", &e);
       self->settings.color_font = g_key_file_get_string (keyfile, g, "COLOR_FONT", &e);
       self->settings.color_l1 = g_key_file_get_string (keyfile, g, "COLOR_L1", &e);
@@ -75,26 +76,26 @@ main (int argc, char *argv[])
       self->settings.avatar_size = 12;
       self->settings.update_time = 1000;
 
-g_print ("Sup?");
-
       gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
       int i;
       for (i = 0; keywords[i] != NULL; i++)
         self->settings.keywords = g_slist_prepend (self->settings.keywords, g_strdup(keywords[i]));
       g_strfreev (keywords);
-g_print ("Sup?");
+
       gchar** presets = g_strsplit (g_key_file_get_string (keyfile, g, "BOILERPLATES", &e), "|", 0);
       int j;
       for (j = 0; presets[j] != NULL; j++)
         self->settings.presets = g_slist_prepend (self->settings.presets, g_strdup(presets[j]));
       g_strfreev (presets);
-g_print ("Sup?");
+
       if (e)
         g_error ("Errors occured while loading settings: %s.", e->message);
+    #ifdef DEBUG
       else
       {
         g_print ("Settings loaded successfully.\n");
       }
+    #endif
     }
     g_key_file_free (keyfile);
   }

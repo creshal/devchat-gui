@@ -23,7 +23,7 @@
 #include "devchat_url_tag.h"
 
 enum {
-  SETTINGS_BROWSER,
+  SETTINGS_BROWSER = 1,
   SETTINGS_COLOR_FONT,
   SETTINGS_COLOR_L1,
   SETTINGS_COLOR_L3,
@@ -51,6 +51,12 @@ enum {
   SETTINGS_X,
   SETTINGS_Y
 } params;
+
+static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
+static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
+
+void url_tag_nv_color_cb (GtkTextTag* t, gchar* value);
+void url_tag_v_color_cb (GtkTextTag* t, gchar* value);
 
 void notify_cb ();
 void urlopen ();
@@ -488,6 +494,240 @@ devchat_window_init (DevchatWindow* self)
 static void
 devchat_window_class_init (DevchatWindowClass* klass)
 {
+  GObjectClass* gobject_class = G_OBJECT_CLASS (klass);
+
+  gobject_class->set_property = devchat_window_set_property;
+  gobject_class->get_property = devchat_window_get_property;
+
+  g_object_class_install_property (gobject_class, SETTINGS_BROWSER, g_param_spec_string
+                                                     ( "browser", "Browser",
+                                                       "Browser used to display links.", "<native>",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_FONT, g_param_spec_string
+                                                     ( "color_font", "Font Color",
+                                                       "Color used for normal text.", "#fff",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_L1, g_param_spec_string
+                                                     ( "color_l1", "L1 background",
+                                                       "Color used for L1 backgrounds.", "#171717",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_L3, g_param_spec_string
+                                                     ( "color_l3", "L3 background",
+                                                       "Color used for L3 backgrounds.", "#441818",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_L5, g_param_spec_string
+                                                     ( "color_l5", "L5 background",
+                                                       "Color used for L5 backgrounds.", "#242454",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_L6, g_param_spec_string
+                                                     ( "color_l6", "L6 background",
+                                                       "Color used for L6 backgrounds.", "#144414",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_GREENS, g_param_spec_string
+                                                     ( "color_greens", "Greenie color",
+                                                       "Color used for L6+ users.", "#0c9",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_BLUES, g_param_spec_string
+                                                     ( "color_blues", "Peasant color",
+                                                       "Color used for L5- users.", "#47f",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_TIME, g_param_spec_string
+                                                     ( "color_time", "Time color",
+                                                       "Color used for aux. messages, e.g. time.", "#999",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_URL, g_param_spec_string
+                                                     ( "color_url", "URI Color",
+                                                       "Color used to display links.", "#ee6",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_URL_VISITED, g_param_spec_string
+                                                     ( "color_url_visited", "Visited URI color",
+                                                       "Color used to display visited links.", "#ec6",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_URL_HOVER, g_param_spec_string
+                                                     ( "color_url_hover", "Hover Link color",
+                                                       "Color used to display hovered links.", "#fff",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_HIGHLIGHT, g_param_spec_string
+                                                     ( "color_highlight", "Tab highlight color",
+                                                       "Color used to display highlighted tabs.", "#b00",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_USER, g_param_spec_string
+                                                     ( "user", "User name",
+                                                       "Username.", g_get_user_name (),
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_PASS, g_param_spec_string
+                                                     ( "pass", "Password",
+                                                       "Password.", "<hidden>",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_SHOWID, g_param_spec_boolean
+                                                     ( "showid", "Show post id",
+                                                       "Shows the internal post id next to (new) posts.", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_STEALTHJOIN, g_param_spec_boolean
+                                                     ( "showhidden", "Show hidden usernames",
+                                                       "Shows user names when normally required to be hidden (stealth goldies, stealth posts by L6+).", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_AUTOJOIN, g_param_spec_boolean
+                                                     ( "autojoin", "Auto-login",
+                                                       "Logs in automatically when starting the client.", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLORUSER, g_param_spec_boolean
+                                                     ( "coloruser", "Tint user list",
+                                                       "Tints the userlist with L1 background color. Recommended for bright themes.", TRUE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_NOTIFY, g_param_spec_string
+                                                     ( "notify", "Play audio notifications",
+                                                       "Plays notifications, per default audio files.", "<native>",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_VNOTIFY, g_param_spec_string
+                                                     ( "vnotify", "Show visible notifications",
+                                                       "Shows notifications, per default libnotify visual ones.", "<native>",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_WIDTH, g_param_spec_int
+                                                     ( "width", "Window width",
+                                                       "Width of the window.", 480, 65535, 600,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_HEIGHT, g_param_spec_int
+                                                     ( "height", "Window height",
+                                                       "Height of the window.", 320, 65535, 400,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_X, g_param_spec_int
+                                                     ( "x", "Window x position",
+                                                       "X position of the window.", 0, 65535, 0,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_Y, g_param_spec_int
+                                                     ( "y", "Window y position",
+                                                       "Y position of the window.", 0, 65535, 0,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+}
+
+static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec)
+{
+  DevchatWindow* window = DEVCHAT_WINDOW (object);
+  GdkColor color;
+  GtkTextTagTable* t;
+  GtkTextTag* tag;
+  switch (id)
+  {
+    case SETTINGS_BROWSER: window->settings.browser = g_value_dup_string (value); break;
+    case SETTINGS_COLOR_FONT: window->settings.color_font = g_value_dup_string (value);
+                              gdk_color_parse (g_value_dup_string (value), &color);
+                              gtk_widget_modify_text (window->outputwidget, GTK_STATE_NORMAL, &color);
+                              /*TODO: Modify pm/history windows.*/
+                              gtk_widget_modify_text (window->inputwidget, GTK_STATE_NORMAL, &color); break;
+    case SETTINGS_COLOR_L1: window->settings.color_l1 = g_value_dup_string (value);
+                            gdk_color_parse (g_value_dup_string (value), &color);
+                            gtk_widget_modify_base (window->outputwidget, GTK_STATE_NORMAL, &color);
+                            /*TODO: Modify pm/history windows.*/
+                            gtk_widget_modify_base (window->inputwidget, GTK_STATE_NORMAL, &color); break;
+    case SETTINGS_COLOR_L3: window->settings.color_l3 = g_value_dup_string (value);
+                            t = gtk_text_buffer_get_tag_table (window->output);
+                            tag = gtk_text_tag_table_lookup (t, "l3");
+                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_L5: window->settings.color_l5 = g_value_dup_string (value);
+                            t = gtk_text_buffer_get_tag_table (window->output);
+                            tag = gtk_text_tag_table_lookup (t, "l5");
+                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_L6: window->settings.color_l6 = g_value_dup_string (value);
+                            t = gtk_text_buffer_get_tag_table (window->output);
+                            tag = gtk_text_tag_table_lookup (t, "l6");
+                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_GREENS: window->settings.color_greens = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "greenie");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_BLUES: window->settings.color_blues = g_value_dup_string (value);
+                               t = gtk_text_buffer_get_tag_table (window->output);
+                               tag = gtk_text_tag_table_lookup (t, "peasant");
+                               g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                               /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_TIME: window->settings.color_time = g_value_dup_string (value);
+                              t = gtk_text_buffer_get_tag_table (window->output);
+                              tag = gtk_text_tag_table_lookup (t, "time");
+                              g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                              /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_URL: window->settings.color_url = g_value_dup_string (value);
+                             t = gtk_text_buffer_get_tag_table (window->output);
+                             gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, g_value_dup_string (value));
+                             /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_URL_VISITED: window->settings.color_url_visited = g_value_dup_string (value);
+                                     t = gtk_text_buffer_get_tag_table (window->output);
+                                     gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_v_color_cb, g_value_dup_string (value));
+                                     /*TODO: Modify pm/history windows.*/ break;
+    case SETTINGS_COLOR_URL_HOVER: window->settings.color_url_hover = g_value_dup_string (value); break;
+    case SETTINGS_COLOR_HIGHLIGHT: window->settings.color_highlight = g_value_dup_string (value); /*TODO: Change color of tabs highlighted now.*/ break;
+    case SETTINGS_USER: window->settings.user = g_value_dup_string (value); break;
+    case SETTINGS_PASS: window->settings.pass = g_value_dup_string (value); break;
+    case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
+    case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
+    case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value); break;
+    case SETTINGS_SHOWHIDDEN: window->settings.showhidden = g_value_get_boolean (value); break;
+    case SETTINGS_COLORUSER: window->settings.coloruser = g_value_get_boolean (value); break;
+    case SETTINGS_NOTIFY: window->settings.notify = g_value_dup_string (value); break;
+    case SETTINGS_VNOTIFY: window->settings.vnotify = g_value_dup_string (value); break;
+    case SETTINGS_WIDTH: window->settings.width = g_value_get_int (value);
+                         gtk_window_resize (GTK_WINDOW (window->window), window->settings.width, window->settings.height); break;
+    case SETTINGS_HEIGHT: window->settings.height = g_value_get_int (value);
+                         gtk_window_resize (GTK_WINDOW (window->window), window->settings.width, window->settings.height); break;
+    case SETTINGS_X: window->settings.x = g_value_get_int (value);
+                         gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
+    case SETTINGS_Y: window->settings.y = g_value_get_int (value);
+                         gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
+  }
+}
+
+void url_tag_nv_color_cb (GtkTextTag* t, gchar* value)
+{
+  if (DEVCHAT_IS_URL_TAG (t))
+  {
+    DevchatURLTag* tag = DEVCHAT_URL_TAG (t);
+    if (!tag->visited)
+      g_object_set (tag, "foreground", value, NULL);
+  }
+}
+
+void url_tag_v_color_cb (GtkTextTag* t, gchar* value)
+{
+  if (DEVCHAT_IS_URL_TAG (t))
+  {
+    DevchatURLTag* tag = DEVCHAT_URL_TAG (t);
+    if (tag->visited)
+      g_object_set (tag, "foreground", value, NULL);
+  }
+}
+
+static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec)
+{
+
 }
 
 void destroy (GtkWidget* widget, DevchatCBData* data)
@@ -1136,22 +1376,11 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     STATE_ATTRCONT
   };
 
-  gchar* message_r = g_regex_replace (regex, message, -1, 0, "\xc2\xa0", 0 , NULL);
-
-  gchar* message_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) message_r, XML_SUBSTITUTE_BOTH, 0, 0, 0);
-
-  g_free (message_r);
-
+  gchar* message_d = g_regex_replace (regex, message, -1, 0, " ", 0 , NULL);
 
   GtkTextIter old_end;
 
   GtkTextTagTable* table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (data->data));
-
-#ifdef DEBUG
-  gchar* dbg_msg = g_strdup_printf ("(!!) Decoded message: %s\n", message_d);
-  g_print (dbg_msg);
-  g_free (dbg_msg);
-#endif
 
   gchar current[2];
   current[0] = 32;
@@ -1194,7 +1423,10 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
 
-        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
+        gchar* content_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) content, XML_SUBSTITUTE_REF, 0, 0, 0);
+
+        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content_d, -1);
+        g_free (content_d);
         content = "";
 
         state = STATE_TYPECHECK;
@@ -1245,7 +1477,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       g_print ("State: Close tag.\n");
     #endif
 
-      if (g_strcmp0 (current, ">") == 0)
+      if (g_strcmp0 (current, ">") == 0 && g_strcmp0 (stack->data,"O") == 0)
       {
         GSList* tmp = taglist;
         if (taglist->next)
@@ -1261,7 +1493,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       #endif
 
         gchar* tagname = NULL;
-
         if (g_strcmp0 (top->name,"font")==0)
         {
         #ifdef DEBUG
@@ -1331,9 +1562,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
           else if (uri)
           {
-          //#ifdef DEBUG
+          #ifdef DEBUG
             g_printf ("Searching for image %s... \n", uri);
-          //#endif
+          #endif
 
             gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
 
@@ -1401,7 +1632,10 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         }
         else if (g_strcmp0 (top->name,"a")==0)
         {
-          tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->next->data)->value, NULL);
+          if (top->attrs->next)
+            tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->next->data)->value, NULL);
+          else
+            tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL); /*Mailto*/
 
         #ifdef DEBUG
           g_printf ("Inserting link to %s.\n", tagname);
@@ -1413,6 +1647,27 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
             gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
           }
+        }
+        else if (g_strcmp0 (top->name,"!--") == 0)
+        {
+        #ifdef DEBUG
+          g_print ("Detected comment.");
+        #endif
+
+          top->attrs = g_slist_reverse (top->attrs);
+
+          gchar* comment = "";
+
+          while (top->attrs && g_strcmp0 (( (DevchatHTMLAttr*) top->attrs->data)->name, "--"))
+          {
+            comment = g_strconcat (comment, ( (DevchatHTMLAttr*) top->attrs->data)->name, " ", NULL);
+            top->attrs = top->attrs->next;
+          }
+          GtkTextIter end;
+
+          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+
+          gtk_text_buffer_insert_with_tags_by_name (GTK_TEXT_BUFFER (data->data), &end, comment, -1, "time", NULL);
         }
         #ifdef DEBUG
         else
@@ -1445,13 +1700,21 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
         state = STATE_DATA;
       }
-      else
+      else if (g_strcmp0 (stack->data,"O") == 0)
       {
       #ifdef DEBUG
         g_print ("Adding current to tag name.\n");
       #endif
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
+      }
+      else
+      {
+        /*FUUUUUUUUUUUUUUUUU Oger!*/
+      #ifdef DEBUG
+        g_print ("ERR: Tag closed, but none was open.");
+      #endif
+        state = STATE_DATA;
       }
     }
     else if (state == STATE_OPENTAG)
@@ -1592,6 +1855,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       }
     }
   }
+  g_free (message_d);
 #ifdef DEBUG
   g_print ("Parsing done.");
 #endif
