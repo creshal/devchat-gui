@@ -369,10 +369,11 @@ devchat_window_init (DevchatWindow* self)
   self->userlist = gtk_vbox_new (FALSE,1);
   gtk_widget_set_size_request (self->userlist, 180, -1);
   gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW(scroller2), self->userlist);
+  self->userlist_port = gtk_bin_get_child(GTK_BIN(scroller2));
 
   if (self->settings.coloruser == TRUE)
   {
-    gtk_widget_modify_bg (gtk_bin_get_child(GTK_BIN(scroller2)), GTK_STATE_NORMAL, &l1);
+    gtk_widget_modify_bg (self->userlist_port, GTK_STATE_NORMAL, &l1);
   }
 
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller2),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
@@ -589,6 +590,11 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Logs in automatically when starting the client.", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
+  g_object_class_install_property (gobject_class, SETTINGS_STEALTHJOIN, g_param_spec_boolean
+                                                     ( "stealthjoin", "Stealth login",
+                                                       "Supress join/quit messages.", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
   g_object_class_install_property (gobject_class, SETTINGS_COLORUSER, g_param_spec_boolean
                                                      ( "coloruser", "Tint user list",
                                                        "Tints the userlist with L1 background color. Recommended for bright themes.", TRUE,
@@ -641,8 +647,12 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                               /*TODO: Modify pm/history windows.*/
                               gtk_widget_modify_text (window->inputwidget, GTK_STATE_NORMAL, &color); break;
     case SETTINGS_COLOR_L1: window->settings.color_l1 = g_value_dup_string (value);
+                            t = gtk_text_buffer_get_tag_table (window->output);
+                            tag = gtk_text_tag_table_lookup (t, "l1");
+                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
                             gdk_color_parse (g_value_dup_string (value), &color);
                             gtk_widget_modify_base (window->outputwidget, GTK_STATE_NORMAL, &color);
+                            gtk_widget_modify_bg (window->userlist_port, GTK_STATE_NORMAL, &color);
                             /*TODO: Modify pm/history windows.*/
                             gtk_widget_modify_base (window->inputwidget, GTK_STATE_NORMAL, &color); break;
     case SETTINGS_COLOR_L3: window->settings.color_l3 = g_value_dup_string (value);
@@ -685,8 +695,8 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                                      /*TODO: Modify pm/history windows.*/ break;
     case SETTINGS_COLOR_URL_HOVER: window->settings.color_url_hover = g_value_dup_string (value); break;
     case SETTINGS_COLOR_HIGHLIGHT: window->settings.color_highlight = g_value_dup_string (value); /*TODO: Change color of tabs highlighted now.*/ break;
-    case SETTINGS_USER: window->settings.user = g_value_dup_string (value); break;
-    case SETTINGS_PASS: window->settings.pass = g_value_dup_string (value); break;
+    case SETTINGS_USER: window->settings.user = g_value_dup_string (value); gtk_entry_set_text( GTK_ENTRY (window->user_entry), window->settings.user); break;
+    case SETTINGS_PASS: window->settings.pass = g_value_dup_string (value); gtk_entry_set_text( GTK_ENTRY (window->pass_entry), window->settings.pass); break;
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
     case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
     case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value); break;
