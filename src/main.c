@@ -103,15 +103,7 @@ main (int argc, char *argv[])
 
 
 #ifdef G_OS_WIN32
-  #ifdef FOLDERID_ProgramFilesX86
-    self->workingdir = g_build_filename (FOLDERID_ProgramFilesX86,"Devchat","pixmaps",NULL);
-  #else
-    #ifdef CSIDL_PROGRAM_FILES
-      self->workingdir = g_build_filename (CSIDL_PROGRAM_FILES,"Devchat","pixmaps",NULL);
-    #else
-      err("Could not find %PROGRAMFILES%\n");
-    #endif
-  #endif
+  self->workingdir = g_build_filename (g_getenv("PROGRAMFILES"),"Devchat","pixmaps",NULL);
 #else
   #ifdef G_OS_UNIX
     if (!g_file_test (g_build_filename("/","usr","share","pixmaps","devchat",NULL), G_FILE_TEST_IS_DIR))
