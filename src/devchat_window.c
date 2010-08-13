@@ -2066,7 +2066,11 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
 
       if (name && g_str_has_prefix (name, "url::"))
       {
+      #ifndef G_OS_WIN32
         gchar* uri = g_shell_quote (name+5);
+      #else
+        gchar* uri = name+5;
+      #endif
 
       #ifdef DEBUG
         g_printf ("Quoted URI: %s\n", uri);
@@ -2074,9 +2078,7 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
         if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
         {
         #ifdef G_OS_WIN32
-          /*XXX: Not working.*/
-          ShellExecute (NULL, NULL, uri, NULL, NULL, SW_SHOWNORMAL);
-          /*TODO: Win32 default browser.*/
+          ShellExecute (NULL, "open", uri, NULL, NULL, SW_SHOWNORMAL);
         #else
           if (!g_file_test ("/usr/bin/x-www-browser", G_FILE_TEST_EXISTS))
           {
