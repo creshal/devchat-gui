@@ -47,7 +47,7 @@ main (int argc, char *argv[])
       gchar* g = "Devchat";
       GError* e = NULL;
       /*TODO: Use g_object_set to apply changes. */
-      g_object_set (self, "browser", g_key_file_get_string (keyfile, g, "BROWSER", &e),NULL);
+      g_object_set (self, "browser", g_key_file_get_value (keyfile, g, "BROWSER", &e),NULL);
       g_object_set (self, "color_font", g_key_file_get_string (keyfile, g, "COLOR_FONT", &e),NULL);
       g_object_set (self, "color_l1", g_key_file_get_string (keyfile, g, "COLOR_L1", &e),NULL);
       g_object_set (self, "color_l3", g_key_file_get_string (keyfile, g, "COLOR_L3", &e),NULL);
@@ -60,10 +60,10 @@ main (int argc, char *argv[])
       g_object_set (self, "color_url_visited", g_key_file_get_string (keyfile, g, "COLOR_URL_VISITED", &e),NULL);
       g_object_set (self, "color_url_hover", g_key_file_get_string (keyfile, g, "COLOR_URL_HOVER", &e),NULL);
       g_object_set (self, "color_highlight", g_key_file_get_string (keyfile, g, "COLOR_HIGHLIGHT", &e),NULL);
-      g_object_set (self, "user", g_key_file_get_string (keyfile, g, "USER", &e),NULL);
-      g_object_set (self, "pass", g_key_file_get_string (keyfile, g, "PASS", &e),NULL);
-      g_object_set (self, "notify", g_key_file_get_string (keyfile, g, "NOTIFY", &e),NULL);
-      g_object_set (self, "vnotify", g_key_file_get_string (keyfile, g, "VNOTIFY", &e),NULL);
+      g_object_set (self, "user", g_key_file_get_value (keyfile, g, "USER", &e),NULL);
+      g_object_set (self, "pass", g_key_file_get_value (keyfile, g, "PASS", &e),NULL);
+      g_object_set (self, "notify", g_key_file_get_value (keyfile, g, "NOTIFY", &e),NULL);
+      g_object_set (self, "vnotify", g_key_file_get_value (keyfile, g, "VNOTIFY", &e),NULL);
       g_object_set (self, "showid", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWID", &e),"true") == 0,NULL);
       g_object_set (self, "stealthjoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "STEALTHJOIN", &e),"true") == 0,NULL);
       g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0,NULL);

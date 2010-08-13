@@ -357,6 +357,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_end ( GTK_BOX(self->statusbar), gtk_vseparator_new(),FALSE,FALSE,1);
   gtk_box_pack_start(GTK_BOX(vbox0), self->statusbar, FALSE,FALSE,1);
 
+  /*TODO: Padding between output text and window border.*/
+
   self->output = gtk_text_buffer_new (NULL);
   self->outputwidget = gtk_text_view_new_with_buffer (self->output);
   GdkColor l1;
@@ -921,6 +923,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
   g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
 
+  /*TODO: Do incremental updates. Should migitate the flickering issue.*/
+
   gchar* userlist = g_strdup (m->response_body->data);
   if (userlist)
   {
@@ -1292,7 +1296,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
 
         gchar* kickmsg = g_strconcat ("!KICK ",self->window->settings.user,NULL);
-
+        /*XXX: Case insensitive*/
         if (g_strstr_len (message, -1, kickmsg) && user_level > 5 && !(self->window->firstrun))
         {
         #ifdef DEBUG
@@ -2069,6 +2073,7 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
         if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
         {
         #ifdef G_OS_WIN32
+          /*XXX: Not working.*/
           ShellExecute (NULL, NULL, uri, NULL, NULL, SW_SHOWNORMAL);
           /*TODO: Win32 default browser.*/
         #else
@@ -2189,7 +2194,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       "post","chatlevel",sendlevel,"textinput", re_text, NULL);
     soup_session_send_message (data->window->session, post);
 
-
+    /*XXX: Windows version crashs here. No idea why.*/
     g_free (enc_text);
     xmlFree (p);
     g_free (re_text_a);
@@ -2224,6 +2229,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
 
 void at_cb (GtkWidget* widget, DevchatCBData* data)
 {
+  /*XXX: &nbsp; doesn't work.*/
   GRegex* re = g_regex_new (" ", 0, 0, NULL);
   gchar* msg_r = g_regex_replace (re, (gchar*) data->data, -1, 0, "&nbsp;", 0, NULL);
 
