@@ -21,6 +21,7 @@
 #include "devchat_html_tag.h"
 #include "devchat_html_attr.h"
 #include "devchat_url_tag.h"
+#include <string.h>
 
 enum {
   SETTINGS_BROWSER = 1,
@@ -1422,7 +1423,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     STATE_ATTRCONT
   };
 
-  gchar* message_d = g_regex_replace (regex, message, -1, 0, " ", 0 , NULL);
+  gchar* message_d = g_regex_replace (regex, message, -1, 0, "\xc2\xa0", 0 , NULL);
 
   GtkTextIter old_end;
 
@@ -2231,7 +2232,7 @@ void at_cb (GtkWidget* widget, DevchatCBData* data)
 {
   /*XXX: &nbsp; doesn't work.*/
   GRegex* re = g_regex_new (" ", 0, 0, NULL);
-  gchar* msg_r = g_regex_replace (re, (gchar*) data->data, -1, 0, "&nbsp;", 0, NULL);
+  gchar* msg_r = g_regex_replace (re, (gchar*) data->data, -1, 0, "\xc2\xa0", 0, NULL);
 
   gchar* text = g_strconcat ("@", msg_r, " ", NULL);
 
