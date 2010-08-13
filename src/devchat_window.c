@@ -46,6 +46,7 @@ enum {
   SETTINGS_COLORUSER,
   SETTINGS_NOTIFY,
   SETTINGS_VNOTIFY,
+  SETTINGS_HANDLE_WIDTH,
   SETTINGS_WIDTH,
   SETTINGS_HEIGHT,
   SETTINGS_X,
@@ -89,6 +90,7 @@ void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
 void create_tags (GtkTextBuffer* buf, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
 void ins_smilie (GtkWidget* widget, DevchatCBData* data);
+void ins_preset (GtkWidget* widget, DevchatCBData* data);
 
 gint user_lookup (gchar* a, gchar* b);
 void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
@@ -114,12 +116,11 @@ devchat_window_new (void)
 static void
 devchat_window_init (DevchatWindow* self)
 {
+  /*TODO: Create mechanism to add presets/keywords.*/
+
   GtkVBox* vbox0 = GTK_VBOX(gtk_vbox_new(FALSE,0));
   GtkWidget* menu = gtk_menu_bar_new();
   GtkWidget* hpaned1 = gtk_hpaned_new();
-
-  /*XXX: TODO: Store configurable settings as properties. Do whatever needed when changing per set_property (apply color etc.
-    Allows both nicer settings dialog code and changing settings from main method.*/
 
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
   self->users = g_hash_table_new (g_str_hash, g_str_equal);
@@ -277,7 +278,20 @@ devchat_window_init (DevchatWindow* self)
 
   self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
   GtkWidget* item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
-  /*TODO: Fill preset menu.*/
+
+  GSList* i = self->settings.keywords;
+
+  GtkWidget* preset_sub = gtk_menu_new();
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (item_presets), preset_sub);
+
+  while (i)
+  {
+    GtkWidget* item = gtk_menu_item_new_with_label ((gchar*) i->data);
+    g_signal_connect (item, "activate", G_CALLBACK (ins_preset), devchat_cb_data_new (self, (gchar*) i->data));
+    gtk_menu_shell_append (GTK_MENU_SHELL (preset_sub), item);
+
+    i = i->next;
+  }
 
   GtkMenuShell* main_sub = GTK_MENU_SHELL(gtk_menu_new());
   gtk_menu_shell_append(main_sub, self->item_connect);
@@ -379,6 +393,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller2),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller2),GTK_SHADOW_ETCHED_IN);
   gtk_paned_pack2 (GTK_PANED(hpaned1), scroller2, FALSE, FALSE);
+
+  gtk_paned_set_position (GTK_PANED(hpaned1), self->settings.handle_width);
 
 
   GtkWidget* vbox2 = gtk_vbox_new (FALSE, 0);
@@ -610,6 +626,11 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Shows notifications, per default libnotify visual ones.", "<native>",
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
+  g_object_class_install_property (gobject_class, SETTINGS_HANDLE_WIDTH, g_param_spec_int
+                                                     ( "handle_width", "Position of the text view/user list separator",
+                                                       "Determines the width of the text output widget.", 360, 65535, 420,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
   g_object_class_install_property (gobject_class, SETTINGS_WIDTH, g_param_spec_int
                                                      ( "width", "Window width",
                                                        "Width of the window.", 480, 65535, 600,
@@ -699,11 +720,17 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_PASS: window->settings.pass = g_value_dup_string (value); gtk_entry_set_text( GTK_ENTRY (window->pass_entry), window->settings.pass); break;
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
     case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
-    case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value); break;
+    case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value);
+                            if (window->firstrun)
+                              login (window->btn_connect, devchat_cb_data_new (window, NULL));
+                            break;
     case SETTINGS_SHOWHIDDEN: window->settings.showhidden = g_value_get_boolean (value); break;
     case SETTINGS_COLORUSER: window->settings.coloruser = g_value_get_boolean (value); break;
     case SETTINGS_NOTIFY: window->settings.notify = g_value_dup_string (value); break;
     case SETTINGS_VNOTIFY: window->settings.vnotify = g_value_dup_string (value); break;
+    case SETTINGS_HANDLE_WIDTH: window->settings.handle_width = g_value_get_int (value);
+                         GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (window->userlist_port));
+                         gtk_paned_set_position (GTK_PANED(hpaned1), window->settings.handle_width); break;
     case SETTINGS_WIDTH: window->settings.width = g_value_get_int (value);
                          gtk_window_resize (GTK_WINDOW (window->window), window->settings.width, window->settings.height); break;
     case SETTINGS_HEIGHT: window->settings.height = g_value_get_int (value);
@@ -747,11 +774,11 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
   notify_uninit ();
 #endif
 
-  SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
-  soup_session_send_message (data->window->session, msg);
-
   if (!(data->window->firstrun))
   {
+    /*XXX: Sometimes, session does not exist.*/
+    SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
+    soup_session_send_message (data->window->session, msg);
     soup_session_abort (data->window->session);
   }
   gtk_main_quit ();
@@ -1193,6 +1220,11 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
     g_free (labeltext);
 
+    xmlParserCtxtPtr narf = xmlNewParserCtxt();
+    xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
+
+    GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
+
     GtkTextIter old_end;
     gtk_text_buffer_get_end_iter (self->window->output, &old_end);
     GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
@@ -1273,19 +1305,17 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
         g_free (kickmsg);
 
-        xmlParserCtxtPtr narf = xmlNewParserCtxt();
-        xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
-
-        GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
-
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
+
+      #ifdef DEBUG
+        g_printf ("(!!) Message: %s.\n", message_t);
+      #endif
 
         parse_message (message_t, devchat_cb_data_new (self->window, self->window->output), narf, regex);
 
-        g_free (regex);
+
 
         g_free (message_t);
-        xmlFreeParserCtxt (narf);
 
       #ifdef DEBUG
         dbg ("Message parsed, applying level tags...");
@@ -1338,12 +1368,14 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   #endif
 
     GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
-    if (((a->value + a->page_size) / a->upper) > 0.9)
+    if (((a->value + a->page_size) / a->upper) > 0.95)
       gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
     gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
     self->window->firstrun = FALSE;
     xmlFreeTextReader (msgparser);
+    g_free (regex);
+    xmlFreeParserCtxt (narf);
   }
   else
   {
@@ -1391,6 +1423,8 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
   GtkTextIter old_end;
 
   GtkTextTagTable* table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (data->data));
+
+  GRegex* plus = g_regex_new ("&#43;", 0, 0, NULL);
 
   gchar current[2];
   current[0] = 32;
@@ -1533,7 +1567,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         {
           tagname = "bold";
         }
-        else if (g_strcmp0 (top->name,"BR")==0)
+        else if (g_ascii_strcasecmp (top->name,"BR")==0)
         {
           GtkTextIter fnord;
 
@@ -1620,15 +1654,11 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
             if (gdk_pixbuf_get_width (img) > 320)
             {
-              GdkPixbuf* tmp = img;
               img = gdk_pixbuf_scale_simple (img, 320, gdk_pixbuf_get_height (img) / (gdk_pixbuf_get_width (img)/320), GDK_INTERP_BILINEAR);
-              g_free (tmp);
             }
             else if (gdk_pixbuf_get_height (img) > 240)
             {
-              GdkPixbuf* tmp = img;
               img = gdk_pixbuf_scale_simple (img, gdk_pixbuf_get_width (img) / (gdk_pixbuf_get_height (img)/240), 240, GDK_INTERP_BILINEAR);
-              g_free (tmp);
             }
 
             GtkTextIter fnord;
@@ -1646,6 +1676,13 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->next->data)->value, NULL);
           else
             tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL); /*Mailto*/
+
+          gchar* tagname_d = g_regex_replace (plus, tagname, -1, 0, "+", 0, NULL);
+
+          g_free (tagname);
+
+
+          tagname = tagname_d;
 
         #ifdef DEBUG
           g_printf ("Inserting link to %s.\n", tagname);
@@ -1739,7 +1776,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
       #endif
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
-        if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
+        if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
         {
         #ifdef DEBUG
           g_print ("Closing void tag.\n");
@@ -1866,6 +1903,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     }
   }
   g_free (message_d);
+  g_free (plus);
 #ifdef DEBUG
   g_print ("Parsing done.");
 #endif
@@ -2186,12 +2224,31 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
 
 void at_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  GRegex* re = g_regex_new (" ", 0, 0, NULL);
+  gchar* msg_r = g_regex_replace (re, (gchar*) data->data, -1, 0, "&nbsp;", 0, NULL);
+
+  gchar* text = g_strconcat ("@", msg_r, " ", NULL);
+
+  gtk_text_buffer_insert_at_cursor (data->window->input, (gchar*) text, strlen (text));
+
+  g_free (re);
+  g_free (msg_r);
+  g_free (text);
+
+  gtk_widget_grab_focus (data->window->inputwidget);
 }
 
 void pm_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  /*TODO: PM Windows.*/
+
+  gchar* text = g_strconcat ("/msg ", (gchar*) data->data, " ", NULL);
+
+  gtk_text_buffer_insert_at_cursor (data->window->input, (gchar*) text, strlen (text));
+
+  g_free (text);
+
+  gtk_widget_grab_focus (data->window->inputwidget);
 }
 
 void devchat_window_refresh_smilies (DevchatWindow* self)
@@ -2219,6 +2276,11 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 }
 
 void ins_smilie (GtkWidget* widget, DevchatCBData* data)
+{
+  /*TODO*/
+}
+
+void ins_preset (GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
 }

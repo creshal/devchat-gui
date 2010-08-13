@@ -89,6 +89,7 @@ typedef struct dc_settings
   guint y;
   guint update_time;
   guint avatar_size;
+  guint handle_width;
   GSList* keywords;
   GSList* presets;
   gboolean showid;
