@@ -1256,7 +1256,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         self->window->lastid = g_strdup (lid);
 
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.\n", name, mode, time, lid, message);
+        gchar* dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time, lid, message);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1313,7 +1313,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
       #ifdef DEBUG
-        g_printf ("(!!) Message: %s.\n", message_t);
+        gchar* dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
       #endif
 
         parse_message (message_t, devchat_cb_data_new (self->window, self->window->output), narf, regex);
@@ -1446,7 +1448,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
   gint i;
 
 #ifdef DEBUG
-  dbg ("Starting parser loop...\n");
+  dbg ("Starting parser loop...");
 #endif
 
   for (i=0; i < strlen (message_d); i++)
@@ -1454,19 +1456,23 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     current[0] = message_d[i];
 
   #ifdef DEBUG
-    g_printf ("Current char: %s.\n", current);
+    gchar* dbg_msg = g_strdup_printf ("Current char: %s.", current);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
   #endif
 
     if (state == STATE_DATA)
     {
     #ifdef DEBUG
-      g_print ("State: Data\n");
+      dbg ("State: Data");
     #endif
 
       if (g_strcmp0 (current, "<") == 0)
       {
       #ifdef DEBUG
-        g_printf ("Detected <, switching to state typecheck and dumping content %s.\n", content);
+        gchar* dbg_msg = g_strdup_printf ("Detected <, switching to state typecheck and dumping content %s.", content);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
       #endif
 
         GtkTextIter end;
@@ -1483,7 +1489,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else
       {
       #ifdef DEBUG
-        g_print ("Adding char to content.\n");
+        dbg ("Adding char to content.");
       #endif
 
         content = g_strconcat (content, current, NULL);
@@ -1493,13 +1499,13 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     else if (state == STATE_TYPECHECK)
     {
     #ifdef DEBUG
-      g_print ("State: Type check.\n");
+      dbg ("State: Type check.");
     #endif
 
       if (g_strcmp0 (current, "/") == 0 && g_strcmp0 (stack->data, "O") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detecting closing tag.\n");
+        dbg ("Detecting closing tag.");
       #endif
 
         GSList* tmp = stack;
@@ -1511,7 +1517,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else
       {
       #ifdef DEBUG
-        g_print ("Adding current to tag name and switching to state open tag.\n");
+        dbg ("Adding current to tag name and switching to state open tag.");
       #endif
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
@@ -1523,7 +1529,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     else if (state == STATE_CLOSETAG)
     {
     #ifdef DEBUG
-      g_print ("State: Close tag.\n");
+      dbg ("State: Close tag.");
     #endif
 
       if (g_strcmp0 (current, ">") == 0 && g_strcmp0 (stack->data,"O") == 0)
@@ -1538,14 +1544,18 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         /*XXX: Close actually closed tag, not the last one.*/
 
       #ifdef DEBUG
-        g_printf ("Closing Tag %s.\n", top->name);
+        gchar* dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
       #endif
 
         gchar* tagname = NULL;
         if (g_strcmp0 (top->name,"font")==0)
         {
         #ifdef DEBUG
-          g_printf ("Found font tag! Attribute:%s \n",((DevchatHTMLAttr*) top->attrs->data)->name);
+          gchar* dbg_msg = g_strdup_printf ("Found font tag! Attribute:%s ",((DevchatHTMLAttr*) top->attrs->data)->name);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
         #endif
 
           if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "color") == 0)
@@ -1553,7 +1563,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             tagname = color_lookup (((DevchatHTMLAttr*) top->attrs->data)->value);
 
           #ifdef DEBUG
-            g_printf ("Color attribute with value %s.\n", tagname);
+            gchar* dbg_msg = g_strdup_printf ("Color attribute with value %s.", tagname);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
           #endif
 
             if (!gtk_text_tag_table_lookup (table, tagname))
@@ -1589,7 +1601,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         else if (g_strcmp0 (top->name,"img")==0)
         {
         #ifdef DEBUG
-          g_print ("Parsing img tag...\n");
+          dbg ("Parsing img tag...");
         #endif
           GtkTextIter fnord;
           GdkPixbuf* smilie = NULL;
@@ -1603,7 +1615,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           if (smilie)
           {
           #ifdef DEBUG
-            g_print ("Found smilie in database. \n");
+            dbg ("Found smilie in database. ");
           #endif
             gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
             gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
@@ -1612,7 +1624,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           else if (uri)
           {
           #ifdef DEBUG
-            g_printf ("Searching for image %s... \n", uri);
+            gchar* dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
           #endif
 
             gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
@@ -1620,28 +1634,22 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             gchar* filename = NULL;
 
         #ifdef G_OS_WIN32
-          #ifdef FOLDERID_InternetCache
-            filename = g_build_filename (FOLDERID_InternetCache, g_strjoinv ("_",uri_parts), NULL);
-          #else
-            #ifdef CSIDL_INTERNET_CACHE
-            filename = g_build_filename (CSIDL_INTERNET_CACHE, g_strjoinv ("_",uri_parts), NULL);
-            #else
-            err ("Your system is fucked up.\n");
-            #endif
-          #endif
+            filename = g_build_filename (g_getenv ("TEMP"), g_strjoinv ("_",uri_parts), NULL);
         #else
             filename = g_build_filename ("/tmp", g_strjoinv ("_",uri_parts), NULL);
         #endif
             g_strfreev (uri_parts);
 
           #ifdef DEBUG
-            g_printf ("Writing image to %s.\n", filename);
+            gchar* dbg_msg = g_strdup_printf ("Writing image to %s.", filename);
+            dbg (dbg_msg);
+            g_free (dbg);
           #endif
 
             if (!g_file_test (filename, G_FILE_TEST_EXISTS))
             {
             #ifdef DEBUG
-              g_print ("File not in cache, downloading...\n");
+              dbg ("File not in cache, downloading...");
             #endif
               SoupMessage* i_m = soup_message_new ("GET", uri);
               if (soup_session_send_message (data->window->session, i_m) == 200)
@@ -1690,7 +1698,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           tagname = tagname_d;
 
         #ifdef DEBUG
-          g_printf ("Inserting link to %s.\n", tagname);
+          gchar* dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
         #endif
 
           if (!gtk_text_tag_table_lookup (table, tagname))
@@ -1703,7 +1713,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         else if (g_strcmp0 (top->name,"!--") == 0)
         {
         #ifdef DEBUG
-          g_print ("Detected comment.");
+          dbg ("Detected comment.");
         #endif
 
           top->attrs = g_slist_reverse (top->attrs);
@@ -1732,7 +1742,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         if (tagname)
         {
         #ifdef DEBUG
-          g_printf ("Applying tag %s.\n", tagname);
+          gchar* dbg_msg = g_strdup_printf ("Applying tag %s.", tagname);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
         #endif
 
           GtkTextIter end;
@@ -1755,7 +1767,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else if (g_strcmp0 (stack->data,"O") == 0)
       {
       #ifdef DEBUG
-        g_print ("Adding current to tag name.\n");
+        dbg ("Adding current to tag name.");
       #endif
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
@@ -1764,7 +1776,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       {
         /*FUUUUUUUUUUUUUUUUU Oger!*/
       #ifdef DEBUG
-        g_print ("ERR: Tag closed, but none was open.");
+        dbg ("ERR: Tag closed, but none was open. Oger again?");
       #endif
         state = STATE_DATA;
       }
@@ -1772,19 +1784,21 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     else if (state == STATE_OPENTAG)
     {
     #ifdef DEBUG
-      g_print ("State: Open tag.\n");
+      dbg ("State: Open tag.");
     #endif
 
       if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
+        gchar* dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
       #endif
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
         if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
         {
         #ifdef DEBUG
-          g_print ("Closing void tag.\n");
+          dbg ("Closing void tag.");
         #endif
           state = STATE_CLOSETAG;
           i--;
@@ -1806,14 +1820,14 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else if (g_strcmp0 (current, " ") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detecting end of tag name definition, switching to state attribute.\n");
+        dbg ("Detecting end of tag name definition, switching to state attribute.");
       #endif
         state = STATE_ATTR;
       }
       else
       {
       #ifdef DEBUG
-        g_print ("Adding current to tag name.\n");
+        dbg ("Adding current to tag name.");
       #endif
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
@@ -1822,13 +1836,13 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     else if (state == STATE_ATTR)
     {
     #ifdef DEBUG
-      g_print ("State: Attribute.\n");
+      dbg ("State: Attribute.");
     #endif
 
       if (g_strcmp0 (current, "=") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detecting value definition start. Switching to state attribute content.\n");
+        dbg ("Detecting value definition start. Switching to state attribute content.");
       #endif
 
         i++;
@@ -1838,7 +1852,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else if (g_strcmp0 (current, " ") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detecting end of attribute, switching back to state open tag.\n");
+        dbg ("Detecting end of attribute, switching back to state open tag.");
       #endif
 
         current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
@@ -1849,13 +1863,15 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        g_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.\n",current_tag->name);
+        gchar* dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
       #endif
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
         if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
         {
         #ifdef DEBUG
-          g_print ("Closing void tag.\n");
+          dbg ("Closing void tag.");
         #endif
           state = STATE_CLOSETAG;
           i--;
@@ -1878,7 +1894,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else
       {
       #ifdef DEBUG
-        g_print ("Adding current to attribute name.\n");
+        dbg ("Adding current to attribute name.");
       #endif
         current_attr->name = g_strconcat (current_attr->name, current, NULL);
       }
@@ -1888,7 +1904,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       if (g_strcmp0 (current, "\"") == 0)
       {
       #ifdef DEBUG
-        g_print ("Detected \", switching back to state attribute and pop()'ing stack.\n");
+        dbg ("Detected \", switching back to state attribute and pop()'ing stack.");
       #endif
 
         state = STATE_ATTR;
@@ -1900,7 +1916,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else
       {
       #ifdef DEBUG
-        g_print ("Adding current to attribute valute.\n");
+        dbg ("Adding current to attribute valute.");
       #endif
 
         current_attr->value = g_strconcat (current_attr->value, current, NULL);
@@ -1910,7 +1926,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
   g_free (message_d);
   g_free (plus);
 #ifdef DEBUG
-  g_print ("Parsing done.");
+  dbg ("Parsing done.");
 #endif
 }
 
@@ -2073,7 +2089,7 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
       #endif
 
       #ifdef DEBUG
-        g_printf ("Quoted URI: %s\n", uri);
+        gchar* dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
       #endif
         if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
         {
@@ -2364,7 +2380,14 @@ void err(gchar* message)
 #ifdef DEBUG
 void dbg(gchar* message)
 {
+#ifdef G_OS_WIN32
+  /*F'ing Windows doesn't open stdout/-err for GUI apps.*/
+  FILE* logfile = fopen (g_build_filename (g_getenv ("TEMP"), "dcgui_debug.log", NULL), "a");
+  fprintf (logfile, "%s\n", message);
+  fclose (logfile);
+#else
   g_print (message);
   g_print ("\n");
+#endif
 }
 #endif
