@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.1.30"\n')
+f.write('#define VERSION "0.2.30"\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 
@@ -13,7 +13,17 @@ all:
 \t$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_url_tag.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
-\trm -rv _build
+\t@if [ -d _build ]; then rm -rv _build;fi
+
+love:
+\t@echo "Not war?"
+
+me:
+\t@true
+a:
+\t@true
+sandwich:
+\t@if [[ $EUID -ne 0 ]]; then echo "What? Make it yourself."; else echo "Okay."; fi
 
 distclean: clean
 \trm src/config.h
@@ -29,14 +39,16 @@ parser = optparse.OptionParser()
 parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local/bin",help="Installation prefix.")
 parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
 parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Like debug, but without the textwalls of doom(tm). Useful for automated debugging.")
-parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications.")
-parser.add_option("-a","--enable-audio",action="store_true",dest="audio",default=True,help="Enable audio notifications.")
-parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=True,help="Enable Off-The-Record encryption support.")
-parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=True,help="Enable translations.")
+parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
+parser.add_option("-a","--enable-audio",action="store_true",dest="audio",default=False,help="Enable audio notifications.")
+parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support.")
+parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations.")
 
 (options,args) = parser.parse_args()
 
 ccargs = "-O2 -Wall -march=native"
+
+print "Writing options to config.h ..."
 
 if options.debug:
   f.write('#define DEBUG\n')
@@ -56,18 +68,32 @@ if options.l10n:
   f.write('#define NLS\n')
 
 f.close()
-
+print "Checking whether build environment is sane..."
 m = open("Makefile","w")
 
 if os.name == "posix":
   if os.path.exists("/usr/bin/clang") or os.path.exists("/usr/local/bin/clang"):
-    print "Detected CLang compiler, using it."
+    print "Detected CLang compiler, OK."
     m.write ("CC = clang\n")
+  elif os.path.exists("/usr/bin/gcc") or os.path.exists("/usr/local/bin/gcc"):
+    print "Detected GCC compiler, OK."
+    m.write("CC = gcc\n")
   else:
-    m.write("CC = clang\n")
+    print "Build environment is grinning and holding a spatula. Guess not."
+    sys.exit(-1)
 elif os.name == "nt":
-  print "Windows support unfinished!"
-  sys.exit()
+  print "Please contact your next exorcist for help with compiling on Windows."
+  sys.exit(-42)
+
+print "Checking for libraries..."
+
+for lib in libs.split(" "):
+  print "Checking ", lib
+  if os.path.exists ("/usr/lib/pkgconfig/"+lib+".pc"):
+    print "OK."
+  else:
+    print "ERR: Lib ", lib, " not found."
+    sys.exit(-2)
 
 m.write("LIBS = %s\n"%libs)
 m.write("DESTDIR = %s\n"%options.prefix)
@@ -75,3 +101,5 @@ m.write("CCARGS = %s\n"%ccargs)
 
 m.write(makefile)
 m.close()
+
+print "This was a triumph.\nI'm making a note here, huge success!\n*wanders off singing*"
