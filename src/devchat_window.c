@@ -23,6 +23,10 @@
 #include "devchat_url_tag.h"
 #include <string.h>
 
+#ifdef DEBUG
+  gchar* dbg_msg;
+#endif
+
 enum {
   SETTINGS_BROWSER = 1,
   SETTINGS_COLOR_FONT,
@@ -868,7 +872,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     data->window->userlevel = 1;
   }
 #ifdef DEBUG
-  gchar* dbg_msg = g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel);
+  dbg_msg = g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel);
   dbg (dbg_msg);
   g_free (dbg_msg);
 #endif
@@ -931,8 +935,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
   #ifdef DEBUG
     dbg ("Got non-empty userlist.");
+  #else
+    gchar* dbg_msg;
   #endif
-    gchar* dbg_msg = g_strdup_printf("Last Update: %s",current_time());
+    dbg_msg = g_strdup_printf("Last Update: %s",current_time());
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
     g_free (dbg_msg);
 
@@ -1125,7 +1131,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (profile)
   {
   #ifdef DEBUG
-    gchar* dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...", (gchar*) data->data);
+    dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...", (gchar*) data->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
   #endif
@@ -1256,7 +1262,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         self->window->lastid = g_strdup (lid);
 
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time, lid, message);
+        dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time, lid, message);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1313,7 +1319,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
+        dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1456,7 +1462,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
     current[0] = message_d[i];
 
   #ifdef DEBUG
-    gchar* dbg_msg = g_strdup_printf ("Current char: %s.", current);
+    dbg_msg = g_strdup_printf ("Current char: %s.", current);
     dbg (dbg_msg);
     g_free (dbg_msg);
   #endif
@@ -1470,7 +1476,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       if (g_strcmp0 (current, "<") == 0)
       {
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Detected <, switching to state typecheck and dumping content %s.", content);
+        dbg_msg = g_strdup_printf ("Detected <, switching to state typecheck and dumping content %s.", content);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1544,7 +1550,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         /*XXX: Close actually closed tag, not the last one.*/
 
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
+        dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1553,7 +1559,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         if (g_strcmp0 (top->name,"font")==0)
         {
         #ifdef DEBUG
-          gchar* dbg_msg = g_strdup_printf ("Found font tag! Attribute:%s ",((DevchatHTMLAttr*) top->attrs->data)->name);
+          dbg_msg = g_strdup_printf ("Found font tag! Attribute:%s ",((DevchatHTMLAttr*) top->attrs->data)->name);
           dbg (dbg_msg);
           g_free (dbg_msg);
         #endif
@@ -1563,7 +1569,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             tagname = color_lookup (((DevchatHTMLAttr*) top->attrs->data)->value);
 
           #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Color attribute with value %s.", tagname);
+            dbg_msg = g_strdup_printf ("Color attribute with value %s.", tagname);
             dbg (dbg_msg);
             g_free (dbg_msg);
           #endif
@@ -1624,7 +1630,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           else if (uri)
           {
           #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
+            dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
             dbg (dbg_msg);
             g_free (dbg_msg);
           #endif
@@ -1641,7 +1647,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
             g_strfreev (uri_parts);
 
           #ifdef DEBUG
-            gchar* dbg_msg = g_strdup_printf ("Writing image to %s.", filename);
+            dbg_msg = g_strdup_printf ("Writing image to %s.", filename);
             dbg (dbg_msg);
             g_free (dbg);
           #endif
@@ -1698,7 +1704,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           tagname = tagname_d;
 
         #ifdef DEBUG
-          gchar* dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
+          dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
           dbg (dbg_msg);
           g_free (dbg_msg);
         #endif
@@ -1742,7 +1748,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         if (tagname)
         {
         #ifdef DEBUG
-          gchar* dbg_msg = g_strdup_printf ("Applying tag %s.", tagname);
+          dbg_msg = g_strdup_printf ("Applying tag %s.", tagname);
           dbg (dbg_msg);
           g_free (dbg_msg);
         #endif
@@ -1790,7 +1796,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+        dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1863,7 +1869,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else if (g_strcmp0 (current, ">") == 0)
       {
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+        dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -2089,7 +2095,7 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
       #endif
 
       #ifdef DEBUG
-        gchar* dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
+        dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
       #endif
         if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
         {
@@ -2213,9 +2219,8 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       "post","chatlevel",sendlevel,"textinput", re_text, NULL);
     soup_session_send_message (data->window->session, post);
 
-    /*XXX: Windows version crashs here. No idea why.*/
     g_free (enc_text);
-    xmlFree (p);
+    xmlFreeDoc (p);
     g_free (re_text_a);
     g_free (plus);
     g_free (text);
