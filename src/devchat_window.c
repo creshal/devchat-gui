@@ -1230,6 +1230,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
     gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
     g_free (labeltext);
+    gboolean message_found = FALSE;
 
     xmlParserCtxtPtr narf = xmlNewParserCtxt();
     xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
@@ -1249,6 +1250,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       if (node && (g_strcmp0 (node,"ce") == 0))
       {
+        message_found = TRUE;
       #ifdef DEBUG
         dbg ("Processing message node...");
       #endif
@@ -1380,9 +1382,13 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     dbg ("Message list parsed.");
   #endif
 
-    GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
-    if (((a->value + a->page_size) / a->upper) > 0.95)
-      gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
+    if (message_found)
+    {
+      GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
+      if ((a->upper - (a->value + a->page_size)) < 30)
+        gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
+    }
+
     gtk_text_buffer_delete_mark (self->window->output, scroll_to);
 
     self->window->firstrun = FALSE;
