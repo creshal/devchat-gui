@@ -1,5 +1,5 @@
 pkgname=dcgui
-pkgver=0.2.30
+pkgver=0.3.30
 pkgrel=1
 pkgdesc="A Gtk+ based Devchat client."
 arch=('i686' 'x86_64')
