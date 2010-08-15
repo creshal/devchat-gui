@@ -21,6 +21,8 @@
 #include "devchat_html_tag.h"
 #include "devchat_html_attr.h"
 #include "devchat_url_tag.h"
+#include "HTMLent.h"
+
 #include <string.h>
 
 #ifdef DEBUG
@@ -126,6 +128,8 @@ devchat_window_init (DevchatWindow* self)
   GtkVBox* vbox0 = GTK_VBOX(gtk_vbox_new(FALSE,0));
   GtkWidget* menu = gtk_menu_bar_new();
   GtkWidget* hpaned1 = gtk_hpaned_new();
+
+  init_entities ();
 
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
   self->users = g_hash_table_new (g_str_hash, g_str_equal);
@@ -942,7 +946,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
     g_free (dbg_msg);
 
-    xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
+    xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_DTDLOAD));
     xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
 
     GdkColor l1;
@@ -1242,7 +1246,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
     gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
 
-    xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, (XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_NONET));
+    xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
 
     while (xmlTextReaderRead (msgparser) == 1)
     {
@@ -1490,13 +1494,59 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
 
-        gchar* content_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) content, XML_SUBSTITUTE_REF, 0, 0, 0);
+        //gchar* content_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) content, XML_SUBSTITUTE_BOTH, 0, 0, 0);
 
-        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content_d, -1);
-        g_free (content_d);
+        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
+        //g_free (content_d);
         content = "";
 
         state = STATE_TYPECHECK;
+      }
+      else if (g_strcmp0 (current, "&") == 0)
+      {
+        // Entity
+        int j;
+        gchar ent_current[2];
+        ent_current[0] = 32;
+        ent_current[1] = 0;
+        gchar* entity_name = "";
+        gboolean found = FALSE;
+        for (j=i; j < i+8 && found == FALSE; j++)
+        {
+          ent_current[0] = message_d[j];
+          if (ent_current[0] > 47 && (ent_current[0] < 58 || ent_current[0] > 64 && (ent_current[0] < 91
+                    || (ent_current[0] > 96 && ent_current[0] < 123))) || ent_current[0] == 35)
+            entity_name = g_strconcat (entity_name, ent_current, NULL);
+          if (ent_current[0] == 59)
+            found = TRUE;
+        }
+
+        if (!found)
+        {
+          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compilant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
+          content = g_strconcat (content, "&", NULL);
+        }
+        else
+        {
+          guint64 charval = 0;
+          if (entity_name[0] == 35)
+          {
+            charval = g_ascii_strtoull (entity_name+2,NULL,16);
+          }
+          else
+          {
+            charval = GPOINTER_TO_UINT (g_hash_table_lookup (entities, entity_name));
+          }
+          if (charval)
+          {
+            gchar c[6];
+            c[g_unichar_to_utf8 (charval, c)] = 0;
+            content = g_strconcat (content, c, NULL);
+          }
+
+
+          i = i + strlen(entity_name) + 1;
+        }
       }
       else
       {
@@ -2200,14 +2250,68 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
     /*TODO: Fill linebuffer.*/
     gtk_text_buffer_set_text (buf, "", 0);
 
-    xmlDocPtr p = xmlNewDoc(BAD_CAST "1.0");
-    gchar* enc_text = (gchar*) xmlEncodeEntitiesReentrant (p, (unsigned char*) text);
+    gchar* enc_text = "";
 
-    GRegex* re = g_regex_new ("\n", 0, 0, NULL);
-    GRegex* plus = g_regex_new ("\\+", 0, 0, NULL);
+    guchar current[2];
+    current[0] = 32;
+    current[1] = 0;
 
-    gchar* re_text_a = g_regex_replace (re, enc_text, -1, 0, "\r\n", 0, NULL);
-    gchar* re_text = g_regex_replace (plus, re_text_a, -1, 0, "&#43;", 0, NULL);
+    gint i;
+    gint max = strlen (text);
+
+    for (i=0; i < max; i++)
+    {
+      current[0] = text[i];
+
+    #ifdef DEBUG
+      dbg_msg = g_strdup_printf ("Current char: %i\n", current[0]);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    #endif
+
+      /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
+      if (current[0] == 45 || current[0] == 46
+          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
+          || (current[0] > 96 && current[0] < 123))
+      {
+        enc_text = g_strconcat (enc_text, current, NULL);
+      }
+      else if (current[0] > 31 && current[0] < 128)
+      {
+        //Restricted char, but valid ASCII. %escape
+        if (current[0] == 43)
+          enc_text = g_strconcat (enc_text, "%26%2343%3B", NULL);
+        else
+          enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
+      }
+      else if (current[0] > 193 && current[0] < 245)
+      {
+        //UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...
+
+        enc_text = g_strdup_printf ("%s%%u%0.4X", enc_text, g_utf8_get_char (text+i));
+
+        i++;
+        if (current[0] > 223)
+        {
+          i++;
+          if (current[0] > 239)
+            i++;
+        }
+      }
+    #ifdef DEBUG
+      else
+      {
+        dbg ("Invalid char in sent text. Stop that!");
+      }
+    #endif
+    }
+
+  #ifdef DEBUG
+    dbg_msg = g_strdup_printf ("Parsed message: %s.\n", enc_text);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  #endif
+
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
@@ -2221,17 +2325,10 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       default: sendlevel = "6"; break;
     }
 
-    SoupMessage* post = soup_form_request_new("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj","cmd",
-      "post","chatlevel",sendlevel,"textinput", re_text, NULL);
+    SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
     soup_session_send_message (data->window->session, post);
 
     g_free (enc_text);
-    xmlFreeDoc (p);
-    g_free (re_text_a);
-    g_free (plus);
-    g_free (text);
-    g_free (re);
-    g_free (re_text);
   }
 }
 

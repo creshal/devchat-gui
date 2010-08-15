@@ -1,11 +1,11 @@
 CC = clang
 LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
-DESTDIR = /usr
+DESTDIR = /usr/local/bin
 CCARGS = -O2 -Wall -march=native
 
 all:
 	mkdir -p _build/bin
-	$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/devchat_cb_data.c src/devchat_url_tag.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
+	$(CC) $(CCARGS) `pkg-config --cflags --libs $(LIBS)` src/HTMLent.c src/devchat_cb_data.c src/devchat_url_tag.c src/devchat_html_attr.c src/devchat_html_tag.c src/devchat_window.c src/main.c -o _build/bin/dcgui
 
 clean:
 	@if [ -d _build ]; then rm -rv _build;fi
