@@ -1837,9 +1837,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
       else
       {
         /*FUUUUUUUUUUUUUUUUU Oger!*/
-      #ifdef DEBUG
-        dbg ("ERR: Tag closed, but none was open. Oger again?");
-      #endif
         state = STATE_DATA;
       }
     }
@@ -1868,8 +1865,6 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         else
         {
           state = STATE_DATA;
-
-          /*TODO: HTML comments.*/
         }
 
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
@@ -1974,6 +1969,52 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         GSList* tmp = stack;
         stack = stack->next;
         g_slist_free_1 (tmp);
+      }
+      else if (g_strcmp0 (current, "&") == 0)
+      {
+        // Entity
+        int j;
+        gchar ent_current[2];
+        ent_current[0] = 32;
+        ent_current[1] = 0;
+        gchar* entity_name = "";
+        gboolean found = FALSE;
+        for (j=i; j < i+8 && found == FALSE; j++)
+        {
+          ent_current[0] = message_d[j];
+          if (ent_current[0] > 47 && (ent_current[0] < 58 || ent_current[0] > 64 && (ent_current[0] < 91
+                    || (ent_current[0] > 96 && ent_current[0] < 123))) || ent_current[0] == 35)
+            entity_name = g_strconcat (entity_name, ent_current, NULL);
+          if (ent_current[0] == 59)
+            found = TRUE;
+        }
+
+        if (!found)
+        {
+          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compilant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
+          current_attr->value = g_strconcat (current_attr->value, "&", NULL);
+        }
+        else
+        {
+          guint64 charval = 0;
+          if (entity_name[0] == 35)
+          {
+            charval = g_ascii_strtoull (entity_name+2,NULL,16);
+          }
+          else
+          {
+            charval = GPOINTER_TO_UINT (g_hash_table_lookup (entities, entity_name));
+          }
+          if (charval)
+          {
+            gchar c[6];
+            c[g_unichar_to_utf8 (charval, c)] = 0;
+            current_attr->value = g_strconcat (current_attr->value, c, NULL);
+          }
+
+
+          i = i + strlen(entity_name) + 1;
+        }
       }
       else
       {
