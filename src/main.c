@@ -31,7 +31,9 @@ main (int argc, char *argv[])
   if (!g_file_test (settingsfile, G_FILE_TEST_EXISTS))
   {
 #ifdef DEBUG
-    dbg("Settings file not found.\n");
+    gchar* dbg_msg = g_strdup_printf ("Settings file not found, search path was %s.\n", settingsfile);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
 #endif
   }
   else
@@ -119,7 +121,7 @@ main (int argc, char *argv[])
 #endif
 
 #ifdef DEBUG
-  gchar* dbg_msg = g_strdup_printf ("Working dir determined to be %s \n", self->workingdir);
+  dbg_msg = g_strdup_printf ("Working dir determined to be %s \n", self->workingdir);
   dbg (dbg_msg);
   g_free (dbg_msg);
 #endif

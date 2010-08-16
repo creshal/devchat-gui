@@ -1216,9 +1216,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+  /*XXX Debug SoupMessage to fix Ban's/uc's hangers.*/
   gchar* msglist = g_strdup (m->response_body->data);
   if (msglist)
   {
+    /*XXX: Slow parser is slooow. Fix that.*/
     ce_parse (msglist, data, "");
   #ifdef DEBUG
     dbg ("Parsing done.");
@@ -1523,7 +1525,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
         if (!found)
         {
-          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compilant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
+          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compliant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
           content = g_strconcat (content, "&", NULL);
         }
         else
@@ -1991,7 +1993,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
 
         if (!found)
         {
-          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compilant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
+          /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compliant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
           current_attr->value = g_strconcat (current_attr->value, "&", NULL);
         }
         else
@@ -2310,6 +2312,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       g_free (dbg_msg);
     #endif
 
+      /*XXX: Restructure if flow, gcc doesn't like it. Also, \r\n.*/
       /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
       if (current[0] == 45 || current[0] == 46
           || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
