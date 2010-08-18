@@ -788,9 +788,12 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
   if (!(data->window->firstrun))
   {
     /*XXX: Sometimes, session does not exist.*/
-    SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
-    soup_session_send_message (data->window->session, msg);
-    soup_session_abort (data->window->session);
+    if (data->window->session)
+    {
+      SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
+      soup_session_send_message (data->window->session, msg);
+      soup_session_abort (data->window->session);
+    }
   }
   gtk_main_quit ();
 }
