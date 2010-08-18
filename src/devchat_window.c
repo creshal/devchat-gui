@@ -1219,11 +1219,14 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
-  /*XXX Debug SoupMessage to fix Ban's/uc's hangers.*/
+  #ifdef DEBUG
+    dbg_msg = g_strdup_printf ("(XX) Message list response:\nRequest Headers: %s.\n\nStatus code: %i -> Status Message: %s.\n\nResponse Headers:%s.\n\nResponse Body: %s.\n\n\n", m->request_headers, m->status_code, m->reason_phrase, m->response_headers, m->response_body);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  #endif
   gchar* msglist = g_strdup (m->response_body->data);
   if (msglist)
   {
-    /*XXX: Slow parser is slooow. Fix that.*/
     ce_parse (msglist, data, "");
   #ifdef DEBUG
     dbg ("Parsing done.");
