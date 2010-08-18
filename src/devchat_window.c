@@ -2350,6 +2350,10 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
             i++;
         }
       }
+      else if (current[0] == 10)
+      {
+        enc_text = g_strconcat (enc_text, "%0D%0A", NULL);
+      }
     #ifdef DEBUG
       else
       {
