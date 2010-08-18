@@ -1516,8 +1516,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         for (j=i; j < i+8 && found == FALSE; j++)
         {
           ent_current[0] = message_d[j];
-          if (ent_current[0] > 47 && (ent_current[0] < 58 || ent_current[0] > 64 && (ent_current[0] < 91
-                    || (ent_current[0] > 96 && ent_current[0] < 123))) || ent_current[0] == 35)
+          if (current[0] == 45 || current[0] == 46
+          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
+          || (current[0] > 96 && current[0] < 123) || current[0] == 35)
             entity_name = g_strconcat (entity_name, ent_current, NULL);
           if (ent_current[0] == 59)
             found = TRUE;
@@ -1533,7 +1534,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           guint64 charval = 0;
           if (entity_name[0] == 35)
           {
-            charval = g_ascii_strtoull (entity_name+2,NULL,16);
+            charval = g_ascii_strtoull (entity_name+1,NULL,10);
           }
           else
           {
@@ -1984,8 +1985,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         for (j=i; j < i+8 && found == FALSE; j++)
         {
           ent_current[0] = message_d[j];
-          if (ent_current[0] > 47 && (ent_current[0] < 58 || ent_current[0] > 64 && (ent_current[0] < 91
-                    || (ent_current[0] > 96 && ent_current[0] < 123))) || ent_current[0] == 35)
+          if (current[0] == 45 || current[0] == 46
+          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
+          || (current[0] > 96 && current[0] < 123) || current[0] == 35)
             entity_name = g_strconcat (entity_name, ent_current, NULL);
           if (ent_current[0] == 59)
             found = TRUE;
@@ -2001,7 +2003,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           guint64 charval = 0;
           if (entity_name[0] == 35)
           {
-            charval = g_ascii_strtoull (entity_name+2,NULL,16);
+            charval = g_ascii_strtoull (entity_name+1,NULL,10);
           }
           else
           {
@@ -2332,7 +2334,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       {
         //UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...
 
-        enc_text = g_strdup_printf ("%s%%u%0.4X", enc_text, g_utf8_get_char (text+i));
+        enc_text = g_strdup_printf ("%s%%u%.4X", enc_text, g_utf8_get_char (text+i));
 
         i++;
         if (current[0] > 223)
