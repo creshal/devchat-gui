@@ -73,11 +73,20 @@ main (int argc, char *argv[])
       g_object_set (self, "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,NULL);
       g_object_set (self, "x", g_key_file_get_integer (keyfile, g, "X", &e),NULL);
       g_object_set (self, "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
-      g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLEWIDTH", &e),NULL);
+      if (g_key_file_has_key (keyfile, g, "HANDLEWIDTH", &e))
+        g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLEWIDTH", &e),NULL);
+      else
+        g_object_set (self, "handle_width", 400, NULL);
       g_object_set (self, "width", g_key_file_get_integer (keyfile, g, "WIDTH", &e),NULL);
       g_object_set (self, "height", g_key_file_get_integer (keyfile, g, "HEIGHT", &e),NULL);
-      self->settings.avatar_size = 12;
-      self->settings.update_time = 1000;
+      if (g_key_file_has_key (keyfile, g, "AVATARSIZE", &e))
+        self->settings.avatar_size = g_key_file_get_integer (keyfile, g, "AVATARSIZE", &e);
+      else
+        self->settings.avatar_size = 12;
+      if (g_key_file_has_key (keyfile, g, "UPDATE_TIME", &e))
+        self->settings.update_time = g_key_file_get_integer (keyfile, g, "UPDATE_TIME", &e);
+      else
+        self->settings.update_time = 1000;
 
       gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
       int i;

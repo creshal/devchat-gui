@@ -63,6 +63,8 @@ enum {
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
 static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
 
+void save_settings (DevchatWindow* w);
+
 void url_tag_nv_color_cb (GtkTextTag* t, gchar* value);
 void url_tag_v_color_cb (GtkTextTag* t, gchar* value);
 
@@ -785,6 +787,9 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
   notify_uninit ();
 #endif
 
+  save_settings (data->window);
+
+
   if (!(data->window->firstrun))
   {
     /*XXX: Sometimes, session does not exist.*/
@@ -796,6 +801,101 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
     }
   }
   gtk_main_quit ();
+}
+
+void save_settings (DevchatWindow* w)
+{
+  gchar* settingsfile = g_build_filename(g_get_user_config_dir(),"devchat", NULL);
+
+  if (!g_file_test (settingsfile, G_FILE_TEST_EXISTS))
+  {
+#ifdef DEBUG
+    gchar* dbg_msg = g_strdup_printf ("Settings file not found, search path was %s. Creating.\n", settingsfile);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+#endif
+  }
+
+  GSList* tmp_kw = w->settings.keywords;
+  gchar* keywords_string = "KEYWORDS=";
+
+  if (tmp_kw)
+  {
+    keywords_string = g_strconcat (keywords_string, (gchar*) tmp_kw->data, NULL);
+
+    tmp_kw = tmp_kw->next;
+
+    while (tmp_kw)
+    {
+      keywords_string = g_strconcat (keywords_string, "|", (gchar*) tmp_kw->data, NULL);
+      tmp_kw = tmp_kw->next;
+    }
+  }
+
+  GSList* tmp_ps = w->settings.presets;
+  gchar* presets_string = "BOILERPLATES=";
+
+  if (tmp_ps)
+  {
+    presets_string = g_strconcat (presets_string, (gchar*) tmp_ps->data, NULL);
+
+    tmp_ps = tmp_ps->next;
+
+    while (tmp_ps)
+    {
+      presets_string = g_strconcat (presets_string, "|", (gchar*) tmp_ps->data, NULL);
+      tmp_ps = tmp_ps->next;
+    }
+  }
+
+  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\n", w->settings.showid? "TRUE":"FALSE",
+                                         w->settings.stealthjoin? "TRUE" : "FALSE",
+                                         w->settings.autojoin? "TRUE" : "FALSE",
+                                         w->settings.showhidden? "TRUE" : "FALSE",
+                                         w->settings.coloruser? "TRUE" : "FALSE");
+
+  gchar* settings = g_strconcat ("#Settings file for DevchatGUI. Please do not alter the key names.\n \
+#Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
+#Keywords and boilerplates are separated by | (u007C, vertical line).\n \
+#Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must equal true for true, everything else will be regarded as false.\n[Devchat]\n",
+                                 "BROWSER=",w->settings.browser, "\n",
+                                 "COLOR_FONT=",w->settings.color_font, "\n",
+                                 "COLOR_TIME=",w->settings.color_time, "\n",
+                                 "COLOR_L1=",w->settings.color_l1, "\n",
+                                 "COLOR_L3=",w->settings.color_l3, "\n",
+                                 "COLOR_L5=",w->settings.color_l5, "\n",
+                                 "COLOR_L6=",w->settings.color_l6, "\n",
+                                 "COLOR_GREENS=",w->settings.color_greens, "\n",
+                                 "COLOR_BLUES=",w->settings.color_blues, "\n",
+                                 "COLOR_URL=",w->settings.color_url, "\n",
+                                 "COLOR_URL_VISITED=",w->settings.color_url_visited, "\n",
+                                 "COLOR_URL_HOVER=",w->settings.color_url_hover, "\n",
+                                 "COLOR_HIGHLIGHT=",w->settings.color_highlight, "\n",
+                                 "USER=",w->settings.user, "\n",
+                                 "PASS=",w->settings.pass, "\n",
+                                 "NOTIFY=",w->settings.notify, "\n",
+                                 "VNOTIFY=",w->settings.vnotify, "\n",
+                                 g_strdup_printf("WIDTH=%i\n", w->settings.width),
+                                 g_strdup_printf("HEIGHT=%i\n", w->settings.height),
+                                 g_strdup_printf("X=%i\n", w->settings.x),
+                                 g_strdup_printf("Y=%i\n", w->settings.y),
+                                 g_strdup_printf("UPDATE_TIME=%i\n", w->settings.update_time),
+                                 g_strdup_printf("AVATARSIZE=%i\n", w->settings.avatar_size),
+                                 g_strdup_printf("HANDLE_WIDTH=%i\n", w->settings.handle_width),
+                                 keywords_string, "\n",
+                                 presets_string, "\n",
+                                 bools_string,
+                                 NULL);
+  if(!g_file_set_contents (settingsfile, settings, -1, NULL))
+  {
+    #ifdef DEBUG
+      dbg ("Error writing settings file.");
+    #endif
+  }
+  g_free (settings);
+  g_free (bools_string);
+  g_free (keywords_string);
+  g_free (presets_string);
 }
 
 void login (GtkWidget* widget, DevchatCBData* data)
@@ -933,6 +1033,12 @@ void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
 
 void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+  #ifdef DEBUG
+    dbg_msg = g_strdup_printf ("(XX) User list response:\n\nStatus code: %i -> Status Message: %s.\n\nResponse Body: %s.\n\n\n", m->status_code, m->reason_phrase, m->response_body->data);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  #endif
+
   g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
 
   /*TODO: Do incremental updates. Should migitate the flickering issue.*/
@@ -1220,7 +1326,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
   #ifdef DEBUG
-    dbg_msg = g_strdup_printf ("(XX) Message list response:\nRequest Headers: %s.\n\nStatus code: %i -> Status Message: %s.\n\nResponse Headers:%s.\n\nResponse Body: %s.\n\n\n", m->request_headers, m->status_code, m->reason_phrase, m->response_headers, m->response_body);
+    dbg_msg = g_strdup_printf ("(XX) Message list response:\n\nStatus code: %i -> Status Message: %s.\n\nResponse Body: %s.\n\n\n", m->status_code, m->reason_phrase, m->response_body->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
   #endif
