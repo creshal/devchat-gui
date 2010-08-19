@@ -848,6 +848,9 @@ void save_settings (DevchatWindow* w)
     }
   }
 
+  GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port));
+  g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
+
   gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",
                                          w->settings.autojoin? "TRUE" : "FALSE",
