@@ -1631,9 +1631,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         for (j=i; j < i+8 && found == FALSE; j++)
         {
           ent_current[0] = message_d[j];
-          if (current[0] == 45 || current[0] == 46
-          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
-          || (current[0] > 96 && current[0] < 123) || current[0] == 35)
+          if (ent_current[0] == 45 || ent_current[0] == 46
+          || (ent_current[0] > 47 && ent_current[0] < 58) || (ent_current[0] > 64 && ent_current[0] < 91) || ent_current[0] == 95
+          || (ent_current[0] > 96 && ent_current[0] < 123) || ent_current[0] == 35)
             entity_name = g_strconcat (entity_name, ent_current, NULL);
           if (ent_current[0] == 59)
             found = TRUE;
@@ -2100,9 +2100,9 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         for (j=i; j < i+8 && found == FALSE; j++)
         {
           ent_current[0] = message_d[j];
-          if (current[0] == 45 || current[0] == 46
-          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
-          || (current[0] > 96 && current[0] < 123) || current[0] == 35)
+          if (ent_current[0] == 45 || ent_current[0] == 46
+          || (ent_current[0] > 47 && ent_current[0] < 58) || (ent_current[0] > 64 && ent_current[0] < 91) || ent_current[0] == 95
+          || (ent_current[0] > 96 && ent_current[0] < 123) || ent_current[0] == 35)
             entity_name = g_strconcat (entity_name, ent_current, NULL);
           if (ent_current[0] == 59)
             found = TRUE;
