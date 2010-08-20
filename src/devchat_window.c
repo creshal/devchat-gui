@@ -430,7 +430,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_button_set_image (GTK_BUTTON (btn_url), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_SMALL_TOOLBAR));
   gtk_widget_set_tooltip_text (btn_url, "Insert URL");
   GtkWidget* btn_img = gtk_button_new ();
-  gtk_button_set_image (GTK_BUTTON (btn_img), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_SMALL_TOOLBAR));
+  gtk_button_set_image (GTK_BUTTON (btn_img), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_SMALL_TOOLBAR));
   gtk_widget_set_tooltip_text (btn_img, "Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned.");
 
   g_signal_connect (btn_bold, "clicked", G_CALLBACK (btn_format), format_b);
