@@ -2243,7 +2243,15 @@ void close_tab(GtkWidget* widget, DevchatCBData* data)
 
 void reconnect(GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+#ifdef DEBUG
+  g_print ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit...)\n");
+#endif
+  data->window->firstrun = TRUE;
+  data->window->hovertag = NULL;
+  soup_session_abort (data->window->session);
+  data->window->session = soup_session_async_new ();
+  soup_session_add_feature (data->window->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
+  login (NULL, data);
 }
 
 void tab_changed(GtkWidget* widget, DevchatCBData* data)
@@ -2533,16 +2541,11 @@ void btn_format (GtkWidget* widget, DevchatCBData* data)
 
   if (pagenum == 0)
   {
-  #ifdef DEBUG
-    dbg ("Sending message to main channel.");
-  #endif
     buf = data->window->input;
   }
   else
   {
-  #ifdef DEBUG
-    dbg ("Sending PM.");
-  #endif
+    /*XXX: PM Windows.*/
     buf = data->window->input;
   }
 
@@ -2635,12 +2638,38 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 
 void ins_smilie (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+  }
+  else
+  {
+    /*XXX: PM Windows.*/
+    buf = data->window->input;
+  }
+
+  gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
 }
 
 void ins_preset (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+  }
+  else
+  {
+    /*XXX: PM Windows.*/
+    buf = data->window->input;
+  }
+
+  gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
 }
 
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
