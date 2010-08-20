@@ -96,6 +96,8 @@ void at_cb (GtkWidget* widget, DevchatCBData* data);
 void pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
 
+void launch_browser (gchar* uri, DevchatCBData* data);
+
 void create_tags (GtkTextBuffer* buf, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
 void ins_smilie (GtkWidget* widget, DevchatCBData* data);
@@ -2313,36 +2315,42 @@ void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, De
       #ifdef DEBUG
         dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
       #endif
-        if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
-        {
-        #ifdef G_OS_WIN32
-          ShellExecute (NULL, "open", uri, NULL, NULL, SW_SHOWNORMAL);
-        #else
-          if (!g_file_test ("/usr/bin/x-www-browser", G_FILE_TEST_EXISTS))
-          {
-            err ("Your system doesn't have a native browser!");
-            data->window->settings.browser = "<none>";
-          }
-          else
-          {
-            gchar* commandline = g_strconcat ("/usr/bin/x-www-browser ", uri, NULL);
-            g_spawn_command_line_async (commandline, NULL);
-            g_free (commandline);
-          }
-        #endif
-        }
-        else if (g_strcmp0 (data->window->settings.browser,"<none>") != 0)
-        {
-          gchar* commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
-          g_spawn_command_line_async (commandline, NULL);
-          g_free (commandline);
-        }
+        launch_browser (uri, data);
+        g_free (uri);
 
         g_object_set (tag->data, "visited", TRUE, NULL);
         g_object_set (tag->data, "foreground", data->window->settings.color_url_visited, NULL);
       }
       tag = tag->next;
     }
+  }
+}
+
+void launch_browser (gchar* uri, DevchatCBData* data)
+{
+  if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
+  {
+  #ifdef G_OS_WIN32
+    ShellExecute (NULL, "open", uri, NULL, NULL, SW_SHOWNORMAL);
+  #else
+    if (!g_file_test ("/usr/bin/x-www-browser", G_FILE_TEST_EXISTS))
+    {
+      err ("Your system doesn't have a native browser!");
+      data->window->settings.browser = "<none>";
+    }
+    else
+    {
+      gchar* commandline = g_strconcat ("/usr/bin/x-www-browser ", uri, NULL);
+      g_spawn_command_line_async (commandline, NULL);
+      g_free (commandline);
+    }
+  #endif
+  }
+  else if (g_strcmp0 (data->window->settings.browser,"<none>") != 0)
+  {
+    gchar* commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
+    g_spawn_command_line_async (commandline, NULL);
+    g_free (commandline);
   }
 }
 
@@ -2499,7 +2507,40 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
 
 void btn_format (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+  GtkTextIter start;
+  GtkTextIter end;
+
+  if (pagenum == 0)
+  {
+  #ifdef DEBUG
+    dbg ("Sending message to main channel.");
+  #endif
+    buf = data->window->input;
+  }
+  else
+  {
+  #ifdef DEBUG
+    dbg ("Sending PM.");
+  #endif
+    buf = data->window->input;
+  }
+
+  if (gtk_text_buffer_get_selection_bounds (buf, &start, &end))
+  {
+    GtkTextMark* ed = gtk_text_buffer_create_mark (buf, "tmp", &end, TRUE);
+    gtk_text_buffer_insert (buf, &start, g_strconcat ("[", (gchar*) data->data, "]", NULL), -1);
+    gtk_text_buffer_get_iter_at_mark (buf, &end, ed);
+    gtk_text_buffer_insert (buf, &end, g_strconcat ("[/", (gchar*) data->data, "]", NULL), -1);
+    gtk_text_iter_backward_chars (&end, strlen((gchar*) data->data)+3);
+    gtk_text_buffer_place_cursor (buf, &end);
+    gtk_text_buffer_delete_mark (buf, ed);
+  }
+  else
+  {
+    gtk_text_buffer_insert_at_cursor (buf, g_strconcat ("[", (gchar*) data->data, "][/", (gchar*) data->data, "]", NULL), -1);
+  }
 }
 
 void next_tab (GtkWidget* widget, DevchatCBData* data)
