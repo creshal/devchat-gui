@@ -1156,6 +1156,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
           gtk_button_set_image (GTK_BUTTON (profile_btn), gtk_image_new_from_pixbuf (ava));
           gtk_size_group_add_widget (sg, profile_btn);
+          gint uid_i = (int) strtoll (uid, NULL, 10);
+          g_signal_connect (profile_btn, "clicked", G_CALLBACK (go_forum), devchat_cb_data_new (data->window, GINT_TO_POINTER (uid_i)));
 
           if (real_level > 5)
             color = data->window->settings.color_greens;
@@ -2214,7 +2216,24 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
 void go_forum(GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  gchar* url = g_strdup ("http://forum.egosoft.com/");
+  switch (GPOINTER_TO_INT (data->data))
+  {
+    case -255: url = g_strconcat (url, "profile.php?mode=editprofile", NULL); break;
+    case -5: url = g_strconcat (url, "index.php?c=16", NULL); break;
+    case -3: url = g_strconcat (url, "index.php?c=9", NULL); break;
+    case -1: url = g_strconcat (url, "index.php", NULL); break;
+    default: url = g_strdup_printf ("%sprofile.php?mode=viewprofile&u=%i", url, GPOINTER_TO_INT (data->data)); break;
+  }
+
+#ifdef DEBUG
+  dbg_msg = g_strdup_printf ("URL to open: %s\n", url);
+  dbg (dbg_msg);
+  g_free (dbb_msg);
+#endif
+
+  launch_browser (url, data);
+  g_free (url);
 }
 
 void close_tab(GtkWidget* widget, DevchatCBData* data)

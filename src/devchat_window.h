@@ -101,10 +101,10 @@ typedef struct dc_settings
 
 enum
 {
-  URL_PROFILE_EDIT,
-  URL_VISIT_L1,
-  URL_VISIT_L3 = 3,
-  URL_VISIT_L5 = 5
+  URL_PROFILE_EDIT = -255,
+  URL_VISIT_L1 = -1,
+  URL_VISIT_L3 = -3,
+  URL_VISIT_L5 = -5
 };
 
 
