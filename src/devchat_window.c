@@ -1136,6 +1136,14 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                   g_hash_table_insert (data->window->avatars, g_strdup(uid), gdk_pixbuf_new_from_file_at_size (ava_filename,data->window->settings.avatar_size,data->window->settings.avatar_size,NULL));
                 }
               }
+              else
+              {
+                err ("Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory.");
+
+                SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
+                data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
+              }
 
             }
             g_free (ava_filename);
