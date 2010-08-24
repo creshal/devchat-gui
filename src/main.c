@@ -21,6 +21,9 @@
 int
 main (int argc, char *argv[])
 {
+#ifdef DEBUG
+  gchar* dbg_msg;
+#endif
   gtk_init (&argc, &argv);
   /*TODO: Optparse */
   gchar* settingsfile;
@@ -31,7 +34,7 @@ main (int argc, char *argv[])
   if (!g_file_test (settingsfile, G_FILE_TEST_EXISTS))
   {
 #ifdef DEBUG
-    gchar* dbg_msg = g_strdup_printf ("Settings file not found, search path was %s.\n", settingsfile);
+    dbg_msg = g_strdup_printf ("Settings file not found, search path was %s.\n", settingsfile);
     dbg (dbg_msg);
     g_free (dbg_msg);
 #endif
@@ -48,7 +51,6 @@ main (int argc, char *argv[])
     {
       gchar* g = "Devchat";
       GError* e = NULL;
-      /*TODO: Use g_object_set to apply changes. */
       g_object_set (self, "browser", g_key_file_get_value (keyfile, g, "BROWSER", &e),NULL);
       g_object_set (self, "color_font", g_key_file_get_string (keyfile, g, "COLOR_FONT", &e),NULL);
       g_object_set (self, "color_l1", g_key_file_get_string (keyfile, g, "COLOR_L1", &e),NULL);

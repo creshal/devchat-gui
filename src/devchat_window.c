@@ -800,6 +800,8 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
     {
       SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
       soup_session_send_message (data->window->session, msg);
+      g_source_remove (data->window->msg_list_getter);
+      g_source_remove (data->window->usr_list_getter);
       soup_session_abort (data->window->session);
     }
   }
@@ -1000,8 +1002,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg ("Starting requests...");
 #endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
-  g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
-  g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
+  data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+  data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
 
 gboolean
@@ -1045,7 +1047,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
   #endif
 
-  g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+  data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
 
   /*TODO: Do incremental updates. Should migitate the flickering issue.*/
 
@@ -1368,7 +1370,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     dbg ("Parsing done.");
   #endif
   }
-  g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
+  data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
 
 void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
@@ -2583,7 +2585,7 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
 #ifdef DEBUG
   dbg_msg = g_strdup_printf ("URL to open: %s\n", url);
   dbg (dbg_msg);
-  g_free (dbb_msg);
+  g_free (dbg_msg);
 #endif
 
   launch_browser (url, data);
@@ -2603,6 +2605,8 @@ void reconnect(GtkWidget* widget, DevchatCBData* data)
   data->window->firstrun = TRUE;
   data->window->hovertag = NULL;
   soup_session_abort (data->window->session);
+  g_source_remove (data->window->msg_list_getter);
+  g_source_remove (data->window->usr_list_getter);
   data->window->session = soup_session_async_new ();
   soup_session_add_feature (data->window->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
   login (NULL, data);
@@ -3102,8 +3106,7 @@ void dbg(gchar* message)
   fprintf (logfile, "%s\n", message);
   fclose (logfile);
 #else
-  g_print (message);
-  g_print ("\n");
+  g_printf ("%s\n", message);
 #endif
 }
 #endif

@@ -119,6 +119,8 @@ struct _DevchatWindow
   dc_settings settings_backup;
 
   SoupSession* session;
+  guint msg_list_getter;
+  guint usr_list_getter;
 
   GtkAccelGroup* accelgroup;
 
