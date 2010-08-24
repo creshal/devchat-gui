@@ -2025,7 +2025,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         g_free (dbg_msg);
       #endif
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
-        if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
+        if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0 || g_strcmp0 (current_tag->name, "!--") == 0)
         {
         #ifdef DEBUG
           dbg ("Closing void tag.");
@@ -2096,7 +2096,7 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
         g_free (dbg_msg);
       #endif
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
-        if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0)
+        if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0 || g_strcmp0 (current_tag->name, "!--") == 0)
         {
         #ifdef DEBUG
           dbg ("Closing void tag.");
