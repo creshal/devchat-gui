@@ -24,6 +24,7 @@
 #include "HTMLent.h"
 
 #include <string.h>
+#include <time.h>
 
 #ifdef DEBUG
   gchar* dbg_msg;
@@ -1390,12 +1391,19 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
 
     xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
+    gchar* currenttime = current_time ();
 
     while (xmlTextReaderRead (msgparser) == 1)
     {
       gchar* node = (gchar*) xmlTextReaderLocalName(msgparser);
 
-      if (node && (g_strcmp0 (node,"ce") == 0))
+      if (node && (g_strcmp0 (node,"lastconn") == 0))
+      {
+        gchar** time_cmps = g_strsplit ((gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "value"), " ", 2);
+        currenttime = g_strdup (time_cmps[1]);
+        g_strfreev (time_cmps);
+      }
+      else if (node && (g_strcmp0 (node,"ce") == 0))
       {
         message_found = TRUE;
       #ifdef DEBUG
@@ -1403,7 +1411,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       #endif
         gchar* name = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "a");
         gchar* mode = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "u");
-        gchar* time = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
+        gchar* time_attr = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
         gchar* lid = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "i");
         gchar* message = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "m");
 
@@ -1411,7 +1419,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         self->window->lastid = g_strdup (lid);
 
       #ifdef DEBUG
-        dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time, lid, message);
+        dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time_attr, lid, message);
         dbg (dbg_msg);
         g_free (dbg_msg);
       #endif
@@ -1436,9 +1444,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
 
         gtk_text_buffer_get_end_iter (self->window->output, &end);
-        gchar* time_t = g_strdup_printf ("\n%s", time);
-        gtk_text_buffer_insert_with_tags (self->window->output, &end, time_t, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
-        g_free (time_t);
+        gchar* time_tag = g_strdup_printf ("\n%s", time_attr);
+        gtk_text_buffer_insert_with_tags (self->window->output, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+        g_free (time_tag);
 
         gchar* name_color_tag = "peasant";
         if (user_level > 5)
@@ -1451,7 +1459,11 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
         /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
 
-        gchar* kickmsg = g_strconcat ("!KICK ", g_ascii_strup (self->window->settings.user, -1), NULL);
+        gchar* kickmsg;
+        if (msg_level != 0)
+          kickmsg = g_strconcat ("!KICK ", g_ascii_strup (self->window->settings.user, -1), NULL);
+        else
+          kickmsg = g_strdup ("!KICK");
         gchar* message_up = g_ascii_strup (message, -1);
 
         if (g_strstr_len (message_up, -1, kickmsg) && badass (name, self) && !(self->window->firstrun))
@@ -1464,8 +1476,45 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           destroy (self->window->window, self);
         }
 
+        gchar* silmsg;
+        if (msg_level != 0)
+          silmsg = g_strconcat ("!SILENCE ", g_ascii_strup (self->window->settings.user, -1), NULL);
+        else
+          silmsg = g_strdup ("!SILENCE");
+
+        if (g_strstr_len (message_up, -1, silmsg) && badass (name, self))
+        {
+            gchar** current_time_cmps = g_strsplit (currenttime, ":", -1);
+            gulong current_hour = g_ascii_strtoll (current_time_cmps[0],NULL,10);
+            gulong current_minute = g_ascii_strtoll (current_time_cmps[1],NULL,10);
+            gulong current_time_long = (current_hour * 60) + current_minute;
+            g_strfreev (current_time_cmps);
+
+            gchar** silent_time_cmps = g_strsplit (time_attr, ":", -1);
+            gulong silent_hour = g_ascii_strtoll (silent_time_cmps[0],NULL,10);
+            gulong silent_minute = g_ascii_strtoll (silent_time_cmps[1],NULL,10);
+            gulong silent_time_long = (silent_hour * 60) + silent_minute;
+            g_strfreev (silent_time_cmps);
+
+            if (current_time_long < silent_time_long)
+            {
+              silent_time_long = silent_time_long - 1440;
+            }
+            if (current_time_long == silent_time_long)
+            {
+              gtk_widget_hide (self->window->inputbar);
+              g_timeout_add_seconds (300, (GSourceFunc) gtk_widget_show_all, self->window->inputbar);
+            }
+            else if (current_time_long - silent_time_long < 5)
+            {
+              gtk_widget_hide (self->window->inputbar);
+              g_timeout_add_seconds ((current_time_long - silent_time_long) * 60, (GSourceFunc) gtk_widget_show_all, self->window->inputbar);
+            }
+        }
+
         g_free (kickmsg);
         g_free (message_up);
+        g_free (silmsg);
 
         gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
@@ -1520,7 +1569,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (name);
         g_free (tagname);
         g_free (mode);
-        g_free (time);
+        g_free (time_attr);
         g_free (lid);
         g_free (message);
       }
