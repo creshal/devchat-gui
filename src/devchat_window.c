@@ -1974,24 +1974,33 @@ void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, 
           else
             tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL); /*Mailto*/
 
-          gchar* tagname_d = g_regex_replace (plus, tagname, -1, 0, "+", 0, NULL);
-
-          g_free (tagname);
-
-
-          tagname = tagname_d;
-
-        #ifdef DEBUG
-          dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
-          dbg (dbg_msg);
-          g_free (dbg_msg);
-        #endif
-
-          if (!gtk_text_tag_table_lookup (table, tagname))
+          /*Stupid server always interpreting forum. as link.*/
+          if (g_strcmp0 (tagname, "url::http://forum.") == 0)
           {
-            DevchatURLTag* tag = devchat_url_tag_new (tagname, data->window->settings.color_url);
+            g_free (tagname);
+            tagname = NULL;
+          }
+          else
+          {
+            gchar* tagname_d = g_regex_replace (plus, tagname, -1, 0, "+", 0, NULL);
 
-            gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
+            g_free (tagname);
+
+
+            tagname = tagname_d;
+
+          #ifdef DEBUG
+            dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          #endif
+
+            if (!gtk_text_tag_table_lookup (table, tagname))
+            {
+              DevchatURLTag* tag = devchat_url_tag_new (tagname, data->window->settings.color_url);
+
+              gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
+            }
           }
         }
         else if (g_strcmp0 (top->name,"!--") == 0)
