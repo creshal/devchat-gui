@@ -24,7 +24,7 @@ main (int argc, char *argv[])
 #ifdef DEBUG
   gchar* dbg_msg;
 #endif
-  if (!g_thread_supported ()) g_thread_init (NULL);
+  if (!g_thread_supported ()) g_thread_init (NULL); /*Fix libsoup-related crash with GLib < 2.24*/
   gtk_init (&argc, &argv);
   /*TODO: Optparse */
   gchar* settingsfile;

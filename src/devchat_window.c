@@ -3067,10 +3067,16 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
         /*Restricted char, but valid ASCII. %escape*/
         if (current[0] == 43)
           enc_text = g_strconcat (enc_text, "%26%2343%3B", NULL);
-        else if (current[0] == 60 && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
-          enc_text = g_strconcat (enc_text, "%26%2360%3B", NULL);
-        else if (current[0] == 62 && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
-          enc_text = g_strconcat (enc_text, "%26%2362%3B", NULL);
+        else if (current[0] == 60)
+          if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
+            enc_text = g_strconcat (enc_text, "%26%2360%3B", NULL);
+          else
+            enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
+        else if (current[0] == 62)
+          if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
+            enc_text = g_strconcat (enc_text, "%26%2362%3B", NULL);
+          else
+            enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
         else
           enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
       }
