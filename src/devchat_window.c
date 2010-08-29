@@ -1039,6 +1039,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg ("Starting requests...");
 #endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
+  SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
+
   data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
   data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
@@ -1488,7 +1490,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             name = g_strdup (self->window->settings.user);
             user_level = self->window->userlevel;
             if (g_strcmp0 (name, target_name) == 0) /*Make self-PMs only appear once and cancel processing in that case*/
-              break;
+              continue;
             conv = pm_cb (NULL, devchat_cb_data_new (self->window, target_name));
             gchar* tmp = message;
             message = g_strdup (message+77+strlen(target_name));
@@ -1511,6 +1513,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           }
           buf = conv->out_buffer;
           view = conv->out_widget;
+
+          /*TODO: Highlight tabs.*/
         }
         else
         {
@@ -2692,7 +2696,19 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
 
 void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  const gchar* target_name;
+  GtkWidget* notebook_child;
+  if (data->data)
+  {
+    notebook_child = data->data;
+  }
+  else
+  {
+    notebook_child = gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)));
+  }
+  target_name = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), notebook_child));
+
+  gtk_widget_hide_all (notebook_child);
 }
 
 void reconnect(GtkWidget* widget, DevchatCBData* data)
@@ -2712,11 +2728,12 @@ void reconnect(GtkWidget* widget, DevchatCBData* data)
 
 void tab_changed(GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  /*TODO: Un-Highlight tabs.*/
 }
 
 gboolean devchat_window_tab_changed_win (GtkWidget* widget, DevchatCBData* data)
 {
+  /*TODO: Un-Highlight tabs.*/
   return FALSE;
 }
 
@@ -3028,12 +3045,20 @@ void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
 
 void next_tab (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  if (gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)) == (gtk_notebook_get_n_pages (GTK_NOTEBOOK (data->window->notebook))-1))
+    gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
+  else
+    gtk_notebook_next_page (GTK_NOTEBOOK (data->window->notebook));
 }
+
 void prev_tab (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  if (gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)) == 0)
+    gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), (gtk_notebook_get_n_pages (GTK_NOTEBOOK (data->window->notebook))-1));
+  else
+    gtk_notebook_prev_page (GTK_NOTEBOOK (data->window->notebook));
 }
+
 void show_his (GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
@@ -3066,13 +3091,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
   DevchatConversation* conv = (DevchatConversation*) g_hash_table_lookup (data->window->conversations, (gchar*) data->data);
   if (!conv)
   {
-    conv = (DevchatConversation*) g_hash_table_lookup (data->window->old_conversations, (gchar*) data->data);
-    if (!conv)
-      conv = devchat_conversation_new (is_history, data->window);
-    else
-    {
-      g_hash_table_remove (data->window->old_conversations, (gchar*) data->data);
-    }
+    conv = devchat_conversation_new (is_history, data->window);
 
     g_hash_table_insert (data->window->conversations, g_strdup ((gchar*) data->data), conv);
 
@@ -3101,7 +3120,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
 
     gtk_button_set_image (GTK_BUTTON (tab_close), gtk_image_new_from_pixbuf (real_icon));
 
-    g_signal_connect (tab_close, "clicked", G_CALLBACK (devchat_window_close_tab), conv->child);
+    g_signal_connect (tab_close, "clicked", G_CALLBACK (devchat_window_close_tab), devchat_cb_data_new (data->window, conv->child));
     gtk_box_pack_end (GTK_BOX (labelbox), tab_close, FALSE, TRUE, 0);
     g_signal_connect (event_box, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), NULL);
     gtk_widget_show_all (labelbox);
@@ -3109,6 +3128,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
     gtk_notebook_append_page_menu (GTK_NOTEBOOK (data->window->notebook), conv->child, labelbox, label);
     gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK (data->window->notebook), conv->child, TRUE);
   }
+  gtk_widget_show_all (conv->child);
   gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_page_num (GTK_NOTEBOOK (data->window->notebook), conv->child));
   if (conv->in_widget)
     gtk_widget_grab_focus (conv->in_widget);
