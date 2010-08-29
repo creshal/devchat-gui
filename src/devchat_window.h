@@ -152,7 +152,6 @@ struct _DevchatWindow
   GHashTable* smilies;
   GHashTable* avatars;
   GHashTable* conversations;
-  GHashTable* old_conversations;
   GHashTable* users;
 
   DevchatURLTag* hovertag;
