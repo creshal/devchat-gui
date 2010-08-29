@@ -1525,7 +1525,18 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
 
         gtk_text_buffer_get_end_iter (buf, &end);
-        gchar* time_tag = g_strdup_printf ("\n%s", time_attr);
+        gchar* time_tag;
+        if (self->window->settings.showid)
+        {
+          time_tag = g_strdup_printf ("\n%s %s", lid, time_attr);
+        }
+        else
+        {
+          time_tag = g_strdup_printf ("\n%s", time_attr);
+        }
+
+        gtk_text_buffer_get_end_iter (buf, &end);
+
         gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
         g_free (time_tag);
 
@@ -2636,11 +2647,11 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "color_url_visited", gdk_color_to_string (&color_url_visited),
                                   "color_url_hover", gdk_color_to_string (&color_url_hover),
                                   "color_highlight", gdk_color_to_string (&color_highlight),
-                                  "showid", gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (chk_id)),
-                                  "showhidden", gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (chk_hd)),
-                                  "autojoin", gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (chk_aj)),
-                                  "stealthjoin", gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (chk_sj)),
-                                  "coloruser", gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (chk_cu)),
+                                  "showid", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_id)),
+                                  "showhidden", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_hd)),
+                                  "autojoin", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_aj)),
+                                  "stealthjoin", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_sj)),
+                                  "coloruser", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_cu)),
                                   "browser", gtk_entry_get_text (GTK_ENTRY (entry_browser)),
                                   "notify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_notify)),
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
