@@ -194,6 +194,14 @@ DevchatWindow* devchat_window_new (void);
 
 void devchat_window_refresh_smilies (DevchatWindow* self);
 
+void devchat_window_on_mark_set_cb(/*GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data*/);
+gboolean devchat_window_on_motion_cb (/*GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data*/);
+gboolean devchat_window_tab_changed_win (/*GtkWidget* widget, DevchatCBData* data*/);
+void devchat_window_btn_format (/*GtkWidget* widget, DevchatCBData* data*/);
+void devchat_window_btn_send (/*GtkWidget* widget, DevchatCBData* data*/);
+void devchat_window_close_tab (/*GtkWidget* widget, DevchatCBData* data*/);
+void devchat_window_create_tags (/*GtkTextBuffer* buf, DevchatCBData* data*/);
+
 G_END_DECLS
 
 #endif /* __DEVCHAT_WINDOW_H__ */

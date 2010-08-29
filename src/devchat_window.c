@@ -20,6 +20,7 @@
 #include "devchat_cb_data.h"
 #include "devchat_html_tag.h"
 #include "devchat_html_attr.h"
+#include "devchat_conversation.h"
 #include "devchat_url_tag.h"
 #include "HTMLent.h"
 
@@ -76,30 +77,24 @@ void message_list_get();
 void login_cb ();
 void remote_level ();
 gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data);
-void destroy (GtkWidget* widget, DevchatCBData* data);
+void destroy (GtkObject* widget, DevchatCBData* data);
 void login (GtkWidget* widget, DevchatCBData* data);
 void config_cb (GtkWidget* widget, DevchatCBData* data);
 void go_forum (GtkWidget* widget, DevchatCBData* data);
-void close_tab (GtkWidget* widget, DevchatCBData* data);
 void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, DevchatCBData* data);
-gboolean tab_changed_win (GtkWidget* widget, DevchatCBData* data);
-gboolean on_motion (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data);
-void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data);
+
 void level_changed (GtkWidget* widget, DevchatCBData* data);
-void btn_format (GtkWidget* widget, DevchatCBData* data);
-void btn_send (GtkWidget* widget, DevchatCBData* data);
 void next_tab (GtkWidget* widget, DevchatCBData* data);
 void prev_tab (GtkWidget* widget, DevchatCBData* data);
 void show_his (GtkWidget* widget, DevchatCBData* data);
 void about_cb (GtkWidget* widget, DevchatCBData* data);
 void at_cb (GtkWidget* widget, DevchatCBData* data);
-void pm_cb (GtkWidget* widget, DevchatCBData* data);
+DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
 
 void launch_browser (gchar* uri, DevchatCBData* data);
-
-void create_tags (GtkTextBuffer* buf, DevchatCBData* data);
+void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
 void ins_smilie (GtkWidget* widget, DevchatCBData* data);
 void ins_preset (GtkWidget* widget, DevchatCBData* data);
@@ -110,7 +105,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (gchar* message, DevchatCBData* self, xmlParserCtxtPtr ctxt, GRegex* regex);
+void parse_message (gchar* message, DevchatCBData* self, GRegex* regex);
 gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
@@ -139,6 +134,9 @@ devchat_window_init (DevchatWindow* self)
   self->smilies = g_hash_table_new (g_str_hash, g_str_equal);
   self->users = g_hash_table_new (g_str_hash, g_str_equal);
   self->avatars = g_hash_table_new (g_str_hash, g_str_equal);
+  self->conversations = g_hash_table_new (g_str_hash, g_str_equal);
+  self->old_conversations = g_hash_table_new (g_str_hash, g_str_equal);
+
   self->settings.browser = g_strdup("<native>");
   self->settings.color_font = g_strdup("#eeeeec");
   self->settings.color_l1 = g_strdup("#2e3436");
@@ -185,8 +183,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_window_move(GTK_WINDOW(self->window), self->settings.x, self->settings.y);
   self->accelgroup = gtk_accel_group_new();
   gtk_window_add_accel_group(GTK_WINDOW(self->window), self->accelgroup);
-  g_signal_connect(self->window, "destroy", G_CALLBACK(destroy),&self_data);
-  g_signal_connect(self->window, "focus-in-event", G_CALLBACK(tab_changed_win),self_data);
+  g_signal_connect(self->window, "destroy", G_CALLBACK(destroy), self_data);
+  g_signal_connect(self->window, "focus-in-event", G_CALLBACK(devchat_window_tab_changed_win),self_data);
 
 
   GtkMenuItem* menu_main = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Main"));
@@ -227,7 +225,7 @@ devchat_window_init (DevchatWindow* self)
 
   GtkWidget* item_tabclose = gtk_image_menu_item_new_with_label ("Close tab");
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tabclose), gtk_image_new_from_stock(GTK_STOCK_CLOSE,GTK_ICON_SIZE_MENU));
-  g_signal_connect (item_tabclose, "activate", G_CALLBACK (close_tab), self_data);
+  g_signal_connect (item_tabclose, "activate", G_CALLBACK (devchat_window_close_tab), self_data);
   gtk_widget_add_accelerator(item_tabclose, "activate", self->accelgroup, GDK_W, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   self->item_reconnect = gtk_image_menu_item_new_with_label ("Reconnect");
@@ -261,33 +259,33 @@ devchat_window_init (DevchatWindow* self)
   DevchatCBData* format_b = devchat_cb_data_new (self, "b");
 
   GtkWidget* item_bold = gtk_image_menu_item_new_from_stock (GTK_STOCK_BOLD,self->accelgroup);
-  g_signal_connect (item_bold, "activate", G_CALLBACK (btn_format), format_b);
+  g_signal_connect (item_bold, "activate", G_CALLBACK (devchat_window_btn_format), format_b);
   gtk_widget_add_accelerator(item_bold, "activate", self->accelgroup, GDK_B, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_i = devchat_cb_data_new (self, "i");
 
   GtkWidget* item_italic = gtk_image_menu_item_new_from_stock (GTK_STOCK_ITALIC,self->accelgroup);
-  g_signal_connect (item_italic, "activate", G_CALLBACK (btn_format), format_i);
+  g_signal_connect (item_italic, "activate", G_CALLBACK (devchat_window_btn_format), format_i);
   gtk_widget_add_accelerator(item_italic, "activate", self->accelgroup, GDK_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_u = devchat_cb_data_new (self, "u");
 
   GtkWidget* item_line = gtk_image_menu_item_new_from_stock (GTK_STOCK_UNDERLINE,self->accelgroup);
-  g_signal_connect (item_line, "activate", G_CALLBACK (btn_format), format_u);
+  g_signal_connect (item_line, "activate", G_CALLBACK (devchat_window_btn_format), format_u);
   gtk_widget_add_accelerator(item_line, "activate", self->accelgroup, GDK_U, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_img = devchat_cb_data_new (self, "img");
 
   GtkWidget* item_pict = gtk_image_menu_item_new_with_mnemonic ("I_mage");
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_pict), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_MENU));
-  g_signal_connect (item_pict, "activate", G_CALLBACK (btn_format), format_img);
+  g_signal_connect (item_pict, "activate", G_CALLBACK (devchat_window_btn_format), format_img);
   gtk_widget_add_accelerator(item_pict, "activate", self->accelgroup, GDK_M, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_url = devchat_cb_data_new (self, "url");
 
   GtkWidget* item_link = gtk_image_menu_item_new_with_mnemonic ("_Link");
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_link), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_MENU));
-  g_signal_connect (item_link, "activate", G_CALLBACK (btn_format), format_url);
+  g_signal_connect (item_link, "activate", G_CALLBACK (devchat_window_btn_format), format_url);
   gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
@@ -386,13 +384,14 @@ devchat_window_init (DevchatWindow* self)
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->outputwidget), GTK_WRAP_WORD_CHAR);
   gtk_widget_set_size_request(self->outputwidget, 300,100);
   gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->outputwidget), 2);
-  g_signal_connect (self->output, "mark-set", G_CALLBACK(on_mark_set),self_data);
-  g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(on_motion),self_data);
+  g_signal_connect (self->output, "mark-set", G_CALLBACK(devchat_window_on_mark_set_cb),self_data);
+  g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(devchat_window_on_motion_cb),self_data);
 
   GtkWidget* scroller1 = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller1),GTK_SHADOW_ETCHED_IN);
-  gtk_container_add(GTK_CONTAINER(scroller1),self->outputwidget);
+  g_object_set (self->outputwidget, "left-margin", 2, "right-margin", 2, NULL);
+  gtk_container_add (GTK_CONTAINER(scroller1),self->outputwidget);
   gtk_paned_pack1 (GTK_PANED(hpaned1), scroller1, TRUE,TRUE);
 
   GtkWidget* scroller2 = gtk_scrolled_window_new (NULL, NULL);
@@ -434,11 +433,11 @@ devchat_window_init (DevchatWindow* self)
   gtk_button_set_image (GTK_BUTTON (btn_img), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_SMALL_TOOLBAR));
   gtk_widget_set_tooltip_text (btn_img, "Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned.");
 
-  g_signal_connect (btn_bold, "clicked", G_CALLBACK (btn_format), format_b);
-  g_signal_connect (btn_ital, "clicked", G_CALLBACK (btn_format), format_i);
-  g_signal_connect (btn_line, "clicked", G_CALLBACK (btn_format), format_u);
-  g_signal_connect (btn_url, "clicked", G_CALLBACK (btn_format), format_url);
-  g_signal_connect (btn_img, "clicked", G_CALLBACK (btn_format), format_img);
+  g_signal_connect (btn_bold, "clicked", G_CALLBACK (devchat_window_btn_format), format_b);
+  g_signal_connect (btn_ital, "clicked", G_CALLBACK (devchat_window_btn_format), format_i);
+  g_signal_connect (btn_line, "clicked", G_CALLBACK (devchat_window_btn_format), format_u);
+  g_signal_connect (btn_url, "clicked", G_CALLBACK (devchat_window_btn_format), format_url);
+  g_signal_connect (btn_img, "clicked", G_CALLBACK (devchat_window_btn_format), format_img);
 
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_bold,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_ital,FALSE,FALSE,0);
@@ -447,7 +446,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_img,FALSE,FALSE,0);
 
   GtkWidget* btn_ok = gtk_button_new_from_stock(GTK_STOCK_OK);
-  g_signal_connect (btn_ok, "clicked", G_CALLBACK (btn_send),self_data);
+  g_signal_connect (btn_ok, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
   gtk_widget_add_accelerator(btn_ok, "clicked", self->accelgroup, GDK_Return, 0, 0);
 
   GtkWidget* btn_quit = gtk_button_new_from_stock(GTK_STOCK_QUIT);
@@ -475,7 +474,7 @@ devchat_window_init (DevchatWindow* self)
 
   gtk_box_pack_start (GTK_BOX(vbox2),scroller3,TRUE,TRUE,0);
 
-  create_tags (self->output, self_data);
+  devchat_window_create_tags (self->output, self_data);
 
   self->loginbar = gtk_vbox_new (FALSE,0);
   GtkWidget* hbox2 = gtk_hbox_new (FALSE,0);
@@ -681,7 +680,8 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_COLOR_FONT: window->settings.color_font = g_value_dup_string (value);
                               gdk_color_parse (g_value_dup_string (value), &color);
                               gtk_widget_modify_text (window->outputwidget, GTK_STATE_NORMAL, &color);
-                              /*TODO: Modify pm/history windows.*/
+                              g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                              g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
                               gtk_widget_modify_text (window->inputwidget, GTK_STATE_NORMAL, &color); break;
     case SETTINGS_COLOR_L1: window->settings.color_l1 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
@@ -690,48 +690,57 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                             gdk_color_parse (g_value_dup_string (value), &color);
                             gtk_widget_modify_base (window->outputwidget, GTK_STATE_NORMAL, &color);
                             gtk_widget_modify_bg (window->userlist_port, GTK_STATE_NORMAL, &color);
-                            /*TODO: Modify pm/history windows.*/
+                            g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                            g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
                             gtk_widget_modify_base (window->inputwidget, GTK_STATE_NORMAL, &color); break;
     case SETTINGS_COLOR_L3: window->settings.color_l3 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l3");
                             g_object_set (tag, "background", g_value_dup_string (value), NULL);
-                            /*TODO: Modify pm/history windows.*/ break;
+                            g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                            g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_L5: window->settings.color_l5 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l5");
                             g_object_set (tag, "background", g_value_dup_string (value), NULL);
-                            /*TODO: Modify pm/history windows.*/ break;
+                            g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                            g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_L6: window->settings.color_l6 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l6");
                             g_object_set (tag, "background", g_value_dup_string (value), NULL);
-                            /*TODO: Modify pm/history windows.*/ break;
+                            g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                            g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_GREENS: window->settings.color_greens = g_value_dup_string (value);
                                 t = gtk_text_buffer_get_tag_table (window->output);
                                 tag = gtk_text_tag_table_lookup (t, "greenie");
                                 g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
-                                /*TODO: Modify pm/history windows.*/ break;
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                                g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_BLUES: window->settings.color_blues = g_value_dup_string (value);
                                t = gtk_text_buffer_get_tag_table (window->output);
                                tag = gtk_text_tag_table_lookup (t, "peasant");
                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
-                               /*TODO: Modify pm/history windows.*/ break;
+                               g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                               g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_TIME: window->settings.color_time = g_value_dup_string (value);
                               t = gtk_text_buffer_get_tag_table (window->output);
                               tag = gtk_text_tag_table_lookup (t, "time");
                               g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
-                              /*TODO: Modify pm/history windows.*/ break;
+                              g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                              g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_URL: window->settings.color_url = g_value_dup_string (value);
                              t = gtk_text_buffer_get_tag_table (window->output);
                              gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, g_value_dup_string (value));
-                             /*TODO: Modify pm/history windows.*/ break;
+                             g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                             g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_URL_VISITED: window->settings.color_url_visited = g_value_dup_string (value);
                                      t = gtk_text_buffer_get_tag_table (window->output);
                                      gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_v_color_cb, g_value_dup_string (value));
-                                     /*TODO: Modify pm/history windows.*/ break;
+                                     g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id)));
+                                     g_hash_table_foreach (window->old_conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_URL_HOVER: window->settings.color_url_hover = g_value_dup_string (value); break;
-    case SETTINGS_COLOR_HIGHLIGHT: window->settings.color_highlight = g_value_dup_string (value); /*TODO: Change color of tabs highlighted now.*/ break;
+    case SETTINGS_COLOR_HIGHLIGHT: window->settings.color_highlight = g_value_dup_string (value); break;
     case SETTINGS_USER: window->settings.user = g_value_dup_string (value); gtk_entry_set_text( GTK_ENTRY (window->user_entry), window->settings.user); break;
     case SETTINGS_PASS: window->settings.pass = g_value_dup_string (value); gtk_entry_set_text( GTK_ENTRY (window->pass_entry), window->settings.pass); break;
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
@@ -755,6 +764,38 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                          gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
     case SETTINGS_Y: window->settings.y = g_value_get_int (value);
                          gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
+  }
+}
+
+void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data)
+{
+  GtkTextTagTable* t;
+  GtkTextTag* tag;
+  GdkColor color;
+  switch (GPOINTER_TO_INT (data->data))
+  {
+    case SETTINGS_COLOR_FONT: gdk_color_parse (data->window->settings.color_font, &color);
+                              gtk_widget_modify_text (value->out_widget, GTK_STATE_NORMAL, &color);
+                              if (value->in_widget) {gtk_widget_modify_text (value->in_widget, GTK_STATE_NORMAL, &color);} break;
+    case SETTINGS_COLOR_L1: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                            tag = gtk_text_tag_table_lookup (t, "l1");
+                            g_object_set (tag, "background", data->window->settings.color_l1, NULL);
+                            gdk_color_parse (data->window->settings.color_l1, &color);
+                            gtk_widget_modify_base (value->out_widget, GTK_STATE_NORMAL, &color);
+                            if (value->in_widget) {gtk_widget_modify_base (value->in_widget, GTK_STATE_NORMAL, &color);} break;
+    case SETTINGS_COLOR_GREENS: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "greenie");
+                                g_object_set (tag, "foreground", data->window->settings.color_greens, NULL); break;
+    case SETTINGS_COLOR_BLUES: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                               tag = gtk_text_tag_table_lookup (t, "peasant");
+                               g_object_set (tag, "foreground", data->window->settings.color_blues, NULL); break;
+    case SETTINGS_COLOR_TIME: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                              tag = gtk_text_tag_table_lookup (t, "time");
+                              g_object_set (tag, "foreground", data->window->settings.color_time, NULL); break;
+    case SETTINGS_COLOR_URL: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                             gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, data->window->settings.color_url); break;
+    case SETTINGS_COLOR_URL_VISITED: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                             gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, data->window->settings.color_url_visited); break;
   }
 }
 
@@ -783,7 +824,7 @@ static void devchat_window_get_property (GObject* object, guint id, GValue* valu
 
 }
 
-void destroy (GtkWidget* widget, DevchatCBData* data)
+void destroy (GtkObject* widget, DevchatCBData* data)
 {
   data->window->no_halt_requested = FALSE;
 #ifdef NOTIFY
@@ -795,15 +836,11 @@ void destroy (GtkWidget* widget, DevchatCBData* data)
 
   if (!(data->window->firstrun))
   {
-    /*XXX: Sometimes, session does not exist.*/
-    if (data->window->session)
-    {
-      SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
-      soup_session_send_message (data->window->session, msg);
-      g_source_remove (data->window->msg_list_getter);
-      g_source_remove (data->window->usr_list_getter);
-      soup_session_abort (data->window->session);
-    }
+    SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
+    soup_session_send_message (data->window->session, msg);
+    g_source_remove (data->window->msg_list_getter);
+    g_source_remove (data->window->usr_list_getter);
+    soup_session_abort (data->window->session);
   }
   gtk_main_quit ();
 }
@@ -840,13 +877,13 @@ void save_settings (DevchatWindow* w)
   GSList* tmp_ps = w->settings.presets;
   gchar* presets_string = "BOILERPLATES=";
 
-  if (tmp_ps)
+  if (tmp_ps && tmp_ps->data)
   {
     presets_string = g_strconcat (presets_string, (gchar*) tmp_ps->data, NULL);
 
     tmp_ps = tmp_ps->next;
 
-    while (tmp_ps)
+    while (tmp_ps && tmp_ps->data)
     {
       presets_string = g_strconcat (presets_string, "|", (gchar*) tmp_ps->data, NULL);
       tmp_ps = tmp_ps->next;
@@ -1189,6 +1226,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             color = data->window->settings.color_greens;
           else
             color = data->window->settings.color_blues;
+          if (g_strcmp0 (name, "Belisarius") == 0 || g_strcmp0 (name, "Deepstar") == 0)
+            color = "#FF00FF";
+          else if (g_strcmp0 (name, "Samuel Creshal") == 0)
+            color = "#FF0000";
 
           if (g_strcmp0("",status) != 0)
           {
@@ -1382,15 +1423,13 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     g_free (labeltext);
     gboolean message_found = FALSE;
 
-    xmlParserCtxtPtr narf = xmlNewParserCtxt();
-    xmlCtxtUseOptions (narf, XML_PARSE_RECOVER | XML_PARSE_NOENT | XML_PARSE_NOERROR | XML_PARSE_NONET);
-
     GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
 
     GtkTextIter old_end;
     gtk_text_buffer_get_end_iter (self->window->output, &old_end);
     GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
     gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
+
 
     xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
     gchar* currenttime = current_time ();
@@ -1430,33 +1469,84 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
         gulong msg_level = strtoll (mode+2,NULL,10);
 
-        /*TODO: Private message windows. */
+        GtkTextBuffer* buf;
+        GtkWidget* view;
+
+        if (msg_level == 0)
+        {
+          DevchatConversation* conv;
+          if (g_strcmp0 (name, "(ChatServer)") == 0 && g_strstr_len (message, 80, "You sent a private message successfully to"))
+          {
+            gchar** msg_cmps = g_strsplit (message+66, "</font>", 2);
+            gchar* target_name = g_strdup (msg_cmps[0]);
+            g_strfreev (msg_cmps);
+          #ifdef DEBUG
+            dbg_msg = g_strdup_printf ("PM to: %s.\n", target_name);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          #endif
+            name = g_strdup (self->window->settings.user);
+            user_level = self->window->userlevel;
+            if (g_strcmp0 (name, target_name) == 0) /*Make self-PMs only appear once and cancel processing in that case*/
+              break;
+            conv = pm_cb (NULL, devchat_cb_data_new (self->window, target_name));
+            gchar* tmp = message;
+            message = g_strdup (message+77+strlen(target_name));
+            g_free (tmp);
+          }
+          else
+          {
+          #ifdef DEBUG
+            g_strdup_printf ("PM from: %s.\n", name);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          #endif
+            conv = pm_cb (NULL, devchat_cb_data_new (self->window, name));
+            if (g_strcmp0 (name, "(ChatServer)") != 0)
+            {
+              gchar* tmp = message;
+              message = g_strdup (message+66);
+              g_free (tmp);
+            }
+          }
+          buf = conv->out_buffer;
+          view = conv->out_widget;
+        }
+        else
+        {
+          buf = self->window->output;
+          view = self->window->outputwidget;
+        }
 
         GtkTextIter end;
-        GtkTextTagTable* table = gtk_text_buffer_get_tag_table (self->window->output);
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        GtkTextTagTable* table = gtk_text_buffer_get_tag_table (buf);
+        gtk_text_buffer_get_end_iter (buf, &end);
 
-        GtkTextMark* old_start = gtk_text_mark_new (name, TRUE);
-        gtk_text_buffer_add_mark (self->window->output, old_start, &end);
+        GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
+        gtk_text_buffer_add_mark (buf, old_start, &end);
 
         gchar* tagname = g_strconcat ("user-", name, NULL);
 
         if (!gtk_text_tag_table_lookup (table, tagname))
-          gtk_text_buffer_create_tag (self->window->output, tagname, NULL);
+          gtk_text_buffer_create_tag (buf, tagname, NULL);
 
 
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gtk_text_buffer_get_end_iter (buf, &end);
         gchar* time_tag = g_strdup_printf ("\n%s", time_attr);
-        gtk_text_buffer_insert_with_tags (self->window->output, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+        gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
         g_free (time_tag);
 
         gchar* name_color_tag = "peasant";
         if (user_level > 5)
           name_color_tag = "greenie";
+        if (g_strcmp0 (name, "Belisarius") == 0 || g_strcmp0 (name, "Deepstar") == 0)
+          name_color_tag = "special";
+        else if (g_strcmp0 (name, "Samuel Creshal") == 0)
+          name_color_tag = "commie";
 
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gtk_text_buffer_get_end_iter (buf, &end);
         gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
-        gtk_text_buffer_insert_with_tags (self->window->output, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+        gtk_text_buffer_insert_with_tags (buf, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
         g_free (name_t);
 
         /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
@@ -1474,8 +1564,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           dbg ("IN SOVIET RUSSIA, CHAT KICKS YOU.");
         #endif
           gtk_text_buffer_set_text (self->window->input, "[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …" ,-1);
-          btn_send (NULL, self);
-          destroy (self->window->window, self);
+          devchat_window_btn_send (NULL, self);
+          destroy (NULL, self);
         }
 
         gchar* silmsg;
@@ -1526,9 +1616,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (dbg_msg);
       #endif
 
-        parse_message (message_t, devchat_cb_data_new (self->window, self->window->output), narf, regex);
-
-
+        parse_message (message_t, devchat_cb_data_new (self->window, buf), regex);
 
         g_free (message_t);
 
@@ -1537,8 +1625,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       #endif
 
         GtkTextIter start;
-        gtk_text_buffer_get_iter_at_mark (self->window->output, &start, old_start);
-        gtk_text_buffer_get_end_iter (self->window->output, &end);
+        gtk_text_buffer_get_iter_at_mark (buf, &start, old_start);
+        gtk_text_buffer_get_end_iter (buf, &end);
 
         gchar* taglevel;
         gchar* tagulevel;
@@ -1560,14 +1648,14 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           default: taglevel = g_strdup ("l6"); break;
         }
 
-        gtk_text_buffer_apply_tag_by_name (self->window->output, taglevel, &start, &end);
+        gtk_text_buffer_apply_tag_by_name (buf, taglevel, &start, &end);
         if (tagulevel)
-          gtk_text_buffer_apply_tag_by_name (self->window->output, tagulevel, &start, &end);
-        gtk_text_buffer_apply_tag_by_name (self->window->output, tagname, &start, &end);
+          gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
+        gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
 
         g_free (taglevel);
         g_free (tagulevel);
-        gtk_text_buffer_delete_mark (self->window->output, old_start);
+        gtk_text_buffer_delete_mark (buf, old_start);
         g_free (name);
         g_free (tagname);
         g_free (mode);
@@ -1594,7 +1682,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     self->window->firstrun = FALSE;
     xmlFreeTextReader (msgparser);
     g_free (regex);
-    xmlFreeParserCtxt (narf);
   }
   else
   {
@@ -1606,7 +1693,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   g_free (msglist);
 }
 
-void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
+void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
 {
   gtk_text_buffer_create_tag (buf, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
   gtk_text_buffer_create_tag (buf, "italic", "style", PANGO_STYLE_ITALIC, NULL);
@@ -1614,6 +1701,8 @@ void create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "time", "foreground", data->window->settings.color_time, NULL);
   gtk_text_buffer_create_tag (buf, "peasant", "foreground", data->window->settings.color_blues, NULL);
   gtk_text_buffer_create_tag (buf, "greenie", "foreground", data->window->settings.color_greens, NULL);
+  gtk_text_buffer_create_tag (buf, "special", "foreground", "#FF00FF", NULL);
+  gtk_text_buffer_create_tag (buf, "commie", "foreground", "#FF0000", NULL);
   gtk_text_buffer_create_tag (buf, "l1", "background", data->window->settings.color_l1, NULL);
   gtk_text_buffer_create_tag (buf, "l3", "background", data->window->settings.color_l3, NULL);
   gtk_text_buffer_create_tag (buf, "l5", "background", data->window->settings.color_l5, NULL);
@@ -1649,7 +1738,7 @@ gboolean badass (gchar* name, DevchatCBData* data)
   return FALSE;
 }
 
-void parse_message (gchar* message, DevchatCBData* data, xmlParserCtxtPtr ctxt, GRegex* regex)
+void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
 {
 
   enum
@@ -2601,7 +2690,7 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
   g_free (url);
 }
 
-void close_tab(GtkWidget* widget, DevchatCBData* data)
+void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
 }
@@ -2609,7 +2698,7 @@ void close_tab(GtkWidget* widget, DevchatCBData* data)
 void reconnect(GtkWidget* widget, DevchatCBData* data)
 {
 #ifdef DEBUG
-  g_print ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit...)\n");
+  dbg ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit... *ahem* Sorry, I'll continue.)\n");
 #endif
   data->window->firstrun = TRUE;
   data->window->hovertag = NULL;
@@ -2626,12 +2715,12 @@ void tab_changed(GtkWidget* widget, DevchatCBData* data)
   /*TODO*/
 }
 
-gboolean tab_changed_win(GtkWidget* widget, DevchatCBData* data)
+gboolean devchat_window_tab_changed_win (GtkWidget* widget, DevchatCBData* data)
 {
   return FALSE;
 }
 
-gboolean on_motion (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data)
+gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data)
 {
   gint buf_x;
   gint buf_y;
@@ -2687,7 +2776,7 @@ gboolean on_motion (GtkWidget* widget, GdkEventMotion* m, DevchatCBData* data)
   return FALSE;
 }
 
-void on_mark_set(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data)
+void devchat_window_on_mark_set_cb(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data)
 {
   if (g_strcmp0 (gtk_text_mark_get_name (mark), "selection_bound") == 0)
   {
@@ -2776,7 +2865,7 @@ void level_changed (GtkWidget* widget, DevchatCBData* data)
   }
 }
 
-void btn_send (GtkWidget* widget, DevchatCBData* data)
+void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 {
 #ifdef DEBUG
   dbg ("Sending message...");
@@ -2802,8 +2891,13 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   #ifdef DEBUG
     dbg ("Sending PM.");
   #endif
-    buf = data->window->input;
-    text = ""; /*TODO*/
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
+    gtk_text_buffer_get_start_iter (buf, &start);
+    gtk_text_buffer_get_end_iter (buf, &end);
+
+    text = g_strconcat ("/msg ", target, " ", gtk_text_buffer_get_text (buf, &start, &end, FALSE), NULL);
   }
   text = g_strstrip (text);
 
@@ -2831,7 +2925,6 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       g_free (dbg_msg);
     #endif
 
-      /*XXX: Restructure if flow, gcc doesn't like it. Also, \r\n.*/
       /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
       if (current[0] == 45 || current[0] == 46
           || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
@@ -2849,7 +2942,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
       }
       else if (current[0] > 193 && current[0] < 245)
       {
-        //UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...
+        /*UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...*/
 
         enc_text = g_strdup_printf ("%s%%u%.4X", enc_text, g_utf8_get_char (text+i));
 
@@ -2899,7 +2992,7 @@ void btn_send (GtkWidget* widget, DevchatCBData* data)
   }
 }
 
-void btn_format (GtkWidget* widget, DevchatCBData* data)
+void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
 {
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
   GtkTextBuffer* buf;
@@ -2912,8 +3005,9 @@ void btn_format (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-    /*XXX: PM Windows.*/
-    buf = data->window->input;
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
   }
 
   if (gtk_text_buffer_get_selection_bounds (buf, &start, &end))
@@ -2951,7 +3045,6 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
 
 void at_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  /*XXX: &nbsp; doesn't work.*/
   GRegex* re = g_regex_new (" ", 0, 0, NULL);
   gchar* msg_r = g_regex_replace (re, (gchar*) data->data, -1, 0, "\xc2\xa0", 0, NULL);
 
@@ -2966,17 +3059,61 @@ void at_cb (GtkWidget* widget, DevchatCBData* data)
   gtk_widget_grab_focus (data->window->inputwidget);
 }
 
-void pm_cb (GtkWidget* widget, DevchatCBData* data)
+DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO: PM Windows.*/
+  gboolean is_history = g_str_has_prefix ((gchar*) data->data, "History for ");
 
-  gchar* text = g_strconcat ("/msg ", (gchar*) data->data, " ", NULL);
+  DevchatConversation* conv = (DevchatConversation*) g_hash_table_lookup (data->window->conversations, (gchar*) data->data);
+  if (!conv)
+  {
+    conv = (DevchatConversation*) g_hash_table_lookup (data->window->old_conversations, (gchar*) data->data);
+    if (!conv)
+      conv = devchat_conversation_new (is_history, data->window);
+    else
+    {
+      g_hash_table_remove (data->window->old_conversations, (gchar*) data->data);
+    }
 
-  gtk_text_buffer_insert_at_cursor (data->window->input, (gchar*) text, strlen (text));
+    g_hash_table_insert (data->window->conversations, g_strdup ((gchar*) data->data), conv);
 
-  g_free (text);
+    GtkWidget* labelbox = gtk_hbox_new (FALSE, 0);
 
-  gtk_widget_grab_focus (data->window->inputwidget);
+    /*Determine icon*/
+    if (is_history)
+      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_stock (GTK_STOCK_INFO, GTK_ICON_SIZE_MENU), FALSE, FALSE, 0);
+    else if (g_hash_table_lookup (data->window->users, (gchar*) data->data)
+             && g_hash_table_lookup (data->window->avatars, g_hash_table_lookup (data->window->users, (gchar*) data->data)))
+      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, g_hash_table_lookup (data->window->users, (gchar*) data->data))), FALSE, FALSE, 0);
+    else if (g_strcmp0 ((gchar*) data->data, "(ChatServer):") == 0)
+      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_stock (GTK_STOCK_DIALOG_INFO, GTK_ICON_SIZE_MENU), FALSE, FALSE, 0);
+    else
+      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, "default")), FALSE, FALSE, 0);
+
+    GtkWidget* label = gtk_label_new ((gchar*) data->data);
+    GtkWidget* event_box = gtk_event_box_new ();
+    gtk_container_add (GTK_CONTAINER (event_box), label);
+    gtk_box_pack_start (GTK_BOX (labelbox), event_box, TRUE, TRUE, 0);
+
+    GtkWidget* tab_close = gtk_button_new ();
+    gtk_widget_set_size_request (tab_close, 15, 8);
+    GdkPixbuf* rendered_icon = gtk_widget_render_icon (tab_close, GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU, NULL);
+    GdkPixbuf* real_icon = gdk_pixbuf_scale_simple (rendered_icon, 8, 8, GDK_INTERP_BILINEAR);
+
+    gtk_button_set_image (GTK_BUTTON (tab_close), gtk_image_new_from_pixbuf (real_icon));
+
+    g_signal_connect (tab_close, "clicked", G_CALLBACK (devchat_window_close_tab), conv->child);
+    gtk_box_pack_end (GTK_BOX (labelbox), tab_close, FALSE, TRUE, 0);
+    g_signal_connect (event_box, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), NULL);
+    gtk_widget_show_all (labelbox);
+    gtk_widget_show_all (conv->child);
+    gtk_notebook_append_page_menu (GTK_NOTEBOOK (data->window->notebook), conv->child, labelbox, label);
+    gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK (data->window->notebook), conv->child, TRUE);
+  }
+  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_page_num (GTK_NOTEBOOK (data->window->notebook), conv->child));
+  if (conv->in_widget)
+    gtk_widget_grab_focus (conv->in_widget);
+
+  return conv;
 }
 
 void devchat_window_refresh_smilies (DevchatWindow* self)
@@ -3014,8 +3151,9 @@ void ins_smilie (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-    /*XXX: PM Windows.*/
-    buf = data->window->input;
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
   }
 
   gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
@@ -3032,8 +3170,9 @@ void ins_preset (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-    /*XXX: PM Windows.*/
-    buf = data->window->input;
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
   }
 
   gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
@@ -3064,7 +3203,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
   if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
   {
 #ifdef G_OS_UNIX
-  /*TODO: ALSA*/
+  /*TODO: OSS*/
 #else
   #ifdef G_OS_WIN32
   /*TODO: DSound*/
