@@ -24,6 +24,7 @@ main (int argc, char *argv[])
 #ifdef DEBUG
   gchar* dbg_msg;
 #endif
+  if (!g_thread_supported ()) g_thread_init (NULL);
   gtk_init (&argc, &argv);
   /*TODO: Optparse */
   gchar* settingsfile;

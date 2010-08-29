@@ -130,6 +130,8 @@ struct _DevchatWindow
   GtkWidget* userlist_port;
   GtkWidget* inputbar;
   GtkWidget* level_box;
+  GtkWidget* filter_ml;
+  GtkWidget* filter_ul;
   GtkWidget* loginbar;
   GtkWidget* user_entry;
   GtkWidget* pass_entry;

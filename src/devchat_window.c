@@ -85,6 +85,8 @@ void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, DevchatCBData* data);
 
 void level_changed (GtkWidget* widget, DevchatCBData* data);
+void filter_ul_changed (GtkWidget* widget, DevchatCBData* data);
+void filter_ml_changed (GtkWidget* widget, DevchatCBData* data);
 void next_tab (GtkWidget* widget, DevchatCBData* data);
 void prev_tab (GtkWidget* widget, DevchatCBData* data);
 void show_his (GtkWidget* widget, DevchatCBData* data);
@@ -444,6 +446,16 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_url,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_img,FALSE,FALSE,0);
 
+  self->filter_ul = gtk_combo_box_new_text ();
+  gtk_widget_set_no_show_all (self->filter_ul,TRUE);
+  g_signal_connect(self->filter_ul, "changed", G_CALLBACK (filter_ul_changed), self_data);
+  gtk_box_pack_start(GTK_BOX(self->inputbar),self->filter_ul,FALSE,FALSE,0);
+
+  self->filter_ml = gtk_combo_box_new_text ();
+  gtk_widget_set_no_show_all (self->filter_ml,TRUE);
+  g_signal_connect(self->filter_ml, "changed", G_CALLBACK (filter_ml_changed), self_data);
+  gtk_box_pack_start(GTK_BOX(self->inputbar),self->filter_ml,FALSE,FALSE,0);
+
   GtkWidget* btn_ok = gtk_button_new_from_stock(GTK_STOCK_OK);
   g_signal_connect (btn_ok, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
   gtk_widget_add_accelerator(btn_ok, "clicked", self->accelgroup, GDK_Return, 0, 0);
@@ -689,7 +701,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_COLOR_L1: window->settings.color_l1 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l1");
-                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            g_object_set (tag, "paragraph-background", g_value_dup_string (value), NULL);
                             gdk_color_parse (g_value_dup_string (value), &color);
                             gtk_widget_modify_base (window->outputwidget, GTK_STATE_NORMAL, &color);
                             gtk_widget_modify_bg (window->userlist_port, GTK_STATE_NORMAL, &color);
@@ -698,17 +710,17 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_COLOR_L3: window->settings.color_l3 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l3");
-                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            g_object_set (tag, "paragraph-background", g_value_dup_string (value), NULL);
                             g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_L5: window->settings.color_l5 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l5");
-                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            g_object_set (tag, "paragraph-background", g_value_dup_string (value), NULL);
                             g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_L6: window->settings.color_l6 = g_value_dup_string (value);
                             t = gtk_text_buffer_get_tag_table (window->output);
                             tag = gtk_text_tag_table_lookup (t, "l6");
-                            g_object_set (tag, "background", g_value_dup_string (value), NULL);
+                            g_object_set (tag, "paragraph-background", g_value_dup_string (value), NULL);
                             g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_GREENS: window->settings.color_greens = g_value_dup_string (value);
                                 t = gtk_text_buffer_get_tag_table (window->output);
@@ -773,7 +785,7 @@ void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data)
                               if (value->in_widget) {gtk_widget_modify_text (value->in_widget, GTK_STATE_NORMAL, &color);} break;
     case SETTINGS_COLOR_L1: t = gtk_text_buffer_get_tag_table (value->out_buffer);
                             tag = gtk_text_tag_table_lookup (t, "l1");
-                            g_object_set (tag, "background", data->window->settings.color_l1, NULL);
+                            g_object_set (tag, "paragraph-background", data->window->settings.color_l1, NULL);
                             gdk_color_parse (data->window->settings.color_l1, &color);
                             gtk_widget_modify_base (value->out_widget, GTK_STATE_NORMAL, &color);
                             if (value->in_widget) {gtk_widget_modify_base (value->in_widget, GTK_STATE_NORMAL, &color);} break;
@@ -984,10 +996,24 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (g_strrstr (m->response_body->data,"User-Level: 5"))
   {
     data->window->userlevel = 5;
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 5");
-    gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 5");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <5");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <5");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
+
+    /*gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);*/
+
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->item_l3);
     gtk_widget_show (data->window->item_l5);
@@ -995,20 +1021,49 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else if (g_strrstr (m->response_body->data,"User-Level: 3"))
   {
     data->window->userlevel = 3;
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3");
-    gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
+
+    /*gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);*/
+
+
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->item_l3);
   }
   else if (g_strrstr (m->response_body->data,"User-Level: "))
   {
     data->window->userlevel = 6;
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 5");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 6");
-    gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 5");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 6");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <5");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <6");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
+
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <5");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <6");
+    gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
+
+    /*gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);*/
+
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->chk_raw);
     gtk_widget_show (data->window->item_l3);
@@ -1649,8 +1704,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         }
 
         gtk_text_buffer_apply_tag_by_name (buf, taglevel, &start, &end);
-        if (tagulevel)
-          gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
+        gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
         gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
 
         g_free (taglevel);
@@ -1701,10 +1755,10 @@ void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "time", "foreground", data->window->settings.color_time, NULL);
   gtk_text_buffer_create_tag (buf, "peasant", "foreground", data->window->settings.color_blues, NULL);
   gtk_text_buffer_create_tag (buf, "greenie", "foreground", data->window->settings.color_greens, NULL);
-  gtk_text_buffer_create_tag (buf, "l1", "background", data->window->settings.color_l1, NULL);
-  gtk_text_buffer_create_tag (buf, "l3", "background", data->window->settings.color_l3, NULL);
-  gtk_text_buffer_create_tag (buf, "l5", "background", data->window->settings.color_l5, NULL);
-  gtk_text_buffer_create_tag (buf, "l6", "background", data->window->settings.color_l6, NULL);
+  gtk_text_buffer_create_tag (buf, "l1", "paragraph-background", data->window->settings.color_l1, NULL);
+  gtk_text_buffer_create_tag (buf, "l3", "paragraph-background", data->window->settings.color_l3, NULL);
+  gtk_text_buffer_create_tag (buf, "l5", "paragraph-background", data->window->settings.color_l5, NULL);
+  gtk_text_buffer_create_tag (buf, "l6", "paragraph-background", data->window->settings.color_l6, NULL);
   gtk_text_buffer_create_tag (buf, "ul1", NULL);
   gtk_text_buffer_create_tag (buf, "ul3", NULL);
   gtk_text_buffer_create_tag (buf, "ul5", NULL);
@@ -2843,6 +2897,70 @@ void launch_browser (gchar* uri, DevchatCBData* data)
     gchar* commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
     g_spawn_command_line_async (commandline, NULL);
     g_free (commandline);
+  }
+}
+
+void filter_ul_changed (GtkWidget* widget, DevchatCBData* data)
+{
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data->window->output);
+  GtkTextTag* tag;
+
+  tag = gtk_text_tag_table_lookup (t, "ul1");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "ul3");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "ul5");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "ul6");
+  g_object_set (tag, "invisible", FALSE, NULL);
+
+  switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+  {
+    case 3: tag = gtk_text_tag_table_lookup (t, "ul5");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "l5");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    case 2: tag = gtk_text_tag_table_lookup (t, "ul3");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "l3");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    case 1: tag = gtk_text_tag_table_lookup (t, "ul1");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "l1");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    default: break;
+  }
+}
+
+void filter_ml_changed (GtkWidget* widget, DevchatCBData* data)
+{
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data->window->output);
+  GtkTextTag* tag;
+
+  tag = gtk_text_tag_table_lookup (t, "l1");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "l3");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "l5");
+  g_object_set (tag, "invisible", FALSE, NULL);
+  tag = gtk_text_tag_table_lookup (t, "l6");
+  g_object_set (tag, "invisible", FALSE, NULL);
+
+  switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+  {
+    case 3: tag = gtk_text_tag_table_lookup (t, "l5");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "ul5");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    case 2: tag = gtk_text_tag_table_lookup (t, "l3");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "ul3");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    case 1: tag = gtk_text_tag_table_lookup (t, "l1");
+            g_object_set (tag, "invisible", TRUE, NULL);
+            tag = gtk_text_tag_table_lookup (t, "ul1");
+            g_object_set (tag, "invisible-set", FALSE, NULL);
+    default: break;
   }
 }
 
