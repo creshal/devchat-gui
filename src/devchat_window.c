@@ -1039,8 +1039,6 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg ("Starting requests...");
 #endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
-  SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
-
   data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
   data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
@@ -1228,10 +1226,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             color = data->window->settings.color_greens;
           else
             color = data->window->settings.color_blues;
-          if (g_strcmp0 (name, "Belisarius") == 0 || g_strcmp0 (name, "Deepstar") == 0)
-            color = "#FF00FF";
-          else if (g_strcmp0 (name, "Samuel Creshal") == 0)
-            color = "#FF0000";
 
           if (g_strcmp0("",status) != 0)
           {
@@ -1543,10 +1537,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         gchar* name_color_tag = "peasant";
         if (user_level > 5)
           name_color_tag = "greenie";
-        if (g_strcmp0 (name, "Belisarius") == 0 || g_strcmp0 (name, "Deepstar") == 0)
-          name_color_tag = "special";
-        else if (g_strcmp0 (name, "Samuel Creshal") == 0)
-          name_color_tag = "commie";
 
         gtk_text_buffer_get_end_iter (buf, &end);
         gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
@@ -1705,8 +1695,6 @@ void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "time", "foreground", data->window->settings.color_time, NULL);
   gtk_text_buffer_create_tag (buf, "peasant", "foreground", data->window->settings.color_blues, NULL);
   gtk_text_buffer_create_tag (buf, "greenie", "foreground", data->window->settings.color_greens, NULL);
-  gtk_text_buffer_create_tag (buf, "special", "foreground", "#FF00FF", NULL);
-  gtk_text_buffer_create_tag (buf, "commie", "foreground", "#FF0000", NULL);
   gtk_text_buffer_create_tag (buf, "l1", "background", data->window->settings.color_l1, NULL);
   gtk_text_buffer_create_tag (buf, "l3", "background", data->window->settings.color_l3, NULL);
   gtk_text_buffer_create_tag (buf, "l5", "background", data->window->settings.color_l5, NULL);
