@@ -41,6 +41,7 @@ struct _DevchatConversation
   GtkTextBuffer* out_buffer;
   GtkWidget* in_widget;
   GtkTextBuffer* in_buffer;
+  GtkWidget* chk_raw;
 };
 
 struct _DevchatConversationClass

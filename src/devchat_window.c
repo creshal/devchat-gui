@@ -456,6 +456,11 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_end (GTK_BOX(self->inputbar),gtk_vseparator_new(),FALSE,FALSE,0);
   gtk_box_pack_end (GTK_BOX(self->inputbar),btn_ok,FALSE,FALSE,0);
 
+  self->chk_raw = gtk_check_button_new_with_label ("Raw mode");
+  gtk_widget_set_tooltip_text (self->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
+  gtk_box_pack_end (GTK_BOX(self->inputbar),self->chk_raw,FALSE,FALSE,0);
+  gtk_widget_set_no_show_all (self->chk_raw,TRUE);
+
   gtk_box_pack_start (GTK_BOX(vbox2),self->inputbar,FALSE,FALSE,0);
 
 
@@ -1005,6 +1010,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->level_box), "Level 6");
     gtk_combo_box_set_active ( GTK_COMBO_BOX(data->window->level_box), 0);
     gtk_widget_show (data->window->level_box);
+    gtk_widget_show (data->window->chk_raw);
     gtk_widget_show (data->window->item_l3);
     gtk_widget_show (data->window->item_l5);
   }
@@ -1785,17 +1791,15 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
 
-        //gchar* content_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) content, XML_SUBSTITUTE_BOTH, 0, 0, 0);
 
         gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
-        //g_free (content_d);
         content = "";
 
         state = STATE_TYPECHECK;
       }
       else if (g_strcmp0 (current, "&") == 0)
       {
-        // Entity
+        /* Entity */
         int j;
         gchar ent_current[2];
         ent_current[0] = 32;
@@ -2273,7 +2277,7 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
       }
       else if (g_strcmp0 (current, "&") == 0)
       {
-        // Entity
+        /* Entity */
         int j;
         gchar ent_current[2];
         ent_current[0] = 32;
@@ -2869,6 +2873,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   gchar* text;
   GtkTextIter start;
   GtkTextIter end;
+  GtkWidget* chk_raw;
 
   if (pagenum == 0)
   {
@@ -2879,6 +2884,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     gtk_text_buffer_get_start_iter (buf, &start);
     gtk_text_buffer_get_end_iter (buf, &end);
     text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+    chk_raw = data->window->chk_raw;
   }
   else
   {
@@ -2888,6 +2894,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
     DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
     buf = conv->in_buffer;
+    chk_raw = conv->chk_raw;
     gtk_text_buffer_get_start_iter (buf, &start);
     gtk_text_buffer_get_end_iter (buf, &end);
 
@@ -2928,9 +2935,13 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       }
       else if (current[0] > 31 && current[0] < 128)
       {
-        //Restricted char, but valid ASCII. %escape
+        /*Restricted char, but valid ASCII. %escape*/
         if (current[0] == 43)
           enc_text = g_strconcat (enc_text, "%26%2343%3B", NULL);
+        else if (current[0] == 60 && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
+          enc_text = g_strconcat (enc_text, "%26%2360%3B", NULL);
+        else if (current[0] == 62 && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
+          enc_text = g_strconcat (enc_text, "%26%2362%3B", NULL);
         else
           enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
       }
@@ -2982,6 +2993,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
     soup_session_send_message (data->window->session, post);
 
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
     g_free (enc_text);
   }
 }

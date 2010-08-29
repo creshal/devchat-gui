@@ -120,6 +120,14 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_box_pack_end (GTK_BOX(hbox),gtk_vseparator_new(),FALSE,FALSE,0);
     gtk_box_pack_end (GTK_BOX(hbox),btn_ok,FALSE,FALSE,0);
 
+    obj->chk_raw = gtk_check_button_new_with_label ("Raw mode");
+    gtk_widget_set_tooltip_text (obj->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
+    gtk_box_pack_end (GTK_BOX(hbox),obj->chk_raw,FALSE,FALSE,0);
+    if (parent->userlevel < 6)
+    {
+      gtk_widget_set_no_show_all (obj->chk_raw,TRUE);
+    }
+
     gtk_box_pack_start (GTK_BOX(vbox),hbox,FALSE,FALSE,0);
     gtk_box_pack_start (GTK_BOX(vbox),scroll_in,TRUE,TRUE,0);
 
