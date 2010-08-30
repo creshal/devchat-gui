@@ -63,6 +63,7 @@ G_BEGIN_DECLS
 #define DEVCHAT_WINDOW_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), DEVCHAT_TYPE_WINDOW, DevchatWindowClass))
 #define DEVCHAT_IS_WINDOW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), DEVCHAT_TYPE_WINDOW))
 #define DEVCHAT_WINDOW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), DEVCHAT_TYPE_WINDOW, DevchatWindowClass))
+#define MAX_BUF 19
 
 typedef struct dc_settings
 {
@@ -170,7 +171,8 @@ struct _DevchatWindow
 
   gchar* workingdir;
   gchar* avadir;
-
+  gchar* buffer[MAX_BUF+1];
+  gint buf_current;
 };
 
 struct _DevchatWindowClass

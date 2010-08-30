@@ -170,6 +170,12 @@ devchat_window_init (DevchatWindow* self)
   self->settings.presets = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
+  self->buf_current = 0;
+
+  gint j;
+
+  for (j=0; j <= MAX_BUF; j++)
+    self->buffer[j] = "";
 
   self->settings_backup = self->settings;
 
@@ -2421,13 +2427,97 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
 {
   if (key->type == GDK_KEY_PRESS && (key->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
   {
-    if (key->keyval == GDK_Up)
+    if (key->keyval == GDK_Up) /*Shamelessly copied from browser client.*/
     {
-      /*TODO: linebuffer.*/
+      gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+      GtkTextBuffer* buf;
+      GtkTextIter start;
+      GtkTextIter end;
+      gchar* text;
+
+      if (pagenum == 0)
+      {
+        buf = data->window->input;
+      }
+      else
+      {
+        const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+        DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+        buf = conv->in_buffer;
+      }
+      gtk_text_buffer_get_start_iter (buf, &start);
+      gtk_text_buffer_get_end_iter (buf, &end);
+
+      text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+
+      data->window->buffer[data->window->buf_current] = text;
+      data->window->buf_current++;
+      if (data->window->buf_current > MAX_BUF)
+        data->window->buf_current = MAX_BUF;
+      else if (data->window->buf_current < 0)
+      {
+        if (g_strcmp0 (data->window->buffer[data->window->buf_current], "") != 0)
+        {
+          gint i = MAX_BUF-1;
+          if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
+            g_free (data->window->buffer[MAX_BUF]);
+          while (i >= 0)
+          {
+            data->window->buffer[i+1] = data->window->buffer[i];
+            i--;
+          }
+          data->window->buffer[0] = "";
+        }
+        data->window->buf_current = 0;
+      }
+
+      gtk_text_buffer_set_text (buf, data->window->buffer[data->window->buf_current], -1);
     }
-    else if (key->keyval == GDK_Down)
+    else if (key->keyval == GDK_Down) /*Shamelessly copied from browser client.*/
     {
-      /*same*/
+      gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+      GtkTextBuffer* buf;
+      GtkTextIter start;
+      GtkTextIter end;
+      gchar* text;
+
+      if (pagenum == 0)
+      {
+        buf = data->window->input;
+      }
+      else
+      {
+        const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+        DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+        buf = conv->in_buffer;
+      }
+      gtk_text_buffer_get_start_iter (buf, &start);
+      gtk_text_buffer_get_end_iter (buf, &end);
+
+      text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+
+      data->window->buffer[data->window->buf_current] = text;
+      data->window->buf_current--;
+      if (data->window->buf_current > MAX_BUF)
+        data->window->buf_current = MAX_BUF;
+      else if (data->window->buf_current < 0)
+      {
+        if (g_strcmp0 (data->window->buffer[data->window->buf_current], "") != 0)
+        {
+          gint i = MAX_BUF-1;
+          if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
+            g_free (data->window->buffer[MAX_BUF]);
+          while (i >= 0)
+          {
+            data->window->buffer[i+1] = data->window->buffer[i];
+            i--;
+          }
+          data->window->buffer[0] = "";
+        }
+        data->window->buf_current = 0;
+      }
+
+      gtk_text_buffer_set_text (buf, data->window->buffer[data->window->buf_current], -1);
     }
     else if (data->window->userlevel > 1)
     {
@@ -3047,7 +3137,29 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   if (g_strcmp0("",text) != 0)
   {
     /*TODO: Fill linebuffer.*/
-    gtk_text_buffer_set_text (buf, "", 0);
+
+    gint i = MAX_BUF-1;
+
+    if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
+      g_free (data->window->buffer[MAX_BUF]);
+    /*Shamelessly copied from browser chat.*/
+    while (i>0)
+    {
+      data->window->buffer[i+1] = data->window->buffer[i];
+      i--;
+    }
+    data->window->buffer[1] = text;
+    if (g_strcmp0 (data->window->buffer[0], "") != 0)
+    {
+      gtk_text_buffer_set_text (buf, data->window->buffer[0], -1);
+      g_free(data->window->buffer[0]);
+      data->window->buffer[0] = "";
+    }
+    else
+      gtk_text_buffer_set_text (buf, "", 0);
+    data->window->buf_current = 0;
+
+
 
     gchar* enc_text = "";
 
@@ -3055,7 +3167,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     current[0] = 32;
     current[1] = 0;
 
-    gint i;
     gint max = strlen (text);
 
     for (i=0; i < max; i++)
@@ -3257,7 +3368,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
   GtkWidget* dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © International Organization for Standardization 1986");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft. \nPortions © International Organization for Standardization 1986");
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
 
   gchar* license_text;
