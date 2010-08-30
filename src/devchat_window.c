@@ -103,7 +103,7 @@ void ins_preset (GtkWidget* widget, DevchatCBData* data);
 gboolean badass (gchar* name, DevchatCBData* data);
 gint user_lookup (gchar* a, gchar* b);
 void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
-
+void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
@@ -1467,57 +1467,61 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
     gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
     g_free (labeltext);
-    gboolean message_found = FALSE;
+  }
 
-    GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
+  gboolean message_found = FALSE;
 
-    GtkTextIter old_end;
-    gtk_text_buffer_get_end_iter (self->window->output, &old_end);
-    GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
-    gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
+  GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
+
+  GtkTextIter old_end;
+  gtk_text_buffer_get_end_iter (self->window->output, &old_end);
+  GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
+  gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
 
 
-    xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
-    gchar* currenttime = current_time ();
+  xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
+  gchar* currenttime = current_time ();
 
-    while (xmlTextReaderRead (msgparser) == 1)
+  while (xmlTextReaderRead (msgparser) == 1)
+  {
+    gchar* node = (gchar*) xmlTextReaderLocalName(msgparser);
+
+    if (node && (g_strcmp0 (node,"lastconn") == 0))
     {
-      gchar* node = (gchar*) xmlTextReaderLocalName(msgparser);
+      gchar** time_cmps = g_strsplit ((gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "value"), " ", 2);
+      currenttime = g_strdup (time_cmps[1]);
+      g_strfreev (time_cmps);
+    }
+    else if (node && (g_strcmp0 (node,"ce") == 0))
+    {
+      message_found = TRUE;
+    #ifdef DEBUG
+      dbg ("Processing message node...");
+    #endif
+      gchar* name = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "a");
+      gchar* mode = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "u");
+      gchar* time_attr = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
+      gchar* lid = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "i");
+      gchar* message = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "m");
 
-      if (node && (g_strcmp0 (node,"lastconn") == 0))
+      g_free (self->window->lastid);
+      self->window->lastid = g_strdup (lid);
+
+    #ifdef DEBUG
+      dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time_attr, lid, message);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    #endif
+
+      gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
+      gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
+      gulong msg_level = strtoll (mode+2,NULL,10);
+
+      GtkTextBuffer* buf;
+      GtkWidget* view;
+
+      if (g_strcmp0 (date, "") == 0)
       {
-        gchar** time_cmps = g_strsplit ((gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "value"), " ", 2);
-        currenttime = g_strdup (time_cmps[1]);
-        g_strfreev (time_cmps);
-      }
-      else if (node && (g_strcmp0 (node,"ce") == 0))
-      {
-        message_found = TRUE;
-      #ifdef DEBUG
-        dbg ("Processing message node...");
-      #endif
-        gchar* name = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "a");
-        gchar* mode = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "u");
-        gchar* time_attr = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
-        gchar* lid = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "i");
-        gchar* message = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "m");
-
-        g_free (self->window->lastid);
-        self->window->lastid = g_strdup (lid);
-
-      #ifdef DEBUG
-        dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time_attr, lid, message);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
-
-        gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
-        gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
-        gulong msg_level = strtoll (mode+2,NULL,10);
-
-        GtkTextBuffer* buf;
-        GtkWidget* view;
-
         if (msg_level == 0)
         {
           DevchatConversation* conv;
@@ -1565,47 +1569,57 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           buf = self->window->output;
           view = self->window->outputwidget;
         }
+      }
+      else
+      {
+        DevchatConversation* conv;
+        conv = pm_cb (NULL, devchat_cb_data_new (self->window, g_strconcat ("History for ", date, NULL)));
+        buf = conv->out_buffer;
+        view = conv->out_widget;
+      }
 
-        GtkTextIter end;
-        GtkTextTagTable* table = gtk_text_buffer_get_tag_table (buf);
-        gtk_text_buffer_get_end_iter (buf, &end);
+      GtkTextIter end;
+      GtkTextTagTable* table = gtk_text_buffer_get_tag_table (buf);
+      gtk_text_buffer_get_end_iter (buf, &end);
 
-        GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
-        gtk_text_buffer_add_mark (buf, old_start, &end);
+      GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
+      gtk_text_buffer_add_mark (buf, old_start, &end);
 
-        gchar* tagname = g_strconcat ("user-", name, NULL);
+      gchar* tagname = g_strconcat ("user-", name, NULL);
 
-        if (!gtk_text_tag_table_lookup (table, tagname))
-          gtk_text_buffer_create_tag (buf, tagname, NULL);
+      if (!gtk_text_tag_table_lookup (table, tagname))
+        gtk_text_buffer_create_tag (buf, tagname, NULL);
 
 
-        gtk_text_buffer_get_end_iter (buf, &end);
-        gchar* time_tag;
-        if (self->window->settings.showid)
-        {
-          time_tag = g_strdup_printf ("\n%s %s", lid, time_attr);
-        }
-        else
-        {
-          time_tag = g_strdup_printf ("\n%s", time_attr);
-        }
+      gtk_text_buffer_get_end_iter (buf, &end);
+      gchar* time_tag;
+      if (self->window->settings.showid)
+      {
+        time_tag = g_strdup_printf ("\n%s %s", lid, time_attr);
+      }
+      else
+      {
+        time_tag = g_strdup_printf ("\n%s", time_attr);
+      }
 
-        gtk_text_buffer_get_end_iter (buf, &end);
+      gtk_text_buffer_get_end_iter (buf, &end);
 
-        gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
-        g_free (time_tag);
+      gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+      g_free (time_tag);
 
-        gchar* name_color_tag = "peasant";
-        if (user_level > 5)
-          name_color_tag = "greenie";
+      gchar* name_color_tag = "peasant";
+      if (user_level > 5)
+        name_color_tag = "greenie";
 
-        gtk_text_buffer_get_end_iter (buf, &end);
-        gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
-        gtk_text_buffer_insert_with_tags (buf, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
-        g_free (name_t);
+      gtk_text_buffer_get_end_iter (buf, &end);
+      gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
+      gtk_text_buffer_insert_with_tags (buf, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+      g_free (name_t);
 
-        /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
+      /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
 
+      if (g_strcmp0 (date, "") == 0)
+      {
         gchar* kickmsg;
         if (msg_level != 0)
           kickmsg = g_strconcat ("!KICK ", g_ascii_strup (self->window->settings.user, -1), NULL);
@@ -1619,6 +1633,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           dbg ("IN SOVIET RUSSIA, CHAT KICKS YOU.");
         #endif
           gtk_text_buffer_set_text (self->window->input, "[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …" ,-1);
+          gtk_notebook_set_current_page (GTK_NOTEBOOK (self->window->notebook), 0);
           devchat_window_btn_send (NULL, self);
           destroy (NULL, self);
         }
@@ -1662,88 +1677,84 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (kickmsg);
         g_free (message_up);
         g_free (silmsg);
-
-        gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
-
-      #ifdef DEBUG
-        dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
-
-        parse_message (message_t, devchat_cb_data_new (self->window, buf), regex);
-
-        g_free (message_t);
-
-      #ifdef DEBUG
-        dbg ("Message parsed, applying level tags...");
-      #endif
-
-        GtkTextIter start;
-        gtk_text_buffer_get_iter_at_mark (buf, &start, old_start);
-        gtk_text_buffer_get_end_iter (buf, &end);
-
-        gchar* taglevel;
-        gchar* tagulevel;
-
-        switch (user_level)
-        {
-          case 1: tagulevel = g_strdup ("ul1"); break;
-          case 3: tagulevel = g_strdup ("ul3"); break;
-          case 5: tagulevel = g_strdup ("ul5"); break;
-          default: tagulevel = g_strdup ("ul6"); break;
-        }
-
-        switch (msg_level)
-        {
-          case 0:
-          case 1: taglevel = g_strdup ("l1"); break;
-          case 3: taglevel = g_strdup ("l3"); break;
-          case 5: taglevel = g_strdup ("l5"); break;
-          default: taglevel = g_strdup ("l6"); break;
-        }
-
-        gtk_text_buffer_apply_tag_by_name (buf, taglevel, &start, &end);
-        gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
-        gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
-
-        g_free (taglevel);
-        g_free (tagulevel);
-        gtk_text_buffer_delete_mark (buf, old_start);
-        g_free (name);
-        g_free (tagname);
-        g_free (mode);
-        g_free (time_attr);
-        g_free (lid);
-        g_free (message);
       }
 
-      g_free (node);
+      gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
+
+    #ifdef DEBUG
+      dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    #endif
+
+      parse_message (message_t, devchat_cb_data_new (self->window, buf), regex);
+
+      g_free (message_t);
+
+    #ifdef DEBUG
+      dbg ("Message parsed, applying level tags...");
+    #endif
+
+      GtkTextIter start;
+      gtk_text_buffer_get_iter_at_mark (buf, &start, old_start);
+      gtk_text_buffer_get_end_iter (buf, &end);
+
+      gchar* taglevel;
+      gchar* tagulevel;
+
+      switch (user_level)
+      {
+        case 1: tagulevel = g_strdup ("ul1"); break;
+        case 3: tagulevel = g_strdup ("ul3"); break;
+        case 5: tagulevel = g_strdup ("ul5"); break;
+        default: tagulevel = g_strdup ("ul6"); break;
+      }
+
+      switch (msg_level)
+      {
+        case 0:
+        case 1: taglevel = g_strdup ("l1"); break;
+        case 3: taglevel = g_strdup ("l3"); break;
+        case 5: taglevel = g_strdup ("l5"); break;
+        default: taglevel = g_strdup ("l6"); break;
+      }
+
+      gtk_text_buffer_apply_tag_by_name (buf, taglevel, &start, &end);
+      gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
+      gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
+
+      g_free (taglevel);
+      g_free (tagulevel);
+      gtk_text_buffer_delete_mark (buf, old_start);
+      g_free (name);
+      g_free (tagname);
+      g_free (mode);
+      g_free (time_attr);
+      g_free (lid);
+      g_free (message);
     }
-  #ifdef DEBUG
-    dbg ("Message list parsed.");
-  #endif
 
-    if (message_found)
-    {
-      GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
-      if ((a->upper - (a->value + a->page_size)) < 30)
-        gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
-    }
-
-    gtk_text_buffer_delete_mark (self->window->output, scroll_to);
-
-    self->window->firstrun = FALSE;
-    xmlFreeTextReader (msgparser);
-    g_free (regex);
+    g_free (node);
   }
-  else
+#ifdef DEBUG
+  dbg ("Message list parsed.");
+#endif
+
+  if (message_found)
   {
-  #ifdef DEBUG
-    dbg ("Creating history window...");
-  #endif
-    /* TODO */
+    GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
+    if ((a->upper - (a->value + a->page_size)) < 30)
+      gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
   }
+
+  gtk_text_buffer_delete_mark (self->window->output, scroll_to);
+
+  if (g_strcmp0 (date, "") == 0)
+    self->window->firstrun = FALSE;
+
+  xmlFreeTextReader (msgparser);
+  g_free (regex);
+
   g_free (msglist);
 }
 
@@ -3185,8 +3196,60 @@ void prev_tab (GtkWidget* widget, DevchatCBData* data)
 
 void show_his (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  guint day;
+  guint month;
+  guint year;
+  gchar* uri;
+
+  GtkWidget* cal = gtk_calendar_new ();
+  GtkWidget* dialog = gtk_dialog_new_with_buttons ("Choose a date", GTK_WINDOW (data->window->window), GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                                   GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+                                                   NULL);
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG(dialog))), cal, FALSE, FALSE, 0);
+  gtk_widget_show (cal);
+
+  switch (gtk_dialog_run (GTK_DIALOG (dialog)))
+  {
+    case GTK_RESPONSE_ACCEPT:
+      gtk_calendar_get_date (GTK_CALENDAR (cal), &year, &month, &day);
+      uri = g_strdup_printf ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?date=%02i/%02i/%04i",month,day,year);
+
+      DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, g_strdup_printf ("History for %02i/%02i/%04i",month,day,year));
+      if (conv)
+        gtk_widget_show_all (conv->child);
+      else
+      {
+        SoupMessage* get = soup_message_new("GET", uri);
+        soup_session_queue_message (data->window->session, get, SOUP_SESSION_CALLBACK (his_cb), devchat_cb_data_new(data->window, g_strdup_printf("%02i/%02i/%04i",month,day,year)));
+        gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                            gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "his"),
+                            "History loading..."
+                           );
+      }
+
+    break;
+    default: break;
+  }
+  gtk_widget_destroy (dialog);
+
+
 }
+
+void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
+{
+  gchar* messagelist = g_strdup (m->response_body->data);
+
+  gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                     gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "his")
+                    );
+
+  if (messagelist)
+  {
+    ce_parse (messagelist, data, (gchar*) data->data);
+  }
+}
+
 void about_cb (GtkWidget* widget, DevchatCBData* data)
 {
   /*TODO*/
