@@ -8,7 +8,7 @@ license=('GPL')
 depends=('libsoup' 'gtk2' 'libnotify' 'hicolor-icon-theme' 'libxml2')
 makedepends=('pkgconfig' 'clang')
 source=(http://dev.yaki-syndicate.de/git/cgit.cgi/$pkgname/snapshot/$pkgname-$pkgver.tar.bz2)
-md5sums=(a6449c364a99c2c5d8198a6ff2efa624)
+md5sums=(382d48841329cec1f500ea941959ea09)
 conflicts=('devchat-gui')
 provides=('devchat-gui')
 
