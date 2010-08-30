@@ -95,7 +95,7 @@ void at_cb (GtkWidget* widget, DevchatCBData* data);
 DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
 
-void launch_browser (gchar* uri, DevchatCBData* data);
+void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data);
 void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
 void ins_smilie (GtkWidget* widget, DevchatCBData* data);
@@ -523,6 +523,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_paned_set_position( GTK_PANED(vpaned),-1);
 
   gtk_widget_grab_focus (self->user_entry);
+
+  gtk_about_dialog_set_url_hook ((GtkAboutDialogActivateLinkFunc) launch_browser, self_data, NULL);
 
 #ifdef NOTIFY
   notify_init(APPNAME);
@@ -2747,7 +2749,7 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
   g_free (dbg_msg);
 #endif
 
-  launch_browser (url, data);
+  launch_browser (NULL, url, data);
   g_free (url);
 }
 
@@ -2872,7 +2874,7 @@ void devchat_window_on_mark_set_cb(GtkTextBuffer* buffer, GtkTextIter* iter, Gtk
       #ifdef DEBUG
         dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
       #endif
-        launch_browser (uri, data);
+        launch_browser (NULL, uri, data);
         g_free (uri);
 
         g_object_set (tag->data, "visited", TRUE, NULL);
@@ -2883,7 +2885,7 @@ void devchat_window_on_mark_set_cb(GtkTextBuffer* buffer, GtkTextIter* iter, Gtk
   }
 }
 
-void launch_browser (gchar* uri, DevchatCBData* data)
+void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data)
 {
   if (g_strcmp0 (data->window->settings.browser,"<native>") == 0)
   {
@@ -3252,7 +3254,32 @@ void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void about_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  /*TODO*/
+  GtkWidget* dialog = gtk_about_dialog_new ();
+  gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
+  gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © International Organization for Standardization 1986");
+  gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
+
+  gchar* license_text;
+#ifndef G_OS_WIN32
+  if (g_file_test ("/usr/share/licenses/common/GPL2/license.txt", G_FILE_TEST_EXISTS))
+    g_file_get_contents ("/usr/share/licenses/common/GPL2/license.txt", &license_text, NULL, NULL);
+  else if (g_file_test ("/usr/share/common-licenses/GPL-2", G_FILE_TEST_EXISTS))
+    g_file_get_contents ("/usr/share/common-licenses/GPL-2", &license_text, NULL, NULL);
+  else
+#endif
+    license_text = "    This program is free software; you can redistribute it and/or modify\
+    it under the terms of the GNU General Public License as published by\
+    the Free Software Foundation; either version 2 of the License, or\
+    (at your option) any later version.\
+\
+    This program is distributed in the hope that it will be useful,\
+    but WITHOUT ANY WARRANTY; without even the implied warranty of\
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\
+    GNU General Public License for more details.";
+  gtk_about_dialog_set_license (GTK_ABOUT_DIALOG (dialog), license_text);
+  gtk_dialog_run (GTK_DIALOG (dialog));
+  gtk_widget_destroy (dialog);
 }
 
 void at_cb (GtkWidget* widget, DevchatCBData* data)
