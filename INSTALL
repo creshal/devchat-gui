@@ -1,0 +1,33 @@
+#Compiling the Source code
+##Linux
+You'll need a compiler (I recommend clang, gcc works too), pkg-config and the header files of gtk2, libsoup and libxml2. Decent distributions have them included anyway, Debian/Ubuntu/Mint-users have to install »libgtk2.0-dev libxml2-dev libsoup2.4-dev« for that. Oh, and you need python for the configuration script.
+After that, it's just plain ol' ./configure && make && make install
+
+##Windows
+You're fscked. Compiling GTK apps under Windows involves black magic, human sacrifices and mingw. Basically, you'll need the -dev packages for GTK (plus all dependencies, they're listed on the GTK homepage), libsoup (note that you'll need 2.30, which is not yet available precompiled, so you have to compile that for yourself aswell – Godspeed) and libxml2, latest stable release of each. Set up your (mingw-based) compiler and linker to use the respective directories and compile. Install to %PROGRAMFILES%\Devchat\ and done™. Or not. It's the best to contact me and ask for detailed instructions. Bring coffee and pizza. And vodka. And some virgins (...for the human sacrifice of course).
+
+#Installing compiled stuff
+##Linux
+make install
+
+##Windows
+Create directories and fill as listed:
+%PROGRAMFILES%-Devchat─┬─bin: dcgui.exe and all .dlls
+                       │
+                       ├─etc─gtk-2.0: gtkrc, if wanted (e.g. for better looking themes) 
+                       │
+                       ├─lib─..: GTK stuff (e.g. theme engines)
+                       │
+                       ├─pixmaps: All files from the source archive's folder share\pixmaps\devchat 
+                       │
+                       └─share: GTK theme stuff.
+
+#Special files
+##Settings
+###Linux
+~/.config/devchat
+###Windows
+%APPDATA%\devchat
+
+##Logfile (Windows build with debug mode enabled)
+%TMP%\dcgui_debug.log
