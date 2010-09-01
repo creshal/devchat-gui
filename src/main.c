@@ -99,9 +99,11 @@ main (int argc, char *argv[])
 
       gchar** presets = g_strsplit (g_key_file_get_string (keyfile, g, "BOILERPLATES", &e), "|", 0);
       int j;
-      for (j = 0; presets[j] != NULL; j++)
-        self->settings.presets = g_slist_prepend (self->settings.presets, g_strdup(presets[j]));
+      for (j = 0; presets[j] != NULL && j < 10; j++)
+        self->settings.presets[j] = g_strdup(presets[j]);
       g_strfreev (presets);
+
+      devchat_window_refresh_presets (self);
 
       if (e)
         g_error ("Errors occured while loading settings: %s.", e->message);

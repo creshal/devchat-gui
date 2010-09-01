@@ -167,7 +167,6 @@ devchat_window_init (DevchatWindow* self)
   self->settings.avatar_size = 12;
   self->settings.update_time = 1000; /*Time between update requests in ms.*/
   self->settings.keywords = NULL; /*GSList*/
-  self->settings.presets = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
   self->buf_current = 0;
@@ -176,6 +175,9 @@ devchat_window_init (DevchatWindow* self)
 
   for (j=0; j <= MAX_BUF; j++)
     self->buffer[j] = "";
+
+  for (j=0; j < 10; j++)
+    self->settings.presets[j] = "";
 
   self->settings_backup = self->settings;
 
@@ -296,21 +298,9 @@ devchat_window_init (DevchatWindow* self)
   gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
-  GtkWidget* item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
+  self->item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
 
-  GSList* i = self->settings.keywords;
 
-  GtkWidget* preset_sub = gtk_menu_new();
-  gtk_menu_item_set_submenu (GTK_MENU_ITEM (item_presets), preset_sub);
-
-  while (i)
-  {
-    GtkWidget* item = gtk_menu_item_new_with_label ((gchar*) i->data);
-    g_signal_connect (item, "activate", G_CALLBACK (ins_preset), devchat_cb_data_new (self, (gchar*) i->data));
-    gtk_menu_shell_append (GTK_MENU_SHELL (preset_sub), item);
-
-    i = i->next;
-  }
 
   GtkMenuShell* main_sub = GTK_MENU_SHELL(gtk_menu_new());
   gtk_menu_shell_append(main_sub, self->item_connect);
@@ -328,7 +318,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_shell_append(insert_sub, item_link);
   gtk_menu_shell_append(insert_sub, gtk_menu_item_new());
   gtk_menu_shell_append(insert_sub, self->item_smilies);
-  gtk_menu_shell_append(insert_sub, item_presets);
+  gtk_menu_shell_append(insert_sub, self->item_presets);
   gtk_menu_item_set_submenu(menu_insert,GTK_WIDGET(insert_sub));
 
   GtkMenuShell* edit_sub = GTK_MENU_SHELL(gtk_menu_new());
@@ -888,21 +878,14 @@ void save_settings (DevchatWindow* w)
     }
   }
 
-  GSList* tmp_ps = w->settings.presets;
   gchar* presets_string = g_strdup("BOILERPLATES=");
-
-  if (tmp_ps && tmp_ps->data)
+  gint i;
+  for (i=0;i < 10 && g_strcmp0 ("",w->settings.presets[i]) != 0;i++)
   {
-    presets_string = g_strconcat (presets_string, (gchar*) tmp_ps->data, NULL);
-
-    tmp_ps = tmp_ps->next;
-
-    while (tmp_ps && tmp_ps->data)
-    {
-      presets_string = g_strconcat (presets_string, "|", (gchar*) tmp_ps->data, NULL);
-      tmp_ps = tmp_ps->next;
-    }
+    presets_string = g_strconcat (presets_string, w->settings.presets[i], "|", NULL);
   }
+
+  gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
 
   GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port));
   g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
@@ -2657,7 +2640,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* label_col_hurl = gtk_label_new ("Hover url color:");
   gdk_color_parse (data->window->settings.color_url_hover, &c);
   GtkWidget* btn_col_hurl = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_high = gtk_label_new ("Highlighted tab golor:");
+  GtkWidget* label_col_high = gtk_label_new ("Highlighted tab color:");
   gdk_color_parse (data->window->settings.color_highlight, &c);
   GtkWidget* btn_col_high = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox7), label_col_hurl,FALSE,FALSE,0);
@@ -2730,6 +2713,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   }
   gtk_widget_set_tooltip_text (entry_vnotify, "This notification will be played on keyword match or PNs. <native> is a built-in visual notification.\nYou can also specify custom commands to execute.");
 
+
   gtk_box_pack_start (GTK_BOX (hbox8), label_notify,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox8), entry_notify,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox8), label_vnotify,FALSE,FALSE,0);
@@ -2768,21 +2752,37 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox9), label_browser,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), entry_browser,TRUE,TRUE,0);
 
+  GtkWidget* hbox11 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* label_update = gtk_label_new ("Time between updates (in ms):");
+  GtkWidget* scale_update = gtk_spin_button_new_with_range (200.0, 2000.0, 50.0);
+  gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_update), data->window->settings.update_time);
+  GtkWidget* label_avas = gtk_label_new ("Avatar size:");
+  GtkWidget* scale_avas = gtk_spin_button_new_with_range (8.0, 80.0, 4.0);
+  gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_avas), data->window->settings.avatar_size);
+
+  gtk_box_pack_start (GTK_BOX (hbox11), label_update,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox11), scale_update,FALSE,FALSE,0);
+  gtk_box_pack_end (GTK_BOX (hbox11), scale_avas,FALSE,FALSE,0);
+  gtk_box_pack_end (GTK_BOX (hbox11), label_avas,FALSE,FALSE,0);
+
+
   GtkWidget* vbox2 = gtk_vbox_new (FALSE, 1);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox6,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox10,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), gtk_hseparator_new (),FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox8,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox9,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (vbox2), hbox11,FALSE,FALSE,0);
 
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new ("Misc"));
 
-  /*XXX: Preset text tab.*/
 
-  /*XXX: Sizegroups.*/
 
-  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area( GTK_DIALOG (dialog))), nb, TRUE, TRUE, 1);
+
+
+
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), nb, TRUE, TRUE, 1);
   gtk_widget_show_all (dialog);
 
   gint result = gtk_dialog_run (GTK_DIALOG (dialog));
@@ -2828,6 +2828,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
                                   NULL);
       /*XXX: Keywords, presets.*/
+      data->window->settings.update_time = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_update));
+      data->window->settings.avatar_size = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_avas));
       save_settings (data->window);
     break;
     default: break;
@@ -3496,6 +3498,20 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 
   g_signal_connect (item, "activate", G_CALLBACK (ins_smilie), devchat_cb_data_new (data->window, name));
   gtk_menu_shell_append (data->data, item);
+}
+
+void devchat_window_refresh_presets (DevchatWindow* self)
+{
+  GtkWidget* preset_sub = gtk_menu_new ();
+  gint i;
+  for (i = 0; i < 10 && g_strcmp0 ("", self->settings.presets[i]) != 0; i++)
+  {
+    GtkWidget* item = gtk_menu_item_new_with_label (self->settings.presets[i]);
+    g_signal_connect (item, "activate", G_CALLBACK (ins_preset), devchat_cb_data_new (self, self->settings.presets[i]));
+    gtk_menu_shell_append (GTK_MENU_SHELL (preset_sub), item);
+  }
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_presets), preset_sub);
+  gtk_widget_show_all (self->item_presets);
 }
 
 void ins_smilie (GtkWidget* widget, DevchatCBData* data)

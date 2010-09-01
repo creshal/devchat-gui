@@ -86,13 +86,13 @@ typedef struct dc_settings
   gchar* vnotify;
   guint width;
   guint height;
-  guint x;
-  guint y;
+  gint x;
+  gint y;
   guint update_time;
   guint avatar_size;
   guint handle_width;
   GSList* keywords;
-  GSList* presets;
+  gchar* presets[10];
   gboolean showid;
   gboolean stealthjoin;
   gboolean autojoin;
@@ -146,8 +146,8 @@ struct _DevchatWindow
   GtkWidget* item_l3;
   GtkWidget* item_l5;
   GtkWidget* item_reconnect;
-  GtkWidget* item_texts;
   GtkWidget* item_smilies;
+  GtkWidget* item_presets;
   GtkWidget* chk_raw;
 
   GtkTextBuffer* output;
@@ -197,6 +197,7 @@ GType devchat_window_get_type (void);
 DevchatWindow* devchat_window_new (void);
 
 void devchat_window_refresh_smilies (DevchatWindow* self);
+void devchat_window_refresh_presets (DevchatWindow* self);
 
 void devchat_window_on_mark_set_cb();
 gboolean devchat_window_on_motion_cb ();
