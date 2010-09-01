@@ -156,7 +156,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.showid = FALSE;
   self->settings.stealthjoin = FALSE;
   self->settings.autojoin = FALSE;
-  self->settings.showhidden = FALSE;
+  self->settings.showhidden = TRUE;
   self->settings.coloruser = TRUE;
   self->settings.notify = g_strdup("<native>");
   self->settings.vnotify = g_strdup("<native>");
@@ -635,7 +635,7 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Shows the internal post id next to (new) posts.", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
-  g_object_class_install_property (gobject_class, SETTINGS_STEALTHJOIN, g_param_spec_boolean
+  g_object_class_install_property (gobject_class, SETTINGS_SHOWHIDDEN, g_param_spec_boolean
                                                      ( "showhidden", "Show hidden usernames",
                                                        "Shows user names when normally required to be hidden (stealth goldies, stealth posts by L6+).", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
@@ -873,7 +873,7 @@ void save_settings (DevchatWindow* w)
   }
 
   GSList* tmp_kw = w->settings.keywords;
-  gchar* keywords_string = "KEYWORDS=";
+  gchar* keywords_string = g_strdup("KEYWORDS=");
 
   if (tmp_kw)
   {
@@ -889,7 +889,7 @@ void save_settings (DevchatWindow* w)
   }
 
   GSList* tmp_ps = w->settings.presets;
-  gchar* presets_string = "BOILERPLATES=";
+  gchar* presets_string = g_strdup("BOILERPLATES=");
 
   if (tmp_ps && tmp_ps->data)
   {
@@ -1087,6 +1087,17 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   g_free (dbg_msg);
 #endif
 
+  if (!data->window->settings.stealthjoin)
+  {
+    if (data->window->userlevel < 6)
+      gtk_text_buffer_set_text (data->window->input, "[cyan](SovietServer):[/cyan] /me has joined." ,-1);
+    else
+      gtk_text_buffer_set_text (data->window->input, "<span class=\"chatname_green\">(SovietServer):</span> /me has joined." ,-1);
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (data->window->chk_raw), TRUE);
+    gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
+    devchat_window_btn_send (NULL, data);
+  }
+
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
   gtk_widget_grab_focus(data->window->inputwidget);
   gtk_widget_hide_all (data->window->loginbar);
@@ -1267,7 +1278,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
 
           gchar* at_text = g_strdup_printf ("View the forum profile of %s.",name);
-          gtk_widget_set_tooltip_text (at_btn, at_text);
+          gtk_widget_set_tooltip_text (pm_btn, at_text);
           g_free (at_text);
 
           GdkPixbuf* ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, uid);
@@ -2166,21 +2177,23 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
         #ifdef DEBUG
           dbg ("Detected comment.");
         #endif
-
-          top->attrs = g_slist_reverse (top->attrs);
-
-          gchar* comment = "";
-
-          while (top->attrs && g_strcmp0 (( (DevchatHTMLAttr*) top->attrs->data)->name, "--"))
+          if (data->window->settings.showhidden)
           {
-            comment = g_strconcat (comment, ( (DevchatHTMLAttr*) top->attrs->data)->name, " ", NULL);
-            top->attrs = top->attrs->next;
+            top->attrs = g_slist_reverse (top->attrs);
+
+            gchar* comment = "";
+
+            while (top->attrs && g_strcmp0 (( (DevchatHTMLAttr*) top->attrs->data)->name, "--"))
+            {
+              comment = g_strconcat (comment, ( (DevchatHTMLAttr*) top->attrs->data)->name, " ", NULL);
+              top->attrs = top->attrs->next;
+            }
+            GtkTextIter end;
+
+            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+
+            gtk_text_buffer_insert_with_tags_by_name (GTK_TEXT_BUFFER (data->data), &end, comment, -1, "time", NULL);
           }
-          GtkTextIter end;
-
-          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
-
-          gtk_text_buffer_insert_with_tags_by_name (GTK_TEXT_BUFFER (data->data), &end, comment, -1, "time", NULL);
         }
         #ifdef DEBUG
         else
@@ -2742,7 +2755,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     }
   }
   gtk_entry_set_text (GTK_ENTRY(entry_keywords), keywords_string);
-  g_free (keywords_string);
+  if (g_strcmp0 (keywords_string, "") != 0)
+    g_free (keywords_string);
 
   GtkWidget* label_browser = gtk_label_new ("Browser:");
   GtkWidget* entry_browser = gtk_entry_new ();
@@ -3136,8 +3150,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
   if (g_strcmp0("",text) != 0)
   {
-    /*TODO: Fill linebuffer.*/
-
     gint i = MAX_BUF-1;
 
     if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
@@ -3326,6 +3338,7 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
   {
     case GTK_RESPONSE_ACCEPT:
       gtk_calendar_get_date (GTK_CALENDAR (cal), &year, &month, &day);
+      month++;
       uri = g_strdup_printf ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?date=%02i/%02i/%04i",month,day,year);
 
       DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, g_strdup_printf ("History for %02i/%02i/%04i",month,day,year));
