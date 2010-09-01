@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.4.5"\n')
+f.write('#define VERSION "0.4.6"\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 
@@ -40,7 +40,6 @@ parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",def
 parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
 parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Like debug, but without the textwalls of doom(tm). Useful for automated debugging.")
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
-parser.add_option("-a","--enable-audio",action="store_true",dest="audio",default=False,help="Enable audio notifications.")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support.")
 parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations.")
 
@@ -58,9 +57,6 @@ if options.debugS:
 if options.notify:
   libs += " libnotify"
   f.write('#ifndef G_OS_WIN32\n#define NOTIFY\n#endif\n')
-if options.audio:
-  libs += " alsa"
-  f.write('#define AUDIO\n')
 if options.otr:
   libs += " libotr"
   f.write('#define OTR\n')

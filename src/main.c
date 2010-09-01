@@ -94,7 +94,7 @@ main (int argc, char *argv[])
       gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
       int i;
       for (i = 0; keywords[i] != NULL; i++)
-        self->settings.keywords = g_slist_prepend (self->settings.keywords, g_strdup(keywords[i]));
+        self->settings.keywords = g_slist_append (self->settings.keywords, g_strdup(keywords[i]));
       g_strfreev (keywords);
 
       gchar** presets = g_strsplit (g_key_file_get_string (keyfile, g, "BOILERPLATES", &e), "|", 0);

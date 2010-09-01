@@ -43,16 +43,6 @@
   #include <libnotify/notify.h>
 #endif
 
-#ifdef AUDIO
-  #ifdef G_OS_UNIX
-    #include <alsa/asoundlib.h>
-  #else
-    #ifdef G_OS_WIN32
-    /*TODO*/
-    #endif
-  #endif
-#endif
-
 #define SOUP_SESSION_CALLBACK(f)  ((SoupSessionCallback) (f))
 
 G_BEGIN_DECLS

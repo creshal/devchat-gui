@@ -70,7 +70,10 @@ void save_settings (DevchatWindow* w);
 void url_tag_nv_color_cb (GtkTextTag* t, gchar* value);
 void url_tag_v_color_cb (GtkTextTag* t, gchar* value);
 
+void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data);
+#ifdef NOTIFY
 void notify_cb ();
+#endif
 void urlopen ();
 void user_list_get();
 void message_list_get();
@@ -82,7 +85,7 @@ void login (GtkWidget* widget, DevchatCBData* data);
 void config_cb (GtkWidget* widget, DevchatCBData* data);
 void go_forum (GtkWidget* widget, DevchatCBData* data);
 void reconnect (GtkWidget* widget, DevchatCBData* data);
-void tab_changed (GtkWidget* widget, DevchatCBData* data);
+void tab_changed (GtkWidget* widget, GtkNotebook* nb, guint pagenum, DevchatCBData* data);
 
 void level_changed (GtkWidget* widget, DevchatCBData* data);
 void filter_ul_changed (GtkWidget* widget, DevchatCBData* data);
@@ -125,7 +128,6 @@ devchat_window_new (void)
 static void
 devchat_window_init (DevchatWindow* self)
 {
-  /*TODO: Create mechanism to add presets/keywords.*/
 
   GtkVBox* vbox0 = GTK_VBOX(gtk_vbox_new(FALSE,0));
   GtkWidget* menu = gtk_menu_bar_new();
@@ -193,8 +195,6 @@ devchat_window_init (DevchatWindow* self)
   self->accelgroup = gtk_accel_group_new();
   gtk_window_add_accel_group(GTK_WINDOW(self->window), self->accelgroup);
   g_signal_connect(self->window, "destroy", G_CALLBACK(destroy), self_data);
-  g_signal_connect(self->window, "focus-in-event", G_CALLBACK(devchat_window_tab_changed_win),self_data);
-
 
   GtkMenuItem* menu_main = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Main"));
   GtkMenuItem* menu_edit = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Edit"));
@@ -355,6 +355,7 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect(self->notebook, "switch-page", G_CALLBACK (tab_changed), self_data);
   gtk_box_pack_start(GTK_BOX(vbox0), self->notebook, TRUE,TRUE,0);
   gtk_container_add(GTK_CONTAINER(self->window),GTK_WIDGET(vbox0));
+  g_signal_connect(self->window, "focus-in-event", G_CALLBACK(devchat_window_tab_changed_win),self_data);
 
   self->statusbar = gtk_statusbar_new();
   gtk_statusbar_set_has_resize_grip (GTK_STATUSBAR(self->statusbar),TRUE);
@@ -365,8 +366,6 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_end ( GTK_BOX(self->statusbar), self->statuslabel,FALSE,FALSE,0);
   gtk_box_pack_end ( GTK_BOX(self->statusbar), gtk_vseparator_new(),FALSE,FALSE,1);
   gtk_box_pack_start(GTK_BOX(vbox0), self->statusbar, FALSE,FALSE,1);
-
-  /*TODO: Padding between output text and window border.*/
 
   self->output = gtk_text_buffer_new (NULL);
   self->outputwidget = gtk_text_view_new_with_buffer (self->output);
@@ -1564,7 +1563,16 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           buf = conv->out_buffer;
           view = conv->out_widget;
 
-          /*TODO: Highlight tabs.*/
+          gchar* markup = g_markup_printf_escaped ("<span foreground=\"%s\" weight=\"bold\">%s</span>", self->window->settings.color_highlight, name);
+          gtk_label_set_markup (GTK_LABEL (gtk_notebook_get_menu_label (GTK_NOTEBOOK (self->window->notebook), conv->child)), markup);
+          g_free (markup);
+
+          GdkPixbuf* icon = NULL;
+          if (g_hash_table_lookup (self->window->users, name))
+            icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
+          if (!icon)
+            icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
+          notify (name, "...sent you a private message", NULL, self);
         }
         else
         {
@@ -1609,16 +1617,44 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
       g_free (time_tag);
 
+      gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
+
+    #ifdef DEBUG
+      dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    #endif
+
+      gboolean kw_found = FALSE;
+      if (g_strcmp0 (name, self->window->settings.user) != 0 && !self->window->firstrun)
+      {
+        GSList* tmp_kw = self->window->settings.keywords;
+
+
+        while (tmp_kw && !kw_found)
+        {
+          if (g_strstr_len (g_utf8_strup(message_t,-1), -1, g_utf8_strup((gchar*) tmp_kw->data,-1)))
+          {
+            GdkPixbuf* icon = NULL;
+            if (g_hash_table_lookup (self->window->users, name))
+              icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
+            if (!icon)
+              icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
+            notify ((gchar*) tmp_kw->data, g_strdup_printf ("...was mentioned by %s.", name), icon, self);
+            kw_found = TRUE;
+          }
+          tmp_kw = tmp_kw->next;
+        }
+      }
+
       gchar* name_color_tag = "peasant";
       if (user_level > 5)
         name_color_tag = "greenie";
 
       gtk_text_buffer_get_end_iter (buf, &end);
       gchar* name_t = (show_name != 0)? g_strdup_printf (" %s: ", name) : g_strdup (" ");
-      gtk_text_buffer_insert_with_tags (buf, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), NULL);
+      gtk_text_buffer_insert_with_tags (buf, &end, name_t, -1, gtk_text_tag_table_lookup (table, name_color_tag), (kw_found)? gtk_text_tag_table_lookup (table, "bold") : NULL, NULL);
       g_free (name_t);
-
-      /*TODO: Check for keyword match. Pass the current output buffer as argument.*/
 
       if (g_strcmp0 (date, "") == 0)
       {
@@ -1680,14 +1716,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (message_up);
         g_free (silmsg);
       }
-
-      gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
-
-    #ifdef DEBUG
-      dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    #endif
 
       parse_message (message_t, devchat_cb_data_new (self->window, buf), regex);
 
@@ -1977,7 +2005,7 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
         }
 
         DevchatHTMLTag* top = tmp->data;
-        /*XXX: Close actually closed tag, not the last one.*/
+        /*TODO: Close actually closed tag, not the last one.*/
 
       #ifdef DEBUG
         dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
@@ -2777,9 +2805,31 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new ("Misc"));
 
+  GtkWidget* entry_preset[10];
+  GtkWidget* label_preset[10];
+  GtkWidget* hbox_preset[5];
 
+  GtkWidget* vbox_preset = gtk_vbox_new (TRUE,1);
 
+  gint i_p;
 
+  for (i_p = 0; i_p < 5; i_p++)
+  {
+    label_preset[i_p] = gtk_label_new (g_strdup_printf ("Preset text %i:", i_p+1));
+    entry_preset[i_p] = gtk_entry_new ();
+    gtk_entry_set_text (GTK_ENTRY (entry_preset[i_p]), data->window->settings.presets[i_p]);
+    label_preset[i_p+5] = gtk_label_new (g_strdup_printf ("Preset text %i:", i_p+6));
+    entry_preset[i_p+5] = gtk_entry_new ();
+    gtk_entry_set_text (GTK_ENTRY (entry_preset[i_p+5]), data->window->settings.presets[i_p+5]);
+    hbox_preset[i_p] = gtk_hbox_new (FALSE, 1);
+    gtk_box_pack_start (GTK_BOX (hbox_preset[i_p]), label_preset[i_p], FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (hbox_preset[i_p]), entry_preset[i_p], TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (hbox_preset[i_p]), label_preset[i_p+5], FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (hbox_preset[i_p]), entry_preset[i_p+5], TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (vbox_preset), hbox_preset[i_p], FALSE, FALSE, 0);
+  }
+
+  gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox_preset, gtk_label_new ("Preset texts"));
 
 
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), nb, TRUE, TRUE, 1);
@@ -2792,7 +2842,41 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   switch (result)
   {
-    case GTK_RESPONSE_REJECT: /*XXX: Reset settings.*/  save_settings (data->window); break;
+    case GTK_RESPONSE_REJECT:
+      g_slist_free (data->window->settings.keywords);
+      data->window->settings.keywords = NULL;
+      for (i_p=0;i_p<10;i_p++)
+      {
+        if (g_strcmp0 ("", data->window->settings.presets[i_p]) != 0)
+          g_free (data->window->settings.presets[i_p]);
+        data->window->settings.presets[i_p] = "";
+      }
+
+      g_object_set (data->window, "color_time", data->window->settings_backup.color_time,
+                                  "color_font", data->window->settings_backup.color_font,
+                                  "color_l1", data->window->settings_backup.color_l1,
+                                  "color_l3", data->window->settings_backup.color_l3,
+                                  "color_l5", data->window->settings_backup.color_l5,
+                                  "color_l6", data->window->settings_backup.color_l6,
+                                  "color_greens", data->window->settings_backup.color_greens,
+                                  "color_blues", data->window->settings_backup.color_blues,
+                                  "color_url", data->window->settings_backup.color_url,
+                                  "color_url_visited", data->window->settings_backup.color_url_visited,
+                                  "color_url_hover", data->window->settings_backup.color_url_hover,
+                                  "color_highlight", data->window->settings_backup.color_highlight,
+                                  "showid", data->window->settings_backup.showid,
+                                  "showhidden", data->window->settings_backup.showhidden,
+                                  "autojoin", data->window->settings_backup.autojoin,
+                                  "stealthjoin", data->window->settings_backup.stealthjoin,
+                                  "coloruser", data->window->settings_backup.coloruser,
+                                  "browser", data->window->settings_backup.browser,
+                                  "notify", data->window->settings_backup.notify,
+                                  "vnotify", data->window->settings_backup.vnotify,
+                                  NULL);
+      data->window->settings.update_time = data->window->settings_backup.update_time;
+      data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
+
+      break;
     case GTK_RESPONSE_OK:
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_time), &color_time);
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_font), &color_font);
@@ -2827,7 +2911,18 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "notify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_notify)),
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
                                   NULL);
-      /*XXX: Keywords, presets.*/
+
+      gchar** keywords = g_strsplit (gtk_entry_get_text(GTK_ENTRY(entry_keywords)), "|", 0);
+      gint i;
+      g_slist_free (data->window->settings.keywords);
+      data->window->settings.keywords = NULL;
+      for (i = 0; keywords[i] != NULL; i++)
+        data->window->settings.keywords = g_slist_append (data->window->settings.keywords, g_strdup(keywords[i]));
+      g_strfreev (keywords);
+
+      for (i_p = 0;i_p < 10; i_p++)
+        data->window->settings.presets[i_p] = g_strdup (gtk_entry_get_text (GTK_ENTRY (entry_preset[i_p])));
+
       data->window->settings.update_time = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_update));
       data->window->settings.avatar_size = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_avas));
       save_settings (data->window);
@@ -2869,7 +2964,10 @@ void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-    notebook_child = gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)));
+    if (gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)) != 0)
+      notebook_child = gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)));
+    else
+      return;
   }
   target_name = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), notebook_child));
 
@@ -2891,14 +2989,18 @@ void reconnect(GtkWidget* widget, DevchatCBData* data)
   login (NULL, data);
 }
 
-void tab_changed(GtkWidget* widget, DevchatCBData* data)
+void tab_changed (GtkWidget* widget, GtkNotebook* nb, guint pagenum, DevchatCBData* data)
 {
-  /*TODO: Un-Highlight tabs.*/
+  if (pagenum > 0)
+  {
+    GtkLabel* l = GTK_LABEL (gtk_notebook_get_menu_label (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum)));
+    gtk_label_set_markup (l, gtk_label_get_text (l));
+  }
 }
 
-gboolean devchat_window_tab_changed_win (GtkWidget* widget, DevchatCBData* data)
+gboolean devchat_window_tab_changed_win (GtkWidget* widget, GdkEvent* ev, DevchatCBData* data)
 {
-  /*TODO: Un-Highlight tabs.*/
+  tab_changed (NULL, GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)), data);
   return FALSE;
 }
 
@@ -3462,7 +3564,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
 
     g_signal_connect (tab_close, "clicked", G_CALLBACK (devchat_window_close_tab), devchat_cb_data_new (data->window, conv->child));
     gtk_box_pack_end (GTK_BOX (labelbox), tab_close, FALSE, TRUE, 0);
-    g_signal_connect (event_box, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), NULL);
+    g_signal_connect (event_box, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), data);
     gtk_widget_show_all (labelbox);
     gtk_widget_show_all (conv->child);
     gtk_notebook_append_page_menu (GTK_NOTEBOOK (data->window->notebook), conv->child, labelbox, label);
@@ -3558,8 +3660,11 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
   {
 #ifdef NOTIFY
     NotifyNotification* note = notify_notification_new(title,body,NULL,NULL);
-    notify_notification_set_icon_from_pixbuf(note,icon);
+    if (icon)
+      notify_notification_set_icon_from_pixbuf(note,icon);
     notify_notification_add_action(note, "0","Show",NOTIFY_ACTION_CALLBACK (notify_cb),data,NULL);
+    notify_notification_set_timeout (note, 3141);
+    notify_notification_show (note, NULL);
 #else
     err("libnotify support disabled at compile time.");
     data->window->settings.vnotify = g_strdup("<none>");
@@ -3576,13 +3681,20 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
 
   if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
   {
-#ifdef G_OS_UNIX
-  /*TODO: OSS*/
-#else
-  #ifdef G_OS_WIN32
-  /*TODO: DSound*/
+  #ifdef G_OS_UNIX
+    if (!g_spawn_command_line_async ("aplay -q /usr/share/sounds/purple/receive.wav", NULL))
+    {
+      if (!g_spawn_command_line_async ("ossplay -q /usr/share/sounds/purple/receive.wav", NULL))
+      {
+        err("Failed to launch audio notification process.");
+        data->window->settings.notify = g_strdup("<none>");
+      }
+    }
+  #else
+    #ifdef G_OS_WIN32
+      MessageBeep(0x00000040L);
+    #endif
   #endif
-#endif
   }
   else if (g_strcmp0(data->window->settings.notify,"<none>") != 0)
   {
