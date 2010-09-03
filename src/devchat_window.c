@@ -3506,14 +3506,14 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
     g_file_get_contents ("/usr/share/common-licenses/GPL-2", &license_text, NULL, NULL);
   else
 #endif
-    license_text = "    This program is free software; you can redistribute it and/or modify\
-    it under the terms of the GNU General Public License as published by\
-    the Free Software Foundation; either version 2 of the License, or\
-    (at your option) any later version.\
-\
-    This program is distributed in the hope that it will be useful,\
-    but WITHOUT ANY WARRANTY; without even the implied warranty of\
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\
+    license_text = "    This program is free software; you can redistribute it and/or modify\n\
+    it under the terms of the GNU General Public License as published by\n\
+    the Free Software Foundation; either version 2 of the License, or\n\
+    (at your option) any later version.\n\
+\n\
+    This program is distributed in the hope that it will be useful,\n\
+    but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
     GNU General Public License for more details.";
   gtk_about_dialog_set_license (GTK_ABOUT_DIALOG (dialog), license_text);
   gtk_dialog_run (GTK_DIALOG (dialog));
@@ -3591,6 +3591,8 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
 void devchat_window_refresh_smilies (DevchatWindow* self)
 {
   GtkWidget* smilie_sub = gtk_menu_new();
+  GtkWidget* tearoff = gtk_tearoff_menu_item_new ();
+  gtk_menu_shell_append (GTK_MENU_SHELL (smilie_sub), tearoff);
   g_hash_table_foreach (self->smilies, (GHFunc) add_smilie_cb, devchat_cb_data_new (self, smilie_sub));
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_smilies), smilie_sub);
   gtk_widget_show_all (self->item_smilies);
