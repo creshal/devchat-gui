@@ -112,6 +112,8 @@ struct _DevchatWindow
   SoupSession* session;
   guint msg_list_getter;
   guint usr_list_getter;
+  gboolean msg_list_parsed;
+  gboolean usr_list_parsed;
 
   GtkAccelGroup* accelgroup;
 

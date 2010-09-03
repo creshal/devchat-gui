@@ -829,7 +829,6 @@ static void devchat_window_get_property (GObject* object, guint id, GValue* valu
 
 void destroy (GtkObject* widget, DevchatCBData* data)
 {
-  data->window->no_halt_requested = FALSE;
 #ifdef NOTIFY
   notify_uninit ();
 #endif
@@ -841,8 +840,6 @@ void destroy (GtkObject* widget, DevchatCBData* data)
   {
     SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
     soup_session_send_message (data->window->session, msg);
-    g_source_remove (data->window->msg_list_getter);
-    g_source_remove (data->window->usr_list_getter);
     soup_session_abort (data->window->session);
   }
   gtk_main_quit ();
@@ -1090,6 +1087,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   dbg ("Starting requests...");
 #endif
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
+  data->window->msg_list_parsed = TRUE;
+  data->window->usr_list_parsed = TRUE;
   data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
   data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
 }
@@ -1097,29 +1096,31 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 gboolean
 user_list_poll (DevchatCBData* data)
 {
-  if (data->window->no_halt_requested)
+  if (data->window->usr_list_parsed)
   {
   #ifdef DEBUG
     dbg ("Starting user list poll...");
   #endif
     SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
     soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+    data->window->usr_list_parsed = FALSE;
   }
-  return FALSE;
+  return TRUE;
 }
 
 gboolean
 message_list_poll (DevchatCBData* data)
 {
-  if (data->window->no_halt_requested)
+  if (data->window->msg_list_parsed)
   {
   #ifdef DEBUG
     dbg ("Starting message list poll...");
   #endif
-    SoupMessage* listmessages = soup_message_new ("GET",g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
+    SoupMessage* listmessages = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+    data->window->msg_list_parsed = FALSE;
   }
-  return FALSE;
+  return TRUE;
 }
 
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
@@ -1135,7 +1136,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
   #endif
 
-  data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
+  data->window->usr_list_parsed = TRUE;
 
   /*TODO: Do incremental updates. Should migitate the flickering issue.*/
 
@@ -1458,7 +1459,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     dbg ("Parsing done.");
   #endif
   }
-  data->window->msg_list_getter = g_timeout_add (data->window->settings.update_time, (GSourceFunc) message_list_poll, data);
+  data->window->msg_list_parsed = TRUE;
 }
 
 void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
@@ -1544,6 +1545,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             gchar* tmp = message;
             message = g_strdup (message+77+strlen(target_name));
             g_free (tmp);
+            buf = conv->out_buffer;
+            view = conv->out_widget;
           }
           else
           {
@@ -1552,27 +1555,34 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             dbg (dbg_msg);
             g_free (dbg_msg);
           #endif
-            conv = pm_cb (NULL, devchat_cb_data_new (self->window, name));
             if (g_strcmp0 (name, "(ChatServer)") != 0)
             {
               gchar* tmp = message;
               message = g_strdup (message+66);
               g_free (tmp);
+              conv = pm_cb (NULL, devchat_cb_data_new (self->window, name));
+
+              buf = conv->out_buffer;
+              view = conv->out_widget;
+
+
+              gchar* markup = g_markup_printf_escaped ("<span foreground=\"%s\" weight=\"bold\">%s</span>", self->window->settings.color_highlight, name);
+              gtk_label_set_markup (GTK_LABEL (gtk_notebook_get_menu_label (GTK_NOTEBOOK (self->window->notebook), conv->child)), markup);
+              g_free (markup);
+
+              GdkPixbuf* icon = NULL;
+              if (g_hash_table_lookup (self->window->users, name))
+                icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
+              if (!icon)
+                icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
+              notify (name, "...sent you a private message", NULL, self);
+            }
+            else
+            {
+              buf = self->window->output;
+              view = self->window->outputwidget;
             }
           }
-          buf = conv->out_buffer;
-          view = conv->out_widget;
-
-          gchar* markup = g_markup_printf_escaped ("<span foreground=\"%s\" weight=\"bold\">%s</span>", self->window->settings.color_highlight, name);
-          gtk_label_set_markup (GTK_LABEL (gtk_notebook_get_menu_label (GTK_NOTEBOOK (self->window->notebook), conv->child)), markup);
-          g_free (markup);
-
-          GdkPixbuf* icon = NULL;
-          if (g_hash_table_lookup (self->window->users, name))
-            icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
-          if (!icon)
-            icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
-          notify (name, "...sent you a private message", NULL, self);
         }
         else
         {
@@ -2480,7 +2490,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
         data->window->buf_current = MAX_BUF;
       else if (data->window->buf_current < 0)
       {
-        if (g_strcmp0 (data->window->buffer[data->window->buf_current], "") != 0)
+        if (g_strcmp0 (data->window->buffer[0], "") != 0)
         {
           gint i = MAX_BUF-1;
           if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
@@ -2526,7 +2536,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
         data->window->buf_current = MAX_BUF;
       else if (data->window->buf_current < 0)
       {
-        if (g_strcmp0 (data->window->buffer[data->window->buf_current], "") != 0)
+        if (g_strcmp0 (data->window->buffer[0], "") != 0)
         {
           gint i = MAX_BUF-1;
           if (g_strcmp0 (data->window->buffer[MAX_BUF], "") != 0)
