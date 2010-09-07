@@ -42,6 +42,13 @@ struct _DevchatConversation
   GtkWidget* in_widget;
   GtkTextBuffer* in_buffer;
   GtkWidget* chk_raw;
+  GtkTextMark* scroll_to;
+  GtkWidget* searchbar;
+  GtkWidget* search_button;
+  GtkWidget* search_entry;
+  GtkTextIter search_start;
+  gboolean search_start_set;
+  GtkWidget* btn_send;
 };
 
 struct _DevchatConversationClass

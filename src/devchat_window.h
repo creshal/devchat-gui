@@ -126,6 +126,11 @@ struct _DevchatWindow
   GtkWidget* filter_ml;
   GtkWidget* filter_ul;
   GtkWidget* loginbar;
+  GtkWidget* searchbar;
+  GtkWidget* search_entry;
+  GtkWidget* search_button;
+  GtkTextIter search_start;
+  gboolean search_start_set;
   GtkWidget* user_entry;
   GtkWidget* pass_entry;
   GtkWidget* btn_connect;
@@ -141,6 +146,7 @@ struct _DevchatWindow
   GtkWidget* item_smilies;
   GtkWidget* item_presets;
   GtkWidget* chk_raw;
+  GtkWidget* btn_send;
 
   GtkTextBuffer* output;
   GtkTextBuffer* input;
@@ -198,7 +204,8 @@ void devchat_window_btn_format ();
 void devchat_window_btn_send ();
 void devchat_window_close_tab ();
 void devchat_window_create_tags ();
-
+void devchat_window_find ();
+void devchat_window_close_search ();
 G_END_DECLS
 
 #endif /* __DEVCHAT_WINDOW_H__ */

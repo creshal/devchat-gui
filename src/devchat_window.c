@@ -86,7 +86,7 @@ void config_cb (GtkWidget* widget, DevchatCBData* data);
 void go_forum (GtkWidget* widget, DevchatCBData* data);
 void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, GtkNotebook* nb, guint pagenum, DevchatCBData* data);
-
+gboolean scroll_mark_onscreen (DevchatConversation* c);
 void level_changed (GtkWidget* widget, DevchatCBData* data);
 void filter_ul_changed (GtkWidget* widget, DevchatCBData* data);
 void filter_ml_changed (GtkWidget* widget, DevchatCBData* data);
@@ -97,7 +97,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data);
 void at_cb (GtkWidget* widget, DevchatCBData* data);
 DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data);
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data);
-
+void find (GtkWidget* widget, DevchatCBData* data);
 void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data);
 void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data);
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data);
@@ -172,6 +172,7 @@ devchat_window_init (DevchatWindow* self)
   self->firstrun = TRUE;
   self->hovertag = NULL;
   self->buf_current = 0;
+  self->search_start_set = FALSE;
 
   gint j;
 
@@ -214,6 +215,9 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* item_profile = gtk_image_menu_item_new_with_label ("Edit profile...");
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_profile), gtk_image_new_from_icon_name("system-users",GTK_ICON_SIZE_MENU));
   g_signal_connect (item_profile, "activate", G_CALLBACK (go_forum), edit_profile);
+
+  GtkWidget* item_find = gtk_image_menu_item_new_from_stock (GTK_STOCK_FIND, self->accelgroup);
+  g_signal_connect (item_find, "activate", G_CALLBACK (find), self_data);
 
   DevchatCBData* view_devnet = devchat_cb_data_new (self, GINT_TO_POINTER (URL_VISIT_L3));
 
@@ -322,6 +326,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_item_set_submenu(menu_insert,GTK_WIDGET(insert_sub));
 
   GtkMenuShell* edit_sub = GTK_MENU_SHELL(gtk_menu_new());
+  gtk_menu_shell_append(edit_sub, item_find);
   gtk_menu_shell_append(edit_sub, item_profile);
   gtk_menu_shell_append(edit_sub, gtk_menu_item_new());
   gtk_menu_shell_append(edit_sub, item_prefs);
@@ -387,8 +392,26 @@ devchat_window_init (DevchatWindow* self)
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller1),GTK_SHADOW_ETCHED_IN);
   g_object_set (self->outputwidget, "left-margin", 2, "right-margin", 2, NULL);
-  gtk_container_add (GTK_CONTAINER(scroller1),self->outputwidget);
-  gtk_paned_pack1 (GTK_PANED(hpaned1), scroller1, TRUE,TRUE);
+  gtk_container_add (GTK_CONTAINER(scroller1), self->outputwidget);
+
+  GtkWidget* search_box = gtk_vbox_new (FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (search_box), scroller1, TRUE, TRUE, 0);
+
+  self->searchbar = gtk_hbox_new (FALSE, 1);
+  self->search_entry = gtk_entry_new ();
+  self->search_button = gtk_button_new_from_stock (GTK_STOCK_FIND);
+  g_signal_connect (self->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (self, self->search_entry));
+  gtk_widget_add_accelerator(self->search_button, "activate", self->accelgroup, GDK_Return, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+  g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (self, self->searchbar));
+  gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_entry, TRUE, TRUE, 1);
+  gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_button, FALSE, FALSE, 0);
+  gtk_box_pack_end (GTK_BOX (self->searchbar), btn_bar_close, FALSE, FALSE, 1);
+  gtk_widget_set_no_show_all (self->searchbar, TRUE);
+
+  gtk_box_pack_start (GTK_BOX (search_box), self->searchbar, FALSE, FALSE, 0);
+
+  gtk_paned_pack1 (GTK_PANED(hpaned1), search_box, TRUE,TRUE);
 
   GtkWidget* scroller2 = gtk_scrolled_window_new (NULL, NULL);
   self->userlist = gtk_vbox_new (FALSE,1);
@@ -451,9 +474,9 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect(self->filter_ml, "changed", G_CALLBACK (filter_ml_changed), self_data);
   gtk_box_pack_start(GTK_BOX(self->inputbar),self->filter_ml,FALSE,FALSE,0);
 
-  GtkWidget* btn_ok = gtk_button_new_from_stock(GTK_STOCK_OK);
-  g_signal_connect (btn_ok, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
-  gtk_widget_add_accelerator(btn_ok, "clicked", self->accelgroup, GDK_Return, 0, 0);
+  self->btn_send = gtk_button_new_from_stock(GTK_STOCK_OK);
+  g_signal_connect (self->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
+  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_Return, 0, 0);
 
   GtkWidget* btn_quit = gtk_button_new_from_stock(GTK_STOCK_QUIT);
   g_signal_connect (btn_quit, "clicked", G_CALLBACK (destroy),self_data);
@@ -461,7 +484,7 @@ devchat_window_init (DevchatWindow* self)
 
   gtk_box_pack_end (GTK_BOX(self->inputbar),btn_quit,FALSE,FALSE,0);
   gtk_box_pack_end (GTK_BOX(self->inputbar),gtk_vseparator_new(),FALSE,FALSE,0);
-  gtk_box_pack_end (GTK_BOX(self->inputbar),btn_ok,FALSE,FALSE,0);
+  gtk_box_pack_end (GTK_BOX(self->inputbar),self->btn_send,FALSE,FALSE,0);
 
   self->chk_raw = gtk_check_button_new_with_label ("Raw mode");
   gtk_widget_set_tooltip_text (self->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
@@ -883,7 +906,7 @@ void save_settings (DevchatWindow* w)
 
   gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
 
-  GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port));
+  GtkHPaned* hpaned1 = GTK_HPANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
   g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
 
   gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\n", w->settings.showid? "TRUE":"FALSE",
@@ -980,6 +1003,11 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
 
 void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 3);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 2);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 1);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 0);
+
   if (g_strrstr (m->response_body->data,"User-Level: 5"))
   {
     data->window->userlevel = 5;
@@ -1475,11 +1503,13 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
   GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
 
+  GSList* scroll_tos = NULL;
+
   GtkTextIter old_end;
   gtk_text_buffer_get_end_iter (self->window->output, &old_end);
+
   GtkTextMark* scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
   gtk_text_buffer_add_mark (self->window->output, scroll_to, &old_end);
-
 
   xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
   gchar* currenttime = current_time ();
@@ -1547,6 +1577,16 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             g_free (tmp);
             buf = conv->out_buffer;
             view = conv->out_widget;
+
+            if (!conv->scroll_to)
+            {
+              GtkTextIter pm_end;
+              gtk_text_buffer_get_end_iter (buf, &pm_end);
+              conv->scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
+              gtk_text_buffer_add_mark (buf, conv->scroll_to, &pm_end);
+
+              scroll_tos = g_slist_prepend (scroll_tos, conv);
+            }
           }
           else
           {
@@ -1565,7 +1605,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
               buf = conv->out_buffer;
               view = conv->out_widget;
 
-
               gchar* markup = g_markup_printf_escaped ("<span foreground=\"%s\" weight=\"bold\">%s</span>", self->window->settings.color_highlight, name);
               gtk_label_set_markup (GTK_LABEL (gtk_notebook_get_menu_label (GTK_NOTEBOOK (self->window->notebook), conv->child)), markup);
               g_free (markup);
@@ -1576,6 +1615,16 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
               if (!icon)
                 icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
               notify (name, "...sent you a private message", NULL, self);
+
+              if (!conv->scroll_to)
+              {
+                GtkTextIter pm_end;
+                gtk_text_buffer_get_end_iter (buf, &pm_end);
+                conv->scroll_to = gtk_text_mark_new ("scrollTo", FALSE);
+                gtk_text_buffer_add_mark (buf, conv->scroll_to, &pm_end);
+
+                scroll_tos = g_slist_prepend (scroll_tos, conv);
+              }
             }
             else
             {
@@ -1636,24 +1685,27 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     #endif
 
       gboolean kw_found = FALSE;
-      if (g_strcmp0 (name, self->window->settings.user) != 0 && !self->window->firstrun)
+      if (g_strcmp0 (date, "") == 0)
       {
-        GSList* tmp_kw = self->window->settings.keywords;
-
-
-        while (tmp_kw && !kw_found)
+        if (g_strcmp0 (name, self->window->settings.user) != 0 && !self->window->firstrun)
         {
-          if (g_strstr_len (g_utf8_strup(message_t,-1), -1, g_utf8_strup((gchar*) tmp_kw->data,-1)))
+          GSList* tmp_kw = self->window->settings.keywords;
+
+
+          while (tmp_kw && !kw_found)
           {
-            GdkPixbuf* icon = NULL;
-            if (g_hash_table_lookup (self->window->users, name))
-              icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
-            if (!icon)
-              icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
-            notify ((gchar*) tmp_kw->data, g_strdup_printf ("...was mentioned by %s.", name), icon, self);
-            kw_found = TRUE;
+            if (g_strstr_len (g_utf8_strup(message_t,-1), -1, g_utf8_strup((gchar*) tmp_kw->data,-1)))
+            {
+              GdkPixbuf* icon = NULL;
+              if (g_hash_table_lookup (self->window->users, name))
+                icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
+              if (!icon)
+                icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
+              notify ((gchar*) tmp_kw->data, g_strdup_printf ("...was mentioned by %s.", name), icon, self);
+              kw_found = TRUE;
+            }
+            tmp_kw = tmp_kw->next;
           }
-          tmp_kw = tmp_kw->next;
         }
       }
 
@@ -1785,6 +1837,27 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
     if ((a->upper - (a->value + a->page_size)) < 30)
       gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
+
+    while (scroll_tos)
+    {
+      GtkAdjustment* adj = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (((DevchatConversation*) scroll_tos->data)->out_widget)));
+      GtkTextIter ed;
+      gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (((DevchatConversation*) scroll_tos->data)->out_buffer), &ed);
+      if (((adj->upper - (adj->value + adj->page_size)) < 30) || (self->window->firstrun == TRUE))
+      {
+        g_print ("Scrolling!\n");
+        g_timeout_add (50, (GSourceFunc) scroll_mark_onscreen, (DevchatConversation*) scroll_tos->data);
+      }
+      else
+      {
+        gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (((DevchatConversation*) scroll_tos->data)->out_buffer), ((DevchatConversation*) scroll_tos->data)->scroll_to);
+        ((DevchatConversation*) scroll_tos->data)->scroll_to = NULL;
+      }
+
+      GSList* tmp = scroll_tos;
+      scroll_tos = scroll_tos->next;
+      g_slist_free_1 (tmp);
+    }
   }
 
   gtk_text_buffer_delete_mark (self->window->output, scroll_to);
@@ -1796,6 +1869,14 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   g_free (regex);
 
   g_free (msglist);
+}
+
+gboolean scroll_mark_onscreen (DevchatConversation* c)
+{
+  gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (c->out_widget), c->scroll_to);
+  gtk_text_buffer_delete_mark (c->out_buffer, c->scroll_to);
+  c->scroll_to = NULL;
+  return FALSE;
 }
 
 void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
@@ -2942,6 +3023,129 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_widget_destroy (dialog);
 }
 
+void find (GtkWidget* widget, DevchatCBData* data)
+{
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkWidget* bar;
+  GtkWidget* entry;
+  GtkWidget* button;
+  gboolean start_set;
+
+  if (pagenum == 0)
+  {
+    bar = data->window->searchbar;
+    entry = data->window->search_entry;
+    button = data->window->search_button;
+    start_set = data->window->search_start_set;
+  }
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    bar = conv->searchbar;
+    button = conv->search_button;
+    entry = conv->search_entry;
+    start_set = conv->search_start_set;
+  }
+
+  gboolean is_visible;
+
+  g_object_get (bar, "visible", &is_visible, NULL);
+
+  if (!is_visible)
+  {
+    gtk_widget_set_no_show_all (bar, FALSE);
+    gtk_widget_show_all (bar);
+    gtk_widget_grab_focus (entry);
+    gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
+
+    start_set = FALSE;
+  }
+  else
+  {
+    gtk_widget_hide_all (bar);
+    start_set = FALSE;
+  }
+}
+
+void devchat_window_find (GtkWidget* widget, DevchatCBData* data)
+{
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  DevchatConversation* conv;
+  GtkWidget* entry = GTK_WIDGET (data->data);
+  GtkTextBuffer* buf;
+  GtkWidget* view;
+  GtkTextIter start;
+  gboolean start_set;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->output;
+    view = data->window->outputwidget;
+    entry = data->window->search_entry;
+    start = data->window->search_start;
+    start_set = data->window->search_start_set;
+  }
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->out_buffer;
+    view = conv->out_widget;
+    entry = conv->search_entry;
+    start = conv->search_start;
+    start_set = conv->search_start_set;
+  }
+
+  gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
+
+  const gchar* searchtext = gtk_entry_get_text (GTK_ENTRY (entry));
+
+  GtkTextIter end;
+  if (!start_set)
+  {
+    gtk_text_buffer_get_start_iter (buf, &start);
+    if (pagenum == 0)
+      data->window->search_start_set = TRUE;
+    else
+      conv->search_start_set = TRUE;
+  }
+
+  if (gtk_text_iter_forward_search (&start, searchtext, GTK_TEXT_SEARCH_VISIBLE_ONLY | GTK_TEXT_SEARCH_TEXT_ONLY, &start, &end, NULL))
+  {
+    gtk_text_buffer_move_mark (buf, gtk_text_buffer_get_insert (buf), &start);
+    gtk_text_buffer_move_mark_by_name (buf, "selection_bound", &end);
+    gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (view), gtk_text_buffer_get_insert (buf));
+  }
+  else
+  {
+    gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_STOP);
+  }
+
+  gtk_text_iter_forward_chars (&start, strlen (searchtext));
+
+  if (pagenum == 0)
+    data->window->search_start = start;
+  else
+    conv->search_start = start;
+}
+
+void devchat_window_close_search (GtkWidget* widget, DevchatCBData* data)
+{
+  gtk_widget_hide_all (data->data);
+
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+
+  if (pagenum == 0)
+    data->window->search_start_set = FALSE;
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    conv->search_start_set = FALSE;
+  }
+}
+
 void go_forum(GtkWidget* widget, DevchatCBData* data)
 {
   gchar* url = g_strdup ("http://forum.egosoft.com/");
@@ -3387,18 +3591,21 @@ void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
 {
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
   GtkTextBuffer* buf;
+  GtkWidget* w;
   GtkTextIter start;
   GtkTextIter end;
 
   if (pagenum == 0)
   {
     buf = data->window->input;
+    w = data->window->inputwidget;
   }
   else
   {
     const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
     DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
     buf = conv->in_buffer;
+    w = conv->in_widget;
   }
 
   if (gtk_text_buffer_get_selection_bounds (buf, &start, &end))
@@ -3414,7 +3621,15 @@ void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
   else
   {
     gtk_text_buffer_insert_at_cursor (buf, g_strconcat ("[", (gchar*) data->data, "][/", (gchar*) data->data, "]", NULL), -1);
+
+    GtkTextIter cursor;
+
+    gtk_text_buffer_get_iter_at_mark (buf, &cursor, gtk_text_buffer_get_insert (buf));
+    gtk_text_iter_backward_chars (&cursor, strlen ((gchar*) data->data) + 3);
+    gtk_text_buffer_move_mark (buf, gtk_text_buffer_get_insert (buf), &cursor);
+    gtk_text_buffer_move_mark_by_name (buf, "selection_bound", &cursor);
   }
+  gtk_widget_grab_focus (w);
 }
 
 void next_tab (GtkWidget* widget, DevchatCBData* data)

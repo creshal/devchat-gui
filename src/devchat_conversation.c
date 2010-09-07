@@ -26,6 +26,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   DevchatConversation* obj = g_object_new (DEVCHAT_TYPE_CONVERSATION, NULL);
 
   obj->parent = parent;
+  obj->scroll_to = NULL;
 
   if (!is_history)
     obj->child = gtk_vpaned_new ();
@@ -53,12 +54,29 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   g_signal_connect (obj->out_buffer, "mark-set", G_CALLBACK (devchat_window_on_mark_set_cb), parent_data);
   g_signal_connect (obj->out_widget, "motion-notify-event", G_CALLBACK (devchat_window_on_motion_cb), parent_data);
   g_signal_connect (obj->out_widget, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), parent_data);
-
   gtk_container_add (GTK_CONTAINER (scroll_out), obj->out_widget);
+
+  GtkWidget* search_box = gtk_vbox_new (FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (search_box), scroll_out, TRUE, TRUE, 0);
+
+  obj->searchbar = gtk_hbox_new (FALSE, 1);
+  obj->search_entry = gtk_entry_new ();
+  obj->search_button = gtk_button_new_from_stock (GTK_STOCK_FIND);
+  g_signal_connect (obj->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (parent, obj->search_entry));
+  GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+  g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (parent, obj->searchbar));
+  gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_entry, TRUE, TRUE, 1);
+  gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_button, FALSE, FALSE, 0);
+  gtk_box_pack_end (GTK_BOX (obj->searchbar), btn_bar_close, FALSE, FALSE, 1);
+
+  gtk_box_pack_start (GTK_BOX (search_box), obj->searchbar, FALSE, FALSE, 0);
+  gtk_widget_set_no_show_all (obj->searchbar, TRUE);
+  obj->search_start_set = FALSE;
+
 
   if (!is_history)
   {
-    gtk_paned_pack1 (GTK_PANED (obj->child), scroll_out, TRUE, TRUE);
+    gtk_paned_pack1 (GTK_PANED (obj->child), search_box, TRUE, TRUE);
     GtkWidget* scroll_in = gtk_scrolled_window_new (NULL, NULL);
     gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroll_in), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroll_in), GTK_SHADOW_ETCHED_IN);
@@ -108,9 +126,9 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_box_pack_start (GTK_BOX(hbox),btn_url,FALSE,FALSE,0);
     gtk_box_pack_start (GTK_BOX(hbox),btn_img,FALSE,FALSE,0);
 
-    GtkWidget* btn_ok = gtk_button_new_from_stock (GTK_STOCK_OK);
-    g_signal_connect (btn_ok, "clicked", G_CALLBACK (devchat_window_btn_send), parent_data);
-    gtk_widget_add_accelerator (btn_ok, "clicked", parent->accelgroup, GDK_Return, 0, 0);
+    obj->btn_send = gtk_button_new_from_stock (GTK_STOCK_OK);
+    g_signal_connect (obj->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send), parent_data);
+    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_Return, 0, 0);
 
     GtkWidget* btn_quit = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
     g_signal_connect (btn_quit, "clicked", G_CALLBACK (devchat_window_close_tab), parent_data);
@@ -118,7 +136,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
 
     gtk_box_pack_end (GTK_BOX(hbox),btn_quit,FALSE,FALSE,0);
     gtk_box_pack_end (GTK_BOX(hbox),gtk_vseparator_new(),FALSE,FALSE,0);
-    gtk_box_pack_end (GTK_BOX(hbox),btn_ok,FALSE,FALSE,0);
+    gtk_box_pack_end (GTK_BOX(hbox),obj->btn_send,FALSE,FALSE,0);
 
     obj->chk_raw = gtk_check_button_new_with_label ("Raw mode");
     gtk_widget_set_tooltip_text (obj->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
@@ -136,7 +154,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
 
   }
   else
-    obj->child = scroll_out;
+    obj->child = search_box;
 
   devchat_window_create_tags (obj->out_buffer, parent_data);
 
