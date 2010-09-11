@@ -114,8 +114,6 @@ gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
 
-void play_sound (sample* s, guchar* stream, int len);
-
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
