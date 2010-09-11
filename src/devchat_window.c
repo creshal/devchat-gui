@@ -3989,7 +3989,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
     g_free (cmdline);
   #else
     #ifdef G_OS_WIN32
-      sndPlaySound (g_build_filename (workingdir, "jingle.wav"), SND_ASYNC);
+      sndPlaySound (g_build_filename (workingdir, "jingle.wav", NULL), SND_ASYNC);
     #endif
   #endif
 
