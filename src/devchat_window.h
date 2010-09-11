@@ -43,6 +43,12 @@
   #include <libnotify/notify.h>
 #endif
 
+#ifdef OTR
+  #include <libotr/proto.h>
+  #include <libotr/message.h>
+  #include <libotr/privkey.h>
+#endif
+
 #define SOUP_SESSION_CALLBACK(f)  ((SoupSessionCallback) (f))
 
 G_BEGIN_DECLS
@@ -171,6 +177,13 @@ struct _DevchatWindow
   gchar* avadir;
   gchar* buffer[MAX_BUF+1];
   gint buf_current;
+
+  GSList* users_online;
+
+#ifdef OTR
+  OtrlUserState otr_state;
+  OtrlMessageAppOps otr_funcs;
+#endif
 };
 
 struct _DevchatWindowClass

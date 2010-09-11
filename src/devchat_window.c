@@ -38,7 +38,6 @@ enum {
   SETTINGS_COLOR_L3,
   SETTINGS_COLOR_L5,
   SETTINGS_COLOR_L6,
-  //SETTINGS_COLOR_L7,
   SETTINGS_COLOR_GREENS,
   SETTINGS_COLOR_BLUES,
   SETTINGS_COLOR_TIME,
@@ -110,10 +109,32 @@ void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (gchar* message, DevchatCBData* self, GRegex* regex);
+void parse_message (gchar* message, DevchatCBData* self);
 gchar* color_lookup (gchar* color);
 
 gchar* current_time ();
+
+void play_sound (sample* s, guchar* stream, int len);
+
+#ifdef OTR
+OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
+void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
+int otr_is_logged_in (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient);
+void otr_inject_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient, const gchar* message);
+void otr_notify (DevchatWindow* window, OtrlNotifyLevel l, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* title, const gchar* primary, const gchar* secondary);
+int otr_display_otr_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* message);
+void otr_update_context_list (DevchatWindow* window);
+const gchar* otr_protocol_name (DevchatWindow* window, const gchar* protocol);
+const gchar* otr_protocol_name_free (DevchatWindow* window, const gchar* string);
+void otr_new_fingerprint (DevchatWindow* window, OtrlUserState us, const gchar* accname, const gchar* protocol, const gchar* username, guchar fingerprint[20]);
+void otr_write_fingerprints (DevchatWindow* window);
+void otr_gone_secure (DevchatWindow* window, ConnContext* ctxt);
+void otr_gone_insecure (DevchatWindow* window, ConnContext* ctxt);
+void otr_still_secure (DevchatWindow* window, ConnContext* ctxt, int is_reply);
+void otr_log_message (DevchatWindow* window, gchar* message);
+int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt);
+const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol);
+#endif
 
 G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT);
 
@@ -547,6 +568,33 @@ devchat_window_init (DevchatWindow* self)
 #ifdef NOTIFY
   notify_init(APPNAME);
 #endif
+#ifdef OTR
+  OTRL_INIT;
+  gchar* otr_key_filename = g_build_filename (g_get_user_config_dir (), "devchat_otr", NULL);
+  gchar* otr_fingerprint_filename = g_build_filename (g_get_user_config_dir (), "devchat_otr_fingerprints", NULL);
+  self->otr_state = otrl_userstate_create ();
+  otrl_privkey_read (self->otr_state, otr_key_filename);
+  otrl_privkey_read_fingerprints (self->otr_state, otr_fingerprint_filename, NULL, NULL); /*TODO: Callback?*/
+  /*TODO: Fill self->otr_funcs*/
+  self->otr_funcs.policy = (OtrlPolicy* (void *, ConnContext *)) otr_policy;
+  self->otr_funcs.create_privkey = otr_create_privkey;
+  self->otr_funcs.is_logged_in = otr_is_logged_in;
+  self->otr_funcs.inject_message = otr_inject_message;
+  self->otr_funcs.notify = otr_notify;
+  self->otr_funcs.display_otr_message = otr_display_otr_message;
+  self->otr_funcs.update_context_list = otr_update_context_list;
+  self->otr_funcs.protocol_name = otr_protocol_name;
+  self->otr_funcs.protocol_name_free = otr_protocol_name_free;
+  self->otr_funcs.new_fingerprint = otr_new_fingerprint;
+  self->otr_funcs.write_fingerprints = otr_write_fingerprints;
+  self->otr_funcs.gone_secure = otr_gone_secure;
+  self->otr_funcs.gone_insecure = otr_gone_insecure;
+  self->otr_funcs.still_secure = otr_still_secure;
+  self->otr_funcs.log_message = otr_log_message;
+  self->otr_funcs.max_message_size = otr_max_message_size; /*8192 to keep the server load acceptable*/
+  self->otr_funcs.account_name = otr_account_name;
+  self->otr_funcs.account_name_free = otr_protocol_name_free;
+#endif
 
   self->users_without_avatar = NULL;
   self->firstrun = TRUE;
@@ -852,12 +900,11 @@ static void devchat_window_get_property (GObject* object, guint id, GValue* valu
 
 void destroy (GtkObject* widget, DevchatCBData* data)
 {
+  save_settings (data->window);
+
 #ifdef NOTIFY
   notify_uninit ();
 #endif
-
-  save_settings (data->window);
-
 
   if (!(data->window->firstrun))
   {
@@ -1129,7 +1176,18 @@ user_list_poll (DevchatCBData* data)
   #ifdef DEBUG
     dbg ("Starting user list poll...");
   #endif
-    SoupMessage* listusers = soup_message_new ("GET","http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=1");
+
+    GSList* tmp = data->window->users_online;
+
+    gchar* uri = g_strdup ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=");
+
+    while (tmp)
+    {
+      uri = g_strconcat (uri, (gchar*) tmp->data, ";", NULL);
+      tmp = tmp->next;
+    }
+
+    SoupMessage* listusers = soup_message_new ("GET", uri);
     soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
     data->window->usr_list_parsed = FALSE;
   }
@@ -1164,9 +1222,13 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
   #endif
 
-  data->window->usr_list_parsed = TRUE;
+  if (data->window->users_online)
+  {
+    g_slist_free (data->window->users_online);
+    data->window->users_online = NULL;
+  }
 
-  /*TODO: Do incremental updates. Should migitate the flickering issue.*/
+  data->window->usr_list_parsed = TRUE;
 
   gchar* userlist = g_strdup (m->response_body->data);
   if (userlist)
@@ -1180,7 +1242,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
     g_free (dbg_msg);
 
-    xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT|XML_PARSE_DTDLOAD));
+    xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT));
     xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
 
     GdkColor l1;
@@ -1204,6 +1266,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
         g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
+        data->window->users_online = g_slist_prepend (data->window->users_online, g_strdup (uid));
 
         if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
         {
@@ -1349,7 +1412,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
           if (data->window->settings.coloruser)
           {
-
             gtk_widget_modify_bg (at_btn, GTK_STATE_PRELIGHT, &l1);
             gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);
           }
@@ -1500,8 +1562,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   }
 
   gboolean message_found = FALSE;
-
-  GRegex* regex = g_regex_new ("\\&nbsp;",0,0,NULL);
 
   GSList* scroll_tos = NULL;
 
@@ -1691,7 +1751,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         {
           GSList* tmp_kw = self->window->settings.keywords;
 
-
           while (tmp_kw && !kw_found)
           {
             if (g_strstr_len (g_utf8_strup(message_t,-1), -1, g_utf8_strup((gchar*) tmp_kw->data,-1)))
@@ -1779,7 +1838,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (silmsg);
       }
 
-      parse_message (message_t, devchat_cb_data_new (self->window, buf), regex);
+      parse_message (message_t, devchat_cb_data_new (self->window, buf));
 
       g_free (message_t);
 
@@ -1845,7 +1904,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (((DevchatConversation*) scroll_tos->data)->out_buffer), &ed);
       if (((adj->upper - (adj->value + adj->page_size)) < 30) || (self->window->firstrun == TRUE))
       {
-        g_print ("Scrolling!\n");
         g_timeout_add (50, (GSourceFunc) scroll_mark_onscreen, (DevchatConversation*) scroll_tos->data);
       }
       else
@@ -1866,7 +1924,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     self->window->firstrun = FALSE;
 
   xmlFreeTextReader (msgparser);
-  g_free (regex);
 
   g_free (msglist);
 }
@@ -1922,7 +1979,7 @@ gboolean badass (gchar* name, DevchatCBData* data)
   return FALSE;
 }
 
-void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
+void parse_message (gchar* message_d, DevchatCBData* data)
 {
 
   enum
@@ -1934,8 +1991,6 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
     STATE_ATTR,
     STATE_ATTRCONT
   };
-
-  gchar* message_d = g_regex_replace (regex, message, -1, 0, "\xc2\xa0", 0 , NULL);
 
   GtkTextIter old_end;
 
@@ -2036,7 +2091,6 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
             c[g_unichar_to_utf8 (charval, c)] = 0;
             content = g_strconcat (content, c, NULL);
           }
-
 
           i = i + strlen(entity_name) + 1;
         }
@@ -2257,7 +2311,6 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
 
             g_free (tagname);
 
-
             tagname = tagname_d;
 
           #ifdef DEBUG
@@ -2324,7 +2377,6 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
         if (top->start_mark)
           gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (data->data), top->start_mark);
         g_slist_free_1 (tmp);
-
 
         current_tag = devchat_html_tag_new ();
 
@@ -2531,7 +2583,6 @@ void parse_message (gchar* message, DevchatCBData* data, GRegex* regex)
       }
     }
   }
-  g_free (message_d);
   g_free (plus);
 #ifdef DEBUG
   dbg ("Parsing done.");
@@ -3085,6 +3136,7 @@ void devchat_window_find (GtkWidget* widget, DevchatCBData* data)
     entry = data->window->search_entry;
     start = data->window->search_start;
     start_set = data->window->search_start_set;
+    conv = NULL;
   }
   else
   {
@@ -3464,6 +3516,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
     text = g_strconcat ("/msg ", target, " ", gtk_text_buffer_get_text (buf, &start, &end, FALSE), NULL);
   }
+  gchar* tmp = text;
   text = g_strstrip (text);
 
   if (g_strcmp0("",text) != 0)
@@ -3584,6 +3637,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
     g_free (enc_text);
+    g_free (tmp);
   }
 }
 
@@ -3611,16 +3665,22 @@ void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
   if (gtk_text_buffer_get_selection_bounds (buf, &start, &end))
   {
     GtkTextMark* ed = gtk_text_buffer_create_mark (buf, "tmp", &end, TRUE);
-    gtk_text_buffer_insert (buf, &start, g_strconcat ("[", (gchar*) data->data, "]", NULL), -1);
+    gchar* tag_open = g_strconcat ("[", (gchar*) data->data, "]", NULL);
+    gtk_text_buffer_insert (buf, &start, tag_open, -1);
+    g_free (tag_open);
     gtk_text_buffer_get_iter_at_mark (buf, &end, ed);
-    gtk_text_buffer_insert (buf, &end, g_strconcat ("[/", (gchar*) data->data, "]", NULL), -1);
+    gchar* tag_close = g_strconcat ("[/", (gchar*) data->data, "]", NULL);
+    gtk_text_buffer_insert (buf, &end, tag_close, -1);
+    g_free (tag_close);
     gtk_text_iter_backward_chars (&end, strlen((gchar*) data->data)+3);
     gtk_text_buffer_place_cursor (buf, &end);
     gtk_text_buffer_delete_mark (buf, ed);
   }
   else
   {
-    gtk_text_buffer_insert_at_cursor (buf, g_strconcat ("[", (gchar*) data->data, "][/", (gchar*) data->data, "]", NULL), -1);
+    gchar* tag = g_strconcat ("[", (gchar*) data->data, "][/", (gchar*) data->data, "]", NULL);
+    gtk_text_buffer_insert_at_cursor (buf, tag, -1);
+    g_free (tag);
 
     GtkTextIter cursor;
 
@@ -3682,13 +3742,10 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
                             "History loading..."
                            );
       }
-
     break;
     default: break;
   }
   gtk_widget_destroy (dialog);
-
-
 }
 
 void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
@@ -3710,7 +3767,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
   GtkWidget* dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft. \nPortions © International Organization for Standardization 1986");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986\nSounds © Belisarius 2010");
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
 
   gchar* license_text;
@@ -3721,15 +3778,15 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
     g_file_get_contents ("/usr/share/common-licenses/GPL-2", &license_text, NULL, NULL);
   else
 #endif
-    license_text = "    This program is free software; you can redistribute it and/or modify\n\
-    it under the terms of the GNU General Public License as published by\n\
-    the Free Software Foundation; either version 2 of the License, or\n\
-    (at your option) any later version.\n\
+    license_text = "This program is free software; you can redistribute it and/or modify\n\
+it under the terms of the GNU General Public License as published by\n\
+the Free Software Foundation; either version 2 of the License, or\n\
+(at your option) any later version.\n\
 \n\
-    This program is distributed in the hope that it will be useful,\n\
-    but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
-    GNU General Public License for more details.";
+This program is distributed in the hope that it will be useful,\n\
+but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the\n\
+GNU General Public License for more details.";
   gtk_about_dialog_set_license (GTK_ABOUT_DIALOG (dialog), license_text);
   gtk_dialog_run (GTK_DIALOG (dialog));
   gtk_widget_destroy (dialog);
@@ -3819,7 +3876,9 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
   GdkPixbuf* icon = (GdkPixbuf*) value;
 
 #ifdef DEBUG
-  dbg (g_strdup_printf ("Adding smilie %s.", name));
+  dbg_msg = g_strdup_printf ("Adding smilie %s.", name);
+  dbg (dbg_msg);
+  g_free (dbg_msg);
 #endif
 
   GtkWidget* item = gtk_image_menu_item_new_with_label (name);
@@ -3889,54 +3948,75 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
     NotifyNotification* note = notify_notification_new(title,body,NULL,NULL);
     if (icon)
       notify_notification_set_icon_from_pixbuf(note,icon);
-    notify_notification_add_action(note, "0","Show",NOTIFY_ACTION_CALLBACK (notify_cb),data,NULL);
+    notify_notification_add_action(note, "0", "Show", NOTIFY_ACTION_CALLBACK (notify_cb), data, NULL);
     notify_notification_set_timeout (note, 3141);
     notify_notification_show (note, NULL);
 #else
     err("libnotify support disabled at compile time.");
+    g_free (data->window->settings.vnotify);
     data->window->settings.vnotify = g_strdup("<none>");
 #endif
   }
   else if (g_strcmp0(data->window->settings.vnotify,"<none>") != 0)
   {
-    if (!g_spawn_async (NULL, (gchar**) g_strdup(data->window->settings.vnotify),NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,NULL,NULL))
+    gchar** vcmdline;
+    vcmdline[0] = g_strdup(data->window->settings.vnotify);
+    vcmdline[1] = 0;
+    if (!g_spawn_async (NULL, vcmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
     {
       err("Failed to launch visual notification process.");
+      g_free (data->window->settings.vnotify);
       data->window->settings.vnotify = g_strdup("<none>");
     }
+    g_strfreev (vcmdline);
   }
 
   if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
   {
+    GRegex* fldr = g_regex_new ("pixmap", 0, 0, NULL);
+    gchar* workingdir = g_regex_replace (fldr, data->window->workingdir, -1, 0, "sound", 0, NULL);
+
   #ifdef G_OS_UNIX
-    if (!g_spawn_command_line_async ("aplay -q /usr/share/sounds/purple/receive.wav", NULL))
+    gchar* cmdline = g_strdup_printf ("aplay -q %s/jingle.wav", workingdir);
+    if (!g_spawn_command_line_async (cmdline, NULL))
     {
-      if (!g_spawn_command_line_async ("ossplay -q /usr/share/sounds/purple/receive.wav", NULL))
+      g_free (cmdline);
+      cmdline = g_strdup_printf ("ossplay -q %s/jingle.wav", workingdir);
+      if (!g_spawn_command_line_async (cmdline, NULL))
       {
         err("Failed to launch audio notification process.");
         data->window->settings.notify = g_strdup("<none>");
       }
     }
+    g_free (cmdline);
   #else
     #ifdef G_OS_WIN32
-      MessageBeep(0x00000040L);
+      sndPlaySound (g_build_filename (workingdir, "jingle.wav"), SND_ASYNC);
     #endif
   #endif
+
+    g_free (fldr);
+    g_free (workingdir);
   }
   else if (g_strcmp0(data->window->settings.notify,"<none>") != 0)
   {
-    if (!g_spawn_async (NULL, (gchar**) g_strdup(data->window->settings.notify),NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,NULL,NULL))
+    gchar** cmdline;
+    cmdline[0] = g_strdup(data->window->settings.notify);
+    cmdline[1] = 0;
+    if (!g_spawn_async (NULL, cmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
     {
       err("Failed to launch audio notification process.");
+      g_free (data->window->settings.notify);
       data->window->settings.notify = g_strdup("<none>");
     }
+    g_strfreev (cmdline);
   }
 }
 
 #ifdef NOTIFY
 void notify_cb(NotifyNotification* note, gchar* action, DevchatCBData* data)
 {
-  gtk_window_present(GTK_WINDOW(data->window->window));
+  gtk_window_present (GTK_WINDOW(data->window->window));
 }
 #endif
 

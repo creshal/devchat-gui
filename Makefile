@@ -1,7 +1,7 @@
 CC = clang
 LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
 DESTDIR = /usr/local/bin
-CCARGS = -g -O0 -Wall
+CCARGS = -O2 -Wall -march=native
 
 all:
 	mkdir -p _build/bin
@@ -28,3 +28,5 @@ install:
 	install -Dm644 share/applications/dcgui.desktop $(DESTDIR)/share/applications/devchat-gui.desktop
 	mkdir -m755 -p ${DESTDIR}/share/pixmaps/devchat
 	install -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
+	mkdir -m755 -p ${DESTDIR}/share/sounds/devchat
+	install -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat

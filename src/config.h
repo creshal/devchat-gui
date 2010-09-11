@@ -1,2 +1,2 @@
 #define APPNAME "DevchatGUI"
-#define VERSION "0.4.6"
+#define VERSION "0.5"
