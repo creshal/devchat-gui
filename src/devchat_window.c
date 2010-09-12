@@ -951,8 +951,10 @@ void save_settings (DevchatWindow* w)
 
   gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
 
+  g_printf ("Saved handle width: %i.\n", w->settings.handle_width);
   GtkHPaned* hpaned1 = GTK_HPANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
   g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
+  g_printf ("New handle width: %i.\n", w->settings.handle_width);
 
   gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",

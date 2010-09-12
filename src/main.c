@@ -76,7 +76,7 @@ main (int argc, char *argv[])
       g_object_set (self, "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,NULL);
       g_object_set (self, "x", g_key_file_get_integer (keyfile, g, "X", &e),NULL);
       g_object_set (self, "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
-      if (g_key_file_has_key (keyfile, g, "HANDLEWIDTH", &e))
+      if (g_key_file_has_key (keyfile, g, "HANDLE_WIDTH", &e))
         g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLEWIDTH", &e),NULL);
       else
         g_object_set (self, "handle_width", 400, NULL);
