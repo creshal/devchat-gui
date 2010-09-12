@@ -90,6 +90,12 @@ main (int argc, char *argv[])
         self->settings.update_time = g_key_file_get_integer (keyfile, g, "UPDATE_TIME", &e);
       else
         self->settings.update_time = 1000;
+      if (g_key_file_has_key (keyfile, g, "STORE_PASS", &e))
+        self->settings.store_pass = g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "STORE_PASS", &e),"true") == 0;
+      else
+        self->settings.store_pass = FALSE;
+      if (g_key_file_has_key (keyfile, g, "COLOR_GOLDIES", &e))
+        g_object_set (self, "color_goldies", g_key_file_get_string (keyfile, g, "COLOR_GOLDIES", &e),NULL);
 
       gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
       int i;

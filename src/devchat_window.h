@@ -69,6 +69,7 @@ typedef struct dc_settings
   gchar* color_l3;
   gchar* color_l5;
   gchar* color_l6;
+  gchar* color_goldies;
   gchar* color_greens;
   gchar* color_blues;
   gchar* color_time;
@@ -94,6 +95,7 @@ typedef struct dc_settings
   gboolean autojoin;
   gboolean showhidden;
   gboolean coloruser;
+  gboolean store_pass;
 } dc_settings;
 
 enum

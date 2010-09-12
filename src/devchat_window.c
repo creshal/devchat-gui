@@ -38,6 +38,7 @@ enum {
   SETTINGS_COLOR_L3,
   SETTINGS_COLOR_L5,
   SETTINGS_COLOR_L6,
+  SETTINGS_COLOR_GOLDIES,
   SETTINGS_COLOR_GREENS,
   SETTINGS_COLOR_BLUES,
   SETTINGS_COLOR_TIME,
@@ -165,6 +166,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.color_l3 = g_strdup("#543535");
   self->settings.color_l5 = g_strdup("#354254");
   self->settings.color_l6 = g_strdup("#45513a");
+  self->settings.color_goldies = g_strdup ("#ffcc00");
   self->settings.color_greens = g_strdup("#8ae234");
   self->settings.color_blues = g_strdup("#729fcf");
   self->settings.color_time = g_strdup("#babdb6");
@@ -174,6 +176,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.color_highlight = g_strdup("#ef2929");
   self->settings.user = g_strdup(g_get_user_name());
   self->settings.pass = g_strdup("hidden");
+  self->settings.store_pass = FALSE;
   self->settings.showid = FALSE;
   self->settings.stealthjoin = FALSE;
   self->settings.autojoin = FALSE;
@@ -643,9 +646,14 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Color used for L6 backgrounds.", "#144414",
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_GOLDIES, g_param_spec_string
+                                                     ( "color_goldies", "Goldie color",
+                                                       "Color used for L7+ users.", "#fc0",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
   g_object_class_install_property (gobject_class, SETTINGS_COLOR_GREENS, g_param_spec_string
                                                      ( "color_greens", "Greenie color",
-                                                       "Color used for L6+ users.", "#0c9",
+                                                       "Color used for L6 users.", "#0c9",
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_COLOR_BLUES, g_param_spec_string
@@ -788,6 +796,11 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                             tag = gtk_text_tag_table_lookup (t, "l6");
                             g_object_set (tag, "paragraph-background", g_value_dup_string (value), NULL);
                             g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_GOLDIES: window->settings.color_goldies = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "goldie");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
     case SETTINGS_COLOR_GREENS: window->settings.color_greens = g_value_dup_string (value);
                                 t = gtk_text_buffer_get_tag_table (window->output);
                                 tag = gtk_text_tag_table_lookup (t, "greenie");
@@ -818,7 +831,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
     case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
     case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value);
-                            if (window->firstrun)
+                            if (window->firstrun && window->settings.autojoin)
                               login (window->btn_connect, devchat_cb_data_new (window, NULL));
                             break;
     case SETTINGS_SHOWHIDDEN: window->settings.showhidden = g_value_get_boolean (value); break;
@@ -855,6 +868,9 @@ void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data)
                             gdk_color_parse (data->window->settings.color_l1, &color);
                             gtk_widget_modify_base (value->out_widget, GTK_STATE_NORMAL, &color);
                             if (value->in_widget) {gtk_widget_modify_base (value->in_widget, GTK_STATE_NORMAL, &color);} break;
+    case SETTINGS_COLOR_GOLDIES: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "goldie");
+                                g_object_set (tag, "foreground", data->window->settings.color_goldies, NULL); break;
     case SETTINGS_COLOR_GREENS: t = gtk_text_buffer_get_tag_table (value->out_buffer);
                                 tag = gtk_text_tag_table_lookup (t, "greenie");
                                 g_object_set (tag, "foreground", data->window->settings.color_greens, NULL); break;
@@ -954,11 +970,12 @@ void save_settings (DevchatWindow* w)
   GtkHPaned* hpaned1 = GTK_HPANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
   g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
 
-  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\n", w->settings.showid? "TRUE":"FALSE",
+  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",
-                                         w->settings.autojoin? "TRUE" : "FALSE",
+                                         w->settings.store_pass? (w->settings.autojoin? "TRUE" : "FALSE") : "FALSE",
                                          w->settings.showhidden? "TRUE" : "FALSE",
-                                         w->settings.coloruser? "TRUE" : "FALSE");
+                                         w->settings.coloruser? "TRUE" : "FALSE",
+                                         w->settings.store_pass? "TRUE" : "FALSE");
 
   gchar* settings = g_strconcat ("#Settings file for DevchatGUI. Please do not alter the key names.\n \
 #Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
@@ -971,6 +988,7 @@ void save_settings (DevchatWindow* w)
                                  "COLOR_L3=",w->settings.color_l3, "\n",
                                  "COLOR_L5=",w->settings.color_l5, "\n",
                                  "COLOR_L6=",w->settings.color_l6, "\n",
+                                 "COLOR_GOLDIES=",w->settings.color_goldies, "\n",
                                  "COLOR_GREENS=",w->settings.color_greens, "\n",
                                  "COLOR_BLUES=",w->settings.color_blues, "\n",
                                  "COLOR_URL=",w->settings.color_url, "\n",
@@ -978,7 +996,7 @@ void save_settings (DevchatWindow* w)
                                  "COLOR_URL_HOVER=",w->settings.color_url_hover, "\n",
                                  "COLOR_HIGHLIGHT=",w->settings.color_highlight, "\n",
                                  "USER=",w->settings.user, "\n",
-                                 "PASS=",w->settings.pass, "\n",
+                                 "PASS=",w->settings.store_pass? w->settings.pass : "<none>", "\n",
                                  "NOTIFY=",w->settings.notify, "\n",
                                  "VNOTIFY=",w->settings.vnotify, "\n",
                                  g_strdup_printf("WIDTH=%i\n", w->settings.width),
@@ -1363,7 +1381,9 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gint uid_i = (int) strtoll (uid, NULL, 10);
           g_signal_connect (profile_btn, "clicked", G_CALLBACK (go_forum), devchat_cb_data_new (data->window, GINT_TO_POINTER (uid_i)));
 
-          if (real_level > 5)
+          if (real_level > 6)
+            color = data->window->settings.color_goldies;
+          else if (real_level == 6)
             color = data->window->settings.color_greens;
           else
             color = data->window->settings.color_blues;
@@ -1385,6 +1405,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             }
             gtk_widget_set_tooltip_text(at_btn, status_d);
             g_free (status_d);
+
+            color = data->window->settings.color_time;
           }
           else
           {
@@ -1767,7 +1789,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       }
 
       gchar* name_color_tag = "peasant";
-      if (user_level > 5)
+      if (user_level > 6)
+        name_color_tag = "goldie";
+      else if (user_level == 6)
         name_color_tag = "greenie";
 
       gtk_text_buffer_get_end_iter (buf, &end);
@@ -1941,6 +1965,7 @@ void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "underline", "underline", PANGO_UNDERLINE_SINGLE, NULL);
   gtk_text_buffer_create_tag (buf, "time", "foreground", data->window->settings.color_time, NULL);
   gtk_text_buffer_create_tag (buf, "peasant", "foreground", data->window->settings.color_blues, NULL);
+  gtk_text_buffer_create_tag (buf, "goldie", "foreground", data->window->settings.color_goldies, NULL);
   gtk_text_buffer_create_tag (buf, "greenie", "foreground", data->window->settings.color_greens, NULL);
   gtk_text_buffer_create_tag (buf, "l1", "paragraph-background", data->window->settings.color_l1, NULL);
   gtk_text_buffer_create_tag (buf, "l3", "paragraph-background", data->window->settings.color_l3, NULL);
@@ -2816,6 +2841,16 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox7), label_col_high,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(hbox7), btn_col_high,FALSE,FALSE,0);
 
+  GtkWidget* hbox12 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* label_col_gold = gtk_label_new ("Goldie color:");
+  gdk_color_parse (data->window->settings.color_goldies, &c);
+  GtkWidget* btn_col_gold = gtk_color_button_new_with_color (&c);
+  gtk_box_pack_start (GTK_BOX(hbox12), label_col_gold,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX(hbox12), btn_col_gold,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX(hbox12), gtk_hbox_new (TRUE,0),FALSE,FALSE,0); // Hack
+  gtk_box_pack_start (GTK_BOX(hbox12), gtk_hbox_new (TRUE,0),FALSE,FALSE,0);//  to make it look symmetric.
+
+
   GtkWidget* vbox1 = gtk_vbox_new (FALSE, 1);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox1,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox2,FALSE,FALSE,0);
@@ -2823,6 +2858,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox1), hbox4,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox5,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox7,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (vbox1), hbox12,FALSE,FALSE,0);
 
   gtk_notebook_append_page ( GTK_NOTEBOOK (nb), vbox1, gtk_label_new ("Color settings"));
 
@@ -2837,9 +2873,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* chk_sj = gtk_check_button_new_with_label ("Stealth join");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sj), data->window->settings.stealthjoin);
   gtk_widget_set_tooltip_text (chk_sj, "Suppress own join/quit messages.");
-  gtk_box_pack_start (GTK_BOX (hbox6), chk_id,FALSE,FALSE,0);
-  gtk_box_pack_start (GTK_BOX (hbox6), chk_hd,FALSE,FALSE,0);
-  gtk_box_pack_start (GTK_BOX (hbox6), chk_sj,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox6), chk_id,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox6), chk_hd,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox6), chk_sj,TRUE,TRUE,0);
 
   GtkWidget* hbox10 = gtk_hbox_new (FALSE, 1);
   GtkWidget* chk_aj = gtk_check_button_new_with_label ("Automatic join");
@@ -2847,8 +2883,12 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* chk_cu = gtk_check_button_new_with_label ("Tint user list");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_cu), data->window->settings.coloruser);
   gtk_widget_set_tooltip_text (chk_cu, "Whether the userlist should be colored in the same color as the TextViews. Recommended if the font contrast would be too low else (read: bright themes like the ones for Windows®).");
-  gtk_box_pack_start (GTK_BOX (hbox10), chk_aj,FALSE,FALSE,0);
-  gtk_box_pack_start (GTK_BOX (hbox10), chk_cu,FALSE,FALSE,0);
+  GtkWidget* chk_sp = gtk_check_button_new_with_label ("Remember password");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sp), data->window->settings.store_pass);
+  gtk_widget_set_tooltip_text (chk_sp, "Whether the password shall be saved to disk.");
+  gtk_box_pack_start (GTK_BOX (hbox10), chk_aj,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox10), chk_cu,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox10), chk_sp,TRUE,TRUE,0);
 
   GtkWidget* hbox8 = gtk_hbox_new (FALSE, 1);
   GtkWidget* label_notify = gtk_label_new ("Notifications 1:");
@@ -2942,6 +2982,55 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox2), hbox9,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox11,FALSE,FALSE,0);
 
+#ifdef G_OS_WIN32
+
+  GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* label_theme = gtk_label_new ("GTK Theme: ");
+  GtkWidget* combo_theme = gtk_combo_box_entry_new_text ();
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 0, "Aero");
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 1, "Classic");
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 2, "Devchat");
+  gtk_box_pack_start (GTK_BOX (hbox13), label_theme, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox13), combo_theme, FALSE, FALSE, 0);
+
+  gchar* gtkrc;
+  gchar* theme_name;
+  gchar** rc_lines;
+  int i;
+
+  if (!g_file_get_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), &gtkrc, NULL, NULL))
+  {
+    if (!g_file_get_contents (g_build_filename (g_getenv("PROGRAMFILES"), "Devchat", "etc", "gtk-2.0", "gtkrc", NULL), &gtkrc, NULL, NULL))
+    {
+    #ifdef DEBUG
+      dbg ("\n\nYour installation is f'ed up. Please reinstall.\n\n");
+      return;
+    #endif
+    }
+  }
+
+  rc_lines = g_strsplit (gtkrc, "\n", -1);
+
+  for (i=0; rc_lines[i] != NULL && i < 255; i++)
+  {
+    gchar* stripped_line = g_strstrip (rc_lines[i]);
+    if (g_str_has_prefix (stripped_line, "gtk-theme-name=\""))
+    {
+      if (g_str_has_prefix (stripped_line+16, "Classic"))
+        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 1);
+      else if (g_str_has_prefix (stripped_line+16, "Aero"))
+        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 0);
+      else
+        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 2);
+      break;
+    }
+  }
+
+  g_free (gtkrc);
+  g_strfreev (rc_lines);
+
+  gtk_box_pack_start (GTK_BOX (vbox2), hbox13,FALSE,FALSE,0);
+#endif
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new ("Misc"));
 
@@ -2978,7 +3067,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gint result = gtk_dialog_run (GTK_DIALOG (dialog));
 
   GdkColor color_time, color_font, color_l1, color_l3, color_l5, color_l6, color_greens, color_blues, color_url,
-           color_url_visited, color_url_hover, color_highlight;
+           color_url_visited, color_url_hover, color_highlight, color_gold;
 
   switch (result)
   {
@@ -2998,6 +3087,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "color_l3", data->window->settings_backup.color_l3,
                                   "color_l5", data->window->settings_backup.color_l5,
                                   "color_l6", data->window->settings_backup.color_l6,
+                                  "color_goldies", data->window->settings_backup.color_goldies,
                                   "color_greens", data->window->settings_backup.color_greens,
                                   "color_blues", data->window->settings_backup.color_blues,
                                   "color_url", data->window->settings_backup.color_url,
@@ -3015,6 +3105,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   NULL);
       data->window->settings.update_time = data->window->settings_backup.update_time;
       data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
+      data->window->settings.store_pass = data->window->settings_backup.store_pass;
 
       break;
     case GTK_RESPONSE_OK:
@@ -3030,12 +3121,14 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_vurl), &color_url_visited);
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_hurl), &color_url_hover);
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_high), &color_highlight);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_gold), &color_gold);
       g_object_set (data->window, "color_time", gdk_color_to_string (&color_time),
                                   "color_font", gdk_color_to_string (&color_font),
                                   "color_l1", gdk_color_to_string (&color_l1),
                                   "color_l3", gdk_color_to_string (&color_l3),
                                   "color_l5", gdk_color_to_string (&color_l5),
                                   "color_l6", gdk_color_to_string (&color_l6),
+                                  "color_goldies", gdk_color_to_string (&color_gold),
                                   "color_greens", gdk_color_to_string (&color_greens),
                                   "color_blues", gdk_color_to_string (&color_blues),
                                   "color_url", gdk_color_to_string (&color_url),
@@ -3052,6 +3145,12 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
                                   NULL);
 
+    #ifdef G_OS_WIN32
+      gchar* rc_line = g_strdup_printf ("gtk-theme-name=\"%s\"\r\n", gtk_combo_box_get_active_text (GTK_COMBO_BOX (combo_theme)));
+      g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, NULL, NULL);
+      g_free (rc_line);
+    #endif
+
       gchar** keywords = g_strsplit (gtk_entry_get_text(GTK_ENTRY(entry_keywords)), "|", 0);
       gint i;
       g_slist_free (data->window->settings.keywords);
@@ -3065,6 +3164,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
       data->window->settings.update_time = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_update));
       data->window->settings.avatar_size = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_avas));
+      data->window->settings.store_pass = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_sp));
       save_settings (data->window);
     break;
     default: break;
@@ -3324,7 +3424,7 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
   return FALSE;
 }
 
-void devchat_window_on_mark_set_cb(GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data)
+void devchat_window_on_mark_set_cb (GtkTextBuffer* buffer, GtkTextIter* iter, GtkTextMark* mark, DevchatCBData* data)
 {
   if (g_strcmp0 (gtk_text_mark_get_name (mark), "selection_bound") == 0)
   {
