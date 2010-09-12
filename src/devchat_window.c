@@ -1368,7 +1368,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
 
           gchar* at_text = g_strdup_printf ("View the forum profile of %s.",name);
-          gtk_widget_set_tooltip_text (pm_btn, at_text);
+          gtk_widget_set_tooltip_text (at_btn, at_text);
           g_free (at_text);
 
           GdkPixbuf* ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, uid);
