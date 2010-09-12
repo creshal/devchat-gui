@@ -1454,10 +1454,19 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_label_set_text (GTK_LABEL (data->window->userlabel), ul_text);
     g_free (ul_text);
 
+    /*If the server failed to submit an incremental update, request complete list.*/
+    if (usercount == 0)
+      data->window->users_online = NULL;
+
     gtk_widget_show_all (data->window->userlist);
     xmlFreeTextReader (userparser);
     xmlFreeParserCtxt (ctxt);
     g_free (userlist);
+  }
+  else
+  {
+    /*If the server failed to submit an incremental update, request complete list.*/
+    data->window->users_online = NULL;
   }
 }
 
@@ -2622,7 +2631,6 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
       GtkTextBuffer* buf;
       GtkTextIter start;
       GtkTextIter end;
-      gchar* text;
 
       if (pagenum == 0)
       {
@@ -2637,9 +2645,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
       gtk_text_buffer_get_start_iter (buf, &start);
       gtk_text_buffer_get_end_iter (buf, &end);
 
-      text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
-
-      data->window->buffer[data->window->buf_current] = text;
+      data->window->buffer[data->window->buf_current] = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
       data->window->buf_current++;
       if (data->window->buf_current > MAX_BUF)
         data->window->buf_current = MAX_BUF;
@@ -2668,7 +2674,6 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
       GtkTextBuffer* buf;
       GtkTextIter start;
       GtkTextIter end;
-      gchar* text;
 
       if (pagenum == 0)
       {
@@ -2683,9 +2688,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
       gtk_text_buffer_get_start_iter (buf, &start);
       gtk_text_buffer_get_end_iter (buf, &end);
 
-      text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
-
-      data->window->buffer[data->window->buf_current] = text;
+      data->window->buffer[data->window->buf_current] = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
       data->window->buf_current--;
       if (data->window->buf_current > MAX_BUF)
         data->window->buf_current = MAX_BUF;
@@ -3629,7 +3632,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       data->window->buffer[i+1] = data->window->buffer[i];
       i--;
     }
-    data->window->buffer[1] = text;
+    data->window->buffer[1] = g_strdup (text);
     if (g_strcmp0 (data->window->buffer[0], "") != 0)
     {
       gtk_text_buffer_set_text (buf, data->window->buffer[0], -1);
