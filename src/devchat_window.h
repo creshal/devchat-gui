@@ -81,8 +81,9 @@ typedef struct dc_settings
   gchar* pass;
   gchar* notify;
   gchar* vnotify;
-  guint width;
-  guint height;
+  gchar* servername;
+  gint width;
+  gint height;
   gint x;
   gint y;
   guint update_time;
@@ -96,6 +97,8 @@ typedef struct dc_settings
   gboolean showhidden;
   gboolean coloruser;
   gboolean store_pass;
+  gboolean showtray;
+  gboolean jumptab;
 } dc_settings;
 
 enum
@@ -155,6 +158,7 @@ struct _DevchatWindow
   GtkWidget* item_presets;
   GtkWidget* chk_raw;
   GtkWidget* btn_send;
+  GtkStatusIcon* trayicon;
 
   GtkTextBuffer* output;
   GtkTextBuffer* input;
@@ -170,6 +174,7 @@ struct _DevchatWindow
 
   gboolean firstrun;
   gboolean no_halt_requested;
+  gboolean dnd;
 
   gint lineno;
   gchar* lastid;

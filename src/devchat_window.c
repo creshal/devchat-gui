@@ -59,17 +59,18 @@ enum {
   SETTINGS_WIDTH,
   SETTINGS_HEIGHT,
   SETTINGS_X,
-  SETTINGS_Y
+  SETTINGS_Y,
+  SETTINGS_TRAYICON
 } params;
 
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
 static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
 
 void save_settings (DevchatWindow* w);
-
+void tray_status_change (GtkWidget* w, DevchatCBData* data);
 void url_tag_nv_color_cb (GtkTextTag* t, gchar* value);
 void url_tag_v_color_cb (GtkTextTag* t, gchar* value);
-
+void show_tray_menu (GtkStatusIcon* icon, guint button, guint activate_time, DevchatCBData* data);
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data);
 #ifdef NOTIFY
 void notify_cb ();
@@ -112,7 +113,7 @@ gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
 void parse_message (gchar* message, DevchatCBData* self);
 gchar* color_lookup (gchar* color);
-
+void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data);
 gchar* current_time ();
 
 #ifdef OTR
@@ -182,8 +183,11 @@ devchat_window_init (DevchatWindow* self)
   self->settings.autojoin = FALSE;
   self->settings.showhidden = TRUE;
   self->settings.coloruser = TRUE;
+  self->settings.showtray = FALSE;
+  self->settings.jumptab = FALSE;
   self->settings.notify = g_strdup("<native>");
   self->settings.vnotify = g_strdup("<native>");
+  self->settings.servername = g_strdup ("SovietServer");
   self->settings.width = 600;
   self->settings.height = 400;
   self->settings.x = 0;
@@ -195,6 +199,7 @@ devchat_window_init (DevchatWindow* self)
   self->hovertag = NULL;
   self->buf_current = 0;
   self->search_start_set = FALSE;
+  self->dnd = FALSE;
 
   gint j;
 
@@ -556,6 +561,13 @@ devchat_window_init (DevchatWindow* self)
 
   gtk_notebook_append_page_menu(GTK_NOTEBOOK(self->notebook),vpaned,gtk_label_new("X-DEVCHAT"),gtk_label_new("X-DEVCHAT"));
 
+  gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK(self->notebook), vpaned, FALSE);
+
+  self->trayicon = gtk_status_icon_new ();
+  gtk_status_icon_set_visible (GTK_STATUS_ICON (self->trayicon), self->settings.showtray);
+  g_signal_connect (self->trayicon, "activate", G_CALLBACK (toggle_tray_minimize), self_data);
+  g_signal_connect (self->trayicon, "popup-menu", G_CALLBACK (show_tray_menu), self_data);
+
   gtk_widget_show_all (self->window);
   gtk_widget_hide_all (self->inputbar);
 
@@ -716,6 +728,11 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Supress join/quit messages.", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
+  g_object_class_install_property (gobject_class, SETTINGS_TRAYICON, g_param_spec_boolean
+                                                     ( "trayicon", "Show Tray Icon",
+                                                       "Whether to show a tray icon.", FALSE,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
   g_object_class_install_property (gobject_class, SETTINGS_COLORUSER, g_param_spec_boolean
                                                      ( "coloruser", "Tint user list",
                                                        "Tints the userlist with L1 background color. Recommended for bright themes.", TRUE,
@@ -849,6 +866,8 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                          gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
     case SETTINGS_Y: window->settings.y = g_value_get_int (value);
                          gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
+    case SETTINGS_TRAYICON: window->settings.showtray = g_value_get_boolean (value);
+                            gtk_status_icon_set_visible (GTK_STATUS_ICON (window->trayicon), window->settings.showtray); break;
   }
 }
 
@@ -966,16 +985,19 @@ void save_settings (DevchatWindow* w)
   }
 
   gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
+  gtk_window_get_size (GTK_WINDOW (w->window), &w->settings.width, &w->settings.height);
 
   GtkHPaned* hpaned1 = GTK_HPANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
   g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
 
-  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\n", w->settings.showid? "TRUE":"FALSE",
+  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\nSHOW_TRAY=%s\nJUMP_TAB=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",
                                          w->settings.store_pass? (w->settings.autojoin? "TRUE" : "FALSE") : "FALSE",
                                          w->settings.showhidden? "TRUE" : "FALSE",
                                          w->settings.coloruser? "TRUE" : "FALSE",
-                                         w->settings.store_pass? "TRUE" : "FALSE");
+                                         w->settings.store_pass? "TRUE" : "FALSE",
+                                         w->settings.showtray? "TRUE" : "FALSE",
+                                         w->settings.jumptab? "TRUE" : "FALSE");
 
   gchar* settings = g_strconcat ("#Settings file for DevchatGUI. Please do not alter the key names.\n \
 #Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
@@ -999,6 +1021,7 @@ void save_settings (DevchatWindow* w)
                                  "PASS=",w->settings.store_pass? w->settings.pass : "<none>", "\n",
                                  "NOTIFY=",w->settings.notify, "\n",
                                  "VNOTIFY=",w->settings.vnotify, "\n",
+                                 "SERVER_NAME=",w->settings.servername, "\n",
                                  g_strdup_printf("WIDTH=%i\n", w->settings.width),
                                  g_strdup_printf("HEIGHT=%i\n", w->settings.height),
                                  g_strdup_printf("X=%i\n", w->settings.x),
@@ -1159,10 +1182,13 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
   if (!data->window->settings.stealthjoin)
   {
+    gchar* joinmsg;
     if (data->window->userlevel < 6)
-      gtk_text_buffer_set_text (data->window->input, "[cyan](SovietServer):[/cyan] /me has joined." ,-1);
+      joinmsg = g_strdup_printf ("[cyan](%s):[/cyan] /me has joined.", data->window->settings.servername);
     else
-      gtk_text_buffer_set_text (data->window->input, "<span class=\"chatname_green\">(SovietServer):</span> /me has joined." ,-1);
+      joinmsg = g_strdup_printf ("<span class=\"chatname_green\">(%s):</span> /me has joined.", data->window->settings.servername);
+    gtk_text_buffer_set_text (data->window->input, joinmsg, -1);
+    g_free (joinmsg);
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (data->window->chk_raw), TRUE);
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
     devchat_window_btn_send (NULL, data);
@@ -1822,7 +1848,13 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         #ifdef DEBUG
           dbg ("IN SOVIET RUSSIA, CHAT KICKS YOU.");
         #endif
-          gtk_text_buffer_set_text (self->window->input, "[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …" ,-1);
+          gchar* kickmsg;
+          if (g_strcmp0 (self->window->settings.servername, "SovietServer") == 0)
+            kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
+          else
+            kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
+          gtk_text_buffer_set_text (self->window->input, kickmsg, -1);
+          g_free (kickmsg);
           gtk_notebook_set_current_page (GTK_NOTEBOOK (self->window->notebook), 0);
           devchat_window_btn_send (NULL, self);
           destroy (NULL, self);
@@ -1862,6 +1894,15 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
               gtk_widget_hide (self->window->inputbar);
               g_timeout_add_seconds ((current_time_long - silent_time_long) * 60, (GSourceFunc) gtk_widget_show_all, self->window->inputbar);
             }
+        }
+
+        if (g_strstr_len (message_up, -1, "STATUS CHANGED. NEW STATUS: DND"))
+        {
+          self->window->dnd = TRUE;
+        }
+        else if (g_strstr_len (message_up, -1, "STATUS CHANGED. NEW STATUS: ACTIVE"))
+        {
+          self->window->dnd = FALSE;
         }
 
         g_free (kickmsg);
@@ -2866,13 +2907,13 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_notebook_append_page ( GTK_NOTEBOOK (nb), vbox1, gtk_label_new ("Color settings"));
 
 
-  GtkWidget* hbox6 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox6 = gtk_hbox_new (TRUE, 1);
   GtkWidget* chk_id = gtk_check_button_new_with_label ("Show message ID");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_id), data->window->settings.showid);
   gtk_widget_set_tooltip_text (chk_id, "Shows the internal ID of messages.\nMakes pointing at a certain post easier (and allows you to see whether people are talking in private messages and/or on higher levels).\nNote that this setting only applies on newly received messages.");
   GtkWidget* chk_hd = gtk_check_button_new_with_label ("Show hidden usernames");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_hd), data->window->settings.showhidden);
-  gtk_widget_set_tooltip_text (chk_hd, "Shows usernames e.g. for /me actions and stealthing greenies. Note usernames hidden by <!-- --> (read: Greenie stealth posts) will always be shown.\nChanging this setting will apply on new tabs and newly received messages.");
+  gtk_widget_set_tooltip_text (chk_hd, "Shows usernames e.g. for /me actions, stealthing greenies and HTML comments <!-- --> (read: Greenie stealth posts).\nChanging this setting will apply on new tabs and newly received messages.");
   GtkWidget* chk_sj = gtk_check_button_new_with_label ("Stealth join");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sj), data->window->settings.stealthjoin);
   gtk_widget_set_tooltip_text (chk_sj, "Suppress own join/quit messages.");
@@ -2880,18 +2921,28 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox6), chk_hd,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox6), chk_sj,TRUE,TRUE,0);
 
-  GtkWidget* hbox10 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox10 = gtk_hbox_new (TRUE, 1);
   GtkWidget* chk_aj = gtk_check_button_new_with_label ("Automatic join");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_aj), data->window->settings.autojoin);
   GtkWidget* chk_cu = gtk_check_button_new_with_label ("Tint user list");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_cu), data->window->settings.coloruser);
-  gtk_widget_set_tooltip_text (chk_cu, "Whether the userlist should be colored in the same color as the TextViews. Recommended if the font contrast would be too low else (read: bright themes like the ones for Windows®).");
+  gtk_widget_set_tooltip_text (chk_cu, "Whether the userlist should be colored in the same color as the TextViews. Recommended if the font contrast would be too low else (read: bright themes like Aero/Classic for Windows®).");
   GtkWidget* chk_sp = gtk_check_button_new_with_label ("Remember password");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sp), data->window->settings.store_pass);
   gtk_widget_set_tooltip_text (chk_sp, "Whether the password shall be saved to disk.");
   gtk_box_pack_start (GTK_BOX (hbox10), chk_aj,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox10), chk_cu,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox10), chk_sp,TRUE,TRUE,0);
+
+  GtkWidget* hbox14 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* chk_tray = gtk_check_button_new_with_label ("Show tray icon");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_tray), data->window->settings.showtray);
+  GtkWidget* chk_jmp = gtk_check_button_new_with_label ("Jump to unread PMs");
+  gtk_widget_set_tooltip_text (chk_jmp, "Whether the focus should jump to tabs with unread PMs or not.");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_jmp), data->window->settings.jumptab);
+  gtk_box_pack_start (GTK_BOX (hbox14), chk_tray,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox14), chk_jmp,TRUE,TRUE,0);
+  gtk_box_pack_start (GTK_BOX (hbox14), gtk_vbox_new (FALSE,0),TRUE,TRUE,0);
 
   GtkWidget* hbox8 = gtk_hbox_new (FALSE, 1);
   GtkWidget* label_notify = gtk_label_new ("Notifications 1:");
@@ -2980,14 +3031,15 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* vbox2 = gtk_vbox_new (FALSE, 1);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox6,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox10,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (vbox2), hbox14,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), gtk_hseparator_new (),FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox8,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox9,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox2), hbox11,FALSE,FALSE,0);
 
-#ifdef G_OS_WIN32
 
   GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
+#ifdef G_OS_WIN32
   GtkWidget* label_theme = gtk_label_new ("GTK Theme: ");
   GtkWidget* combo_theme = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 0, "Aero");
@@ -3031,9 +3083,25 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   g_free (gtkrc);
   g_strfreev (rc_lines);
+#endif
+  GtkWidget* label_msg = gtk_label_new ("Chatserver string: ");
+  GtkWidget* entry_msg = gtk_combo_box_entry_new_text ();
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "SovietServer");
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 1, "ChatServer");
+  if (g_strcmp0 (data->window->settings.servername, "SovietServer") == 0)
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 0);
+  else if (g_strcmp0 (data->window->settings.servername, "ChatServer") == 0)
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 1);
+  else
+  {
+    gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 2, data->window->settings.servername);
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 2);
+  }
+  gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
 
   gtk_box_pack_start (GTK_BOX (vbox2), hbox13,FALSE,FALSE,0);
-#endif
+
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new ("Misc"));
 
@@ -3105,10 +3173,13 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "browser", data->window->settings_backup.browser,
                                   "notify", data->window->settings_backup.notify,
                                   "vnotify", data->window->settings_backup.vnotify,
+                                  "trayicon", data->window->settings_backup.showtray,
                                   NULL);
       data->window->settings.update_time = data->window->settings_backup.update_time;
       data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
       data->window->settings.store_pass = data->window->settings_backup.store_pass;
+      data->window->settings.servername = data->window->settings_backup.servername;
+      data->window->settings.jumptab = data->window->settings_backup.jumptab;
 
       break;
     case GTK_RESPONSE_OK:
@@ -3146,6 +3217,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "browser", gtk_entry_get_text (GTK_ENTRY (entry_browser)),
                                   "notify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_notify)),
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
+                                  "trayicon", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_tray)),
                                   NULL);
 
     #ifdef G_OS_WIN32
@@ -3168,6 +3240,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
       data->window->settings.update_time = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_update));
       data->window->settings.avatar_size = gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (scale_avas));
       data->window->settings.store_pass = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_sp));
+      data->window->settings.servername = gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_msg));
+      data->window->settings.jumptab = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_jmp));
+      devchat_window_refresh_presets (data->window);
       save_settings (data->window);
     break;
     default: break;
@@ -3954,9 +4029,12 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
     gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK (data->window->notebook), conv->child, TRUE);
   }
   gtk_widget_show_all (conv->child);
-  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_page_num (GTK_NOTEBOOK (data->window->notebook), conv->child));
-  if (conv->in_widget)
-    gtk_widget_grab_focus (conv->in_widget);
+  if (data->window->settings.jumptab)
+  {
+    gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_page_num (GTK_NOTEBOOK (data->window->notebook), conv->child));
+    if (conv->in_widget)
+      gtk_widget_grab_focus (conv->in_widget);
+  }
 
   return conv;
 }
@@ -3997,6 +4075,7 @@ void devchat_window_refresh_presets (DevchatWindow* self)
   {
     GtkWidget* item = gtk_menu_item_new_with_label (self->settings.presets[i]);
     g_signal_connect (item, "activate", G_CALLBACK (ins_preset), devchat_cb_data_new (self, self->settings.presets[i]));
+    gtk_widget_add_accelerator (item, "activate", self->accelgroup, i==9? GDK_0 : GDK_1+i, GDK_MOD1_MASK, GTK_ACCEL_VISIBLE);
     gtk_menu_shell_append (GTK_MENU_SHELL (preset_sub), item);
   }
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_presets), preset_sub);
@@ -4043,74 +4122,75 @@ void ins_preset (GtkWidget* widget, DevchatCBData* data)
 
 void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
 {
-  if (g_strcmp0(data->window->settings.vnotify,"<native>") == 0)
+  if (!data->window->dnd)
   {
-#ifdef NOTIFY
-    NotifyNotification* note = notify_notification_new(title,body,NULL,NULL);
-    if (icon)
-      notify_notification_set_icon_from_pixbuf(note,icon);
-    notify_notification_add_action(note, "0", "Show", NOTIFY_ACTION_CALLBACK (notify_cb), data, NULL);
-    notify_notification_set_timeout (note, 3141);
-    notify_notification_show (note, NULL);
-#else
-    err("libnotify support disabled at compile time.");
-    g_free (data->window->settings.vnotify);
-    data->window->settings.vnotify = g_strdup("<none>");
-#endif
-  }
-  else if (g_strcmp0(data->window->settings.vnotify,"<none>") != 0)
-  {
-    gchar** vcmdline;
-    vcmdline[0] = g_strdup(data->window->settings.vnotify);
-    vcmdline[1] = 0;
-    if (!g_spawn_async (NULL, vcmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
+    if (g_strcmp0(data->window->settings.vnotify,"<native>") == 0)
     {
-      err("Failed to launch visual notification process.");
-      g_free (data->window->settings.vnotify);
-      data->window->settings.vnotify = g_strdup("<none>");
+      if (!gtk_widget_get_visible (data->window->window))
+        gtk_status_icon_set_blinking (GTK_STATUS_ICON (data->window->trayicon), TRUE);
+  #ifdef NOTIFY
+      NotifyNotification* note = notify_notification_new(title,body,NULL,NULL);
+      if (icon)
+        notify_notification_set_icon_from_pixbuf(note,icon);
+      notify_notification_add_action(note, "0", "Show", NOTIFY_ACTION_CALLBACK (notify_cb), data, NULL);
+      notify_notification_set_timeout (note, 3141);
+      notify_notification_show (note, NULL);
+  #endif
     }
-    g_strfreev (vcmdline);
-  }
-
-  if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
-  {
-    GRegex* fldr = g_regex_new ("pixmap", 0, 0, NULL);
-    gchar* workingdir = g_regex_replace (fldr, data->window->workingdir, -1, 0, "sound", 0, NULL);
-
-  #ifdef G_OS_UNIX
-    gchar* cmdline = g_strdup_printf ("aplay -q %s/jingle.wav", workingdir);
-    if (!g_spawn_command_line_async (cmdline, NULL))
+    else if (g_strcmp0(data->window->settings.vnotify,"<none>") != 0)
     {
-      g_free (cmdline);
-      cmdline = g_strdup_printf ("ossplay -q %s/jingle.wav", workingdir);
+      gchar** vcmdline;
+      vcmdline[0] = g_strdup(data->window->settings.vnotify);
+      vcmdline[1] = 0;
+      if (!g_spawn_async (NULL, vcmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
+      {
+        err("Failed to launch visual notification process.");
+        g_free (data->window->settings.vnotify);
+        data->window->settings.vnotify = g_strdup("<none>");
+      }
+      g_strfreev (vcmdline);
+    }
+
+    if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
+    {
+      GRegex* fldr = g_regex_new ("pixmap", 0, 0, NULL);
+      gchar* workingdir = g_regex_replace (fldr, data->window->workingdir, -1, 0, "sound", 0, NULL);
+
+    #ifdef G_OS_UNIX
+      gchar* cmdline = g_strdup_printf ("aplay -q %s/jingle.wav", workingdir);
       if (!g_spawn_command_line_async (cmdline, NULL))
       {
+        g_free (cmdline);
+        cmdline = g_strdup_printf ("ossplay -q %s/jingle.wav", workingdir);
+        if (!g_spawn_command_line_async (cmdline, NULL))
+        {
+          err("Failed to launch audio notification process.");
+          data->window->settings.notify = g_strdup("<none>");
+        }
+      }
+      g_free (cmdline);
+    #else
+      #ifdef G_OS_WIN32
+        sndPlaySound (g_build_filename (workingdir, "jingle.wav", NULL), SND_ASYNC);
+      #endif
+    #endif
+
+      g_free (fldr);
+      g_free (workingdir);
+    }
+    else if (g_strcmp0(data->window->settings.notify,"<none>") != 0)
+    {
+      gchar** cmdline;
+      cmdline[0] = g_strdup(data->window->settings.notify);
+      cmdline[1] = 0;
+      if (!g_spawn_async (NULL, cmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
+      {
         err("Failed to launch audio notification process.");
+        g_free (data->window->settings.notify);
         data->window->settings.notify = g_strdup("<none>");
       }
+      g_strfreev (cmdline);
     }
-    g_free (cmdline);
-  #else
-    #ifdef G_OS_WIN32
-      sndPlaySound (g_build_filename (workingdir, "jingle.wav", NULL), SND_ASYNC);
-    #endif
-  #endif
-
-    g_free (fldr);
-    g_free (workingdir);
-  }
-  else if (g_strcmp0(data->window->settings.notify,"<none>") != 0)
-  {
-    gchar** cmdline;
-    cmdline[0] = g_strdup(data->window->settings.notify);
-    cmdline[1] = 0;
-    if (!g_spawn_async (NULL, cmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
-    {
-      err("Failed to launch audio notification process.");
-      g_free (data->window->settings.notify);
-      data->window->settings.notify = g_strdup("<none>");
-    }
-    g_strfreev (cmdline);
   }
 }
 
@@ -4120,6 +4200,78 @@ void notify_cb(NotifyNotification* note, gchar* action, DevchatCBData* data)
   gtk_window_present (GTK_WINDOW(data->window->window));
 }
 #endif
+
+void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data)
+{
+  gtk_status_icon_set_blinking (icon, FALSE);
+  if (gtk_widget_get_visible (data->window->window))
+  {
+    gtk_window_get_position (GTK_WINDOW (data->window->window), &data->window->settings.x, &data->window->settings.y);
+    if (gtk_window_has_toplevel_focus (GTK_WINDOW (data->window->window)))
+    {
+      gtk_widget_hide (data->window->window);
+    }
+    else
+    {
+      gtk_window_present (GTK_WINDOW (data->window->window));
+      gtk_window_move (GTK_WINDOW (data->window->window), data->window->settings.x, data->window->settings.y);
+    }
+  }
+  else
+  {
+    gtk_widget_show (data->window->window);
+    gtk_window_move (GTK_WINDOW (data->window->window), data->window->settings.x, data->window->settings.y);
+  }
+}
+
+void show_tray_menu (GtkStatusIcon* icon, guint button, guint activate_time, DevchatCBData* data)
+{
+  GtkWidget* menu = gtk_menu_new ();
+
+  GtkWidget* item_status = gtk_menu_item_new_with_label ("Change Status...");
+
+  GtkWidget* item_status_online = gtk_menu_item_new_with_label ("Online");
+  g_signal_connect (item_status_online, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (0)));
+  GtkWidget* item_status_away = gtk_menu_item_new_with_label ("Away");
+  g_signal_connect (item_status_away, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (1)));
+  GtkWidget* item_status_dnd = gtk_menu_item_new_with_label ("DND");
+  g_signal_connect (item_status_dnd, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (2)));
+
+  GtkMenuShell* sub_status = GTK_MENU_SHELL(gtk_menu_new());
+  gtk_menu_shell_append(sub_status, item_status_online);
+  gtk_menu_shell_append(sub_status, item_status_away);
+  gtk_menu_shell_append(sub_status, item_status_dnd);
+
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (item_status), GTK_WIDGET (sub_status));
+
+  GtkWidget* item_quit = gtk_image_menu_item_new_from_stock (GTK_STOCK_QUIT, NULL);
+  g_signal_connect (item_quit, "activate", G_CALLBACK (destroy), data);
+
+  gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_status);
+  gtk_menu_shell_append (GTK_MENU_SHELL (menu), gtk_menu_item_new ());
+  gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_quit);
+
+  gtk_widget_show_all (menu);
+
+  gtk_menu_popup (GTK_MENU (menu), NULL, NULL, gtk_status_icon_position_menu, icon, button, activate_time);
+}
+
+void tray_status_change (GtkWidget* w, DevchatCBData* data)
+{
+  gchar* msg;
+  switch (GPOINTER_TO_INT (data->data))
+  {
+    case 0: msg = "/back"; break;
+    case 1: msg = "/away"; break;
+    case 2: msg = "/dnd"; break;
+    default: return;
+  }
+  gtk_text_buffer_set_text (data->window->input, msg, -1);
+  gint old_page = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
+  devchat_window_btn_send (NULL, data);
+  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), old_page);
+}
 
 gchar* current_time ()
 {
@@ -4136,7 +4288,7 @@ gchar* current_time ()
 
 void err(gchar* message)
 {
-  g_warning ("ERROR: %s.", message);
+  g_critical ("ERROR: %s.", message);
 }
 
 #ifdef DEBUG

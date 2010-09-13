@@ -52,30 +52,32 @@ main (int argc, char *argv[])
     {
       gchar* g = "Devchat";
       GError* e = NULL;
-      g_object_set (self, "browser", g_key_file_get_value (keyfile, g, "BROWSER", &e),NULL);
-      g_object_set (self, "color_font", g_key_file_get_string (keyfile, g, "COLOR_FONT", &e),NULL);
-      g_object_set (self, "color_l1", g_key_file_get_string (keyfile, g, "COLOR_L1", &e),NULL);
-      g_object_set (self, "color_l3", g_key_file_get_string (keyfile, g, "COLOR_L3", &e),NULL);
-      g_object_set (self, "color_l5", g_key_file_get_string (keyfile, g, "COLOR_L5", &e),NULL);
-      g_object_set (self, "color_l6", g_key_file_get_string (keyfile, g, "COLOR_L6", &e),NULL);
-      g_object_set (self, "color_greens", g_key_file_get_string (keyfile, g, "COLOR_GREENS", &e),NULL);
-      g_object_set (self, "color_blues", g_key_file_get_string (keyfile, g, "COLOR_BLUES", &e),NULL);
-      g_object_set (self, "color_time", g_key_file_get_string (keyfile, g, "COLOR_TIME", &e),NULL);
-      g_object_set (self, "color_url", g_key_file_get_string (keyfile, g, "COLOR_URL", &e),NULL);
-      g_object_set (self, "color_url_visited", g_key_file_get_string (keyfile, g, "COLOR_URL_VISITED", &e),NULL);
-      g_object_set (self, "color_url_hover", g_key_file_get_string (keyfile, g, "COLOR_URL_HOVER", &e),NULL);
-      g_object_set (self, "color_highlight", g_key_file_get_string (keyfile, g, "COLOR_HIGHLIGHT", &e),NULL);
-      g_object_set (self, "user", g_key_file_get_value (keyfile, g, "USER", &e),NULL);
-      g_object_set (self, "pass", g_key_file_get_value (keyfile, g, "PASS", &e),NULL);
-      g_object_set (self, "notify", g_key_file_get_value (keyfile, g, "NOTIFY", &e),NULL);
-      g_object_set (self, "vnotify", g_key_file_get_value (keyfile, g, "VNOTIFY", &e),NULL);
-      g_object_set (self, "showid", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWID", &e),"true") == 0,NULL);
-      g_object_set (self, "stealthjoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "STEALTHJOIN", &e),"true") == 0,NULL);
-      g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0,NULL);
-      g_object_set (self, "showhidden", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWHIDDEN", &e),"true") == 0,NULL);
-      g_object_set (self, "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,NULL);
-      g_object_set (self, "x", g_key_file_get_integer (keyfile, g, "X", &e),NULL);
-      g_object_set (self, "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
+
+      if (g_key_file_has_key (keyfile, g, "SERVER_NAME", &e))
+        self->settings.servername = g_key_file_get_string (keyfile, g, "SERVER_NAME", &e);
+
+      g_object_set (self, "browser", g_key_file_get_value (keyfile, g, "BROWSER", &e), "color_font", g_key_file_get_string (keyfile, g, "COLOR_FONT", &e),
+      "color_l1", g_key_file_get_string (keyfile, g, "COLOR_L1", &e),
+      "color_l3", g_key_file_get_string (keyfile, g, "COLOR_L3", &e),
+      "color_l5", g_key_file_get_string (keyfile, g, "COLOR_L5", &e),
+      "color_l6", g_key_file_get_string (keyfile, g, "COLOR_L6", &e),
+      "color_greens", g_key_file_get_string (keyfile, g, "COLOR_GREENS", &e),
+      "color_blues", g_key_file_get_string (keyfile, g, "COLOR_BLUES", &e),
+      "color_time", g_key_file_get_string (keyfile, g, "COLOR_TIME", &e),
+      "color_url", g_key_file_get_string (keyfile, g, "COLOR_URL", &e),
+      "color_url_visited", g_key_file_get_string (keyfile, g, "COLOR_URL_VISITED", &e),
+      "color_url_hover", g_key_file_get_string (keyfile, g, "COLOR_URL_HOVER", &e),
+      "color_highlight", g_key_file_get_string (keyfile, g, "COLOR_HIGHLIGHT", &e),
+      "user", g_key_file_get_value (keyfile, g, "USER", &e),
+      "pass", g_key_file_get_value (keyfile, g, "PASS", &e),
+      "notify", g_key_file_get_value (keyfile, g, "NOTIFY", &e),
+      "vnotify", g_key_file_get_value (keyfile, g, "VNOTIFY", &e),
+      "showid", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWID", &e),"true") == 0,
+      "stealthjoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "STEALTHJOIN", &e),"true") == 0,
+      "showhidden", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWHIDDEN", &e),"true") == 0,
+      "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,
+      "x", g_key_file_get_integer (keyfile, g, "X", &e),
+      "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
       if (g_key_file_has_key (keyfile, g, "HANDLE_WIDTH", &e))
         g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLE_WIDTH", &e),NULL);
       else
@@ -96,6 +98,10 @@ main (int argc, char *argv[])
         self->settings.store_pass = FALSE;
       if (g_key_file_has_key (keyfile, g, "COLOR_GOLDIES", &e))
         g_object_set (self, "color_goldies", g_key_file_get_string (keyfile, g, "COLOR_GOLDIES", &e),NULL);
+      if (g_key_file_has_key (keyfile, g, "SHOW_TRAY", &e))
+        g_object_set (self, "trayicon", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOW_TRAY", &e),"true") == 0,NULL);
+      if (g_key_file_has_key (keyfile, g, "JUMP_TAB", &e))
+        self->settings.jumptab = g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "JUMP_TAB", &e),"true") == 0;
 
       gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
       int i;
@@ -110,6 +116,9 @@ main (int argc, char *argv[])
       g_strfreev (presets);
 
       devchat_window_refresh_presets (self);
+
+
+      g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0, NULL);
 
       if (e)
         g_error ("Errors occured while loading settings: %s.", e->message);
@@ -173,7 +182,10 @@ main (int argc, char *argv[])
   devchat_window_refresh_smilies (self);
 
   /*FIXME: gtk_window_set_icon_list */
-  gtk_window_set_icon_from_file(GTK_WINDOW(self->window), g_build_filename(self->workingdir, "dcgui.png",NULL),NULL);
+  gchar* iconname = g_build_filename(self->workingdir, "dcgui.png",NULL);
+  gtk_window_set_icon_from_file (GTK_WINDOW(self->window), iconname, NULL);
+  gtk_status_icon_set_from_file (GTK_STATUS_ICON (self->trayicon), iconname);
+  g_free (iconname);
 
   self->avadir = g_build_filename (g_get_user_cache_dir(),"avatars",NULL);
 
