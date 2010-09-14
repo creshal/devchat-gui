@@ -750,27 +750,27 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_HANDLE_WIDTH, g_param_spec_int
                                                      ( "handle_width", "Position of the text view/user list separator",
-                                                       "Determines the width of the text output widget.", 360, 65535, 420,
+                                                       "Determines the width of the text output widget.", 0, INT_MAX, 420,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_WIDTH, g_param_spec_int
                                                      ( "width", "Window width",
-                                                       "Width of the window.", 480, 65535, 600,
+                                                       "Width of the window.", 480, INT_MAX, 600,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_HEIGHT, g_param_spec_int
                                                      ( "height", "Window height",
-                                                       "Height of the window.", 320, 65535, 400,
+                                                       "Height of the window.", 320, INT_MAX, 400,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_X, g_param_spec_int
                                                      ( "x", "Window x position",
-                                                       "X position of the window.", 0, 65535, 0,
+                                                       "X position of the window.", 0, INT_MAX, 0,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_Y, g_param_spec_int
                                                      ( "y", "Window y position",
-                                                       "Y position of the window.", 0, 65535, 0,
+                                                       "Y position of the window.", 0, INT_MAX, 0,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
 }
@@ -3069,11 +3069,11 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   for (i=0; rc_lines[i] != NULL && i < 255; i++)
   {
     gchar* stripped_line = g_strstrip (rc_lines[i]);
-    if (g_str_has_prefix (stripped_line, "gtk-theme-name=\""))
+    if (g_strstr_len (stripped_line, -1, "gtk-theme-name=\""))
     {
-      if (g_str_has_prefix (stripped_line+16, "Classic"))
+      if (g_strstr_len (stripped_line, -1, "Classic"))
         gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 1);
-      else if (g_str_has_prefix (stripped_line+16, "Aero"))
+      else if (g_strstr_len (stripped_line, -1, "Aero"))
         gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 0);
       else
         gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 2);
@@ -3222,7 +3222,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
     #ifdef G_OS_WIN32
       gchar* rc_line = g_strdup_printf ("gtk-theme-name=\"%s\"\r\n", gtk_combo_box_get_active_text (GTK_COMBO_BOX (combo_theme)));
-      g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, NULL, NULL);
+      g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, -1, NULL);
       g_free (rc_line);
     #endif
 

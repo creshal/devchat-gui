@@ -78,12 +78,12 @@ main (int argc, char *argv[])
       "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,
       "x", g_key_file_get_integer (keyfile, g, "X", &e),
       "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
+      g_object_set (self, "width", g_key_file_get_integer (keyfile, g, "WIDTH", &e),NULL);
+      g_object_set (self, "height", g_key_file_get_integer (keyfile, g, "HEIGHT", &e),NULL);
       if (g_key_file_has_key (keyfile, g, "HANDLE_WIDTH", &e))
         g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLE_WIDTH", &e),NULL);
       else
         g_object_set (self, "handle_width", 400, NULL);
-      g_object_set (self, "width", g_key_file_get_integer (keyfile, g, "WIDTH", &e),NULL);
-      g_object_set (self, "height", g_key_file_get_integer (keyfile, g, "HEIGHT", &e),NULL);
       if (g_key_file_has_key (keyfile, g, "AVATARSIZE", &e))
         self->settings.avatar_size = g_key_file_get_integer (keyfile, g, "AVATARSIZE", &e);
       else
