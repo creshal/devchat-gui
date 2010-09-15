@@ -60,12 +60,14 @@ enum {
   SETTINGS_HEIGHT,
   SETTINGS_X,
   SETTINGS_Y,
-  SETTINGS_TRAYICON
+  SETTINGS_TRAYICON,
+  SETTINGS_MAXIMIZED
 } params;
 
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
 static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
-
+gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatCBData* data);
+gboolean paned_update (DevchatCBData* data);
 void save_settings (DevchatWindow* w);
 void tray_status_change (GtkWidget* w, DevchatCBData* data);
 void url_tag_nv_color_cb (GtkTextTag* t, gchar* value);
@@ -162,19 +164,19 @@ devchat_window_init (DevchatWindow* self)
   self->conversations = g_hash_table_new (g_str_hash, g_str_equal);
 
   self->settings.browser = g_strdup("<native>");
-  self->settings.color_font = g_strdup("#eeeeec");
-  self->settings.color_l1 = g_strdup("#2e3436");
-  self->settings.color_l3 = g_strdup("#543535");
-  self->settings.color_l5 = g_strdup("#354254");
-  self->settings.color_l6 = g_strdup("#45513a");
-  self->settings.color_goldies = g_strdup ("#ffcc00");
-  self->settings.color_greens = g_strdup("#8ae234");
-  self->settings.color_blues = g_strdup("#729fcf");
-  self->settings.color_time = g_strdup("#babdb6");
-  self->settings.color_url = g_strdup("#fce94f");
-  self->settings.color_url_visited = g_strdup("#fcaf3e");
-  self->settings.color_url_hover = g_strdup("#e9b96e");
-  self->settings.color_highlight = g_strdup("#ef2929");
+  self->settings.color_font = g_strdup("#fff");
+  self->settings.color_l1 = g_strdup("#222");
+  self->settings.color_l3 = g_strdup("#533");
+  self->settings.color_l5 = g_strdup("#344");
+  self->settings.color_l6 = g_strdup("#453");
+  self->settings.color_goldies = g_strdup ("#fc0");
+  self->settings.color_greens = g_strdup("#0c7");
+  self->settings.color_blues = g_strdup("#47f");
+  self->settings.color_time = g_strdup("#999");
+  self->settings.color_url = g_strdup("#ff0");
+  self->settings.color_url_visited = g_strdup("#ff0");
+  self->settings.color_url_hover = g_strdup("#fff");
+  self->settings.color_highlight = g_strdup("#c00");
   self->settings.user = g_strdup(g_get_user_name());
   self->settings.pass = g_strdup("hidden");
   self->settings.store_pass = FALSE;
@@ -200,6 +202,7 @@ devchat_window_init (DevchatWindow* self)
   self->buf_current = 0;
   self->search_start_set = FALSE;
   self->dnd = FALSE;
+  self->settings.maximized = FALSE;
 
   gint j;
 
@@ -223,6 +226,7 @@ devchat_window_init (DevchatWindow* self)
   self->accelgroup = gtk_accel_group_new();
   gtk_window_add_accel_group(GTK_WINDOW(self->window), self->accelgroup);
   g_signal_connect(self->window, "destroy", G_CALLBACK(destroy), self_data);
+  g_signal_connect (self->window, "window-state-event", G_CALLBACK (track_window_state), self_data);
 
   GtkMenuItem* menu_main = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Main"));
   GtkMenuItem* menu_edit = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Edit"));
@@ -455,9 +459,6 @@ devchat_window_init (DevchatWindow* self)
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller2),GTK_SHADOW_ETCHED_IN);
   gtk_paned_pack2 (GTK_PANED(hpaned1), scroller2, FALSE, FALSE);
 
-  gtk_paned_set_position (GTK_PANED(hpaned1), self->settings.handle_width);
-
-
   GtkWidget* vbox2 = gtk_vbox_new (FALSE, 0);
   gtk_widget_set_size_request (vbox2, -1, 74);
 
@@ -589,7 +590,7 @@ devchat_window_init (DevchatWindow* self)
   otrl_privkey_read (self->otr_state, otr_key_filename);
   otrl_privkey_read_fingerprints (self->otr_state, otr_fingerprint_filename, NULL, NULL); /*TODO: Callback?*/
   /*TODO: Fill self->otr_funcs*/
-  self->otr_funcs.policy = (OtrlPolicy* (void *, ConnContext *)) otr_policy;
+  self->otr_funcs.policy = otr_policy;
   self->otr_funcs.create_privkey = otr_create_privkey;
   self->otr_funcs.is_logged_in = otr_is_logged_in;
   self->otr_funcs.inject_message = otr_inject_message;
@@ -750,7 +751,7 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_HANDLE_WIDTH, g_param_spec_int
                                                      ( "handle_width", "Position of the text view/user list separator",
-                                                       "Determines the width of the text output widget.", 0, INT_MAX, 420,
+                                                       "Determines the width of the text output widget.", 0, INT_MAX, 0,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
   g_object_class_install_property (gobject_class, SETTINGS_WIDTH, g_param_spec_int
@@ -771,6 +772,11 @@ devchat_window_class_init (DevchatWindowClass* klass)
   g_object_class_install_property (gobject_class, SETTINGS_Y, g_param_spec_int
                                                      ( "y", "Window y position",
                                                        "Y position of the window.", 0, INT_MAX, 0,
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_MAXIMIZED, g_param_spec_boolean
+                                                     ( "maximized", "Maximize Window",
+                                                       "Indicates whether the window should be maximized.", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
 }
@@ -856,8 +862,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_NOTIFY: window->settings.notify = g_value_dup_string (value); break;
     case SETTINGS_VNOTIFY: window->settings.vnotify = g_value_dup_string (value); break;
     case SETTINGS_HANDLE_WIDTH: window->settings.handle_width = g_value_get_int (value);
-                         GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (window->userlist_port));
-                         gtk_paned_set_position (GTK_PANED(hpaned1), window->settings.handle_width); break;
+                         g_timeout_add (125, (GSourceFunc) paned_update, devchat_cb_data_new (window, NULL)); break;
     case SETTINGS_WIDTH: window->settings.width = g_value_get_int (value);
                          gtk_window_resize (GTK_WINDOW (window->window), window->settings.width, window->settings.height); break;
     case SETTINGS_HEIGHT: window->settings.height = g_value_get_int (value);
@@ -868,7 +873,19 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                          gtk_window_move (GTK_WINDOW (window->window), window->settings.x, window->settings.y); break;
     case SETTINGS_TRAYICON: window->settings.showtray = g_value_get_boolean (value);
                             gtk_status_icon_set_visible (GTK_STATUS_ICON (window->trayicon), window->settings.showtray); break;
+    case SETTINGS_MAXIMIZED: window->settings.maximized = g_value_get_boolean (value);
+                             if (window->settings.maximized)
+                               gtk_window_maximize (GTK_WINDOW (window->window));
+                             else
+                               gtk_window_unmaximize (GTK_WINDOW (window->window)); break;
   }
+}
+
+gboolean paned_update (DevchatCBData* data)
+{
+  GtkWidget* hpaned1 = gtk_widget_get_parent (gtk_widget_get_parent (data->window->userlist_port));
+  gtk_paned_set_position (GTK_PANED(hpaned1), data->window->settings.handle_width);
+  return FALSE;
 }
 
 void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data)
@@ -987,17 +1004,18 @@ void save_settings (DevchatWindow* w)
   gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
   gtk_window_get_size (GTK_WINDOW (w->window), &w->settings.width, &w->settings.height);
 
-  GtkHPaned* hpaned1 = GTK_HPANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
-  g_object_get (hpaned1, "position", &(w->settings.handle_width), NULL);
+  GtkPaned* hpaned1 = GTK_PANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
+  w->settings.handle_width = gtk_paned_get_position (hpaned1);
 
-  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\nSHOW_TRAY=%s\nJUMP_TAB=%s\n", w->settings.showid? "TRUE":"FALSE",
+  gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\nSHOW_TRAY=%s\nJUMP_TAB=%s\nMAXIMIZED=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",
                                          w->settings.store_pass? (w->settings.autojoin? "TRUE" : "FALSE") : "FALSE",
                                          w->settings.showhidden? "TRUE" : "FALSE",
                                          w->settings.coloruser? "TRUE" : "FALSE",
                                          w->settings.store_pass? "TRUE" : "FALSE",
                                          w->settings.showtray? "TRUE" : "FALSE",
-                                         w->settings.jumptab? "TRUE" : "FALSE");
+                                         w->settings.jumptab? "TRUE" : "FALSE",
+                                         w->settings.maximized? "TRUE":"FALSE");
 
   gchar* settings = g_strconcat ("#Settings file for DevchatGUI. Please do not alter the key names.\n \
 #Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
@@ -1560,12 +1578,12 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         /*Workaround for imageshack being TOO MOTHERFUCKING RETARDED to return a 404.*/
         if (g_strcmp0 ("404", a_m->response_body->data) != 0)
         {
-          GError* err = NULL;
+          GError* error = NULL;
           gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
-          if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &err))
+          if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &error))
           {
-            g_printf ("Error while saving avatar: %s.", err->message);
-            g_error_free (err);
+            err (g_strdup_printf ("Error while saving avatar: %s.", error->message));
+            g_error_free (error);
           }
           g_free (filename);
         }
@@ -2297,7 +2315,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           if (smilie)
           {
           #ifdef DEBUG
-            dbg ("Found smilie in database. ");
+            dbg ("Found smilie in database.");
           #endif
             gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
             gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
@@ -2336,11 +2354,11 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               SoupMessage* i_m = soup_message_new ("GET", uri);
               if (soup_session_send_message (data->window->session, i_m) == 200)
               {
-                GError* err = NULL;
-                if (!g_file_set_contents (filename, i_m->response_body->data, i_m->response_body->length, &err))
+                GError* error = NULL;
+                if (!g_file_set_contents (filename, i_m->response_body->data, i_m->response_body->length, &error))
                 {
-                  g_printf ("Error while saving avatar: %s.", err->message);
-                  g_error_free (err);
+                  err (g_strdup_printf ("Error while saving image: %s.", error->message));
+                  g_error_free (error);
                 }
               }
             }
@@ -4029,7 +4047,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
     gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK (data->window->notebook), conv->child, TRUE);
   }
   gtk_widget_show_all (conv->child);
-  if (data->window->settings.jumptab)
+  if (data->window->settings.jumptab || widget)
   {
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_page_num (GTK_NOTEBOOK (data->window->notebook), conv->child));
     if (conv->in_widget)
@@ -4210,6 +4228,7 @@ void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data)
     if (gtk_window_has_toplevel_focus (GTK_WINDOW (data->window->window)))
     {
       gtk_widget_hide (data->window->window);
+      data->window->settings.update_time *= 10;
     }
     else
     {
@@ -4219,6 +4238,7 @@ void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data)
   }
   else
   {
+    data->window->settings.update_time /= 10;
     gtk_widget_show (data->window->window);
     gtk_window_move (GTK_WINDOW (data->window->window), data->window->settings.x, data->window->settings.y);
   }
@@ -4273,6 +4293,19 @@ void tray_status_change (GtkWidget* w, DevchatCBData* data)
   gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), old_page);
 }
 
+gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatCBData* data)
+{
+  if (s->changed_mask & GDK_WINDOW_STATE_MAXIMIZED)
+  {
+    if (s->new_window_state & GDK_WINDOW_STATE_MAXIMIZED)
+      data->window->settings.maximized = TRUE;
+    else
+      data->window->settings.maximized = FALSE;
+  }
+
+  return TRUE;
+}
+
 gchar* current_time ()
 {
   time_t rawtime = time (NULL);
@@ -4288,7 +4321,15 @@ gchar* current_time ()
 
 void err(gchar* message)
 {
-  g_critical ("ERROR: %s.", message);
+#ifdef G_OS_UNIX
+  g_warning ("ERROR: %s.", message);
+#else
+  #ifdef G_OS_WIN32
+  FILE* logfile = fopen (g_build_filename (g_getenv ("TEMP"), "dcgui_error.log", NULL), "a");
+  fprintf (logfile, "%s\n", message);
+  fclose (logfile);
+  #endif
+#endif
 }
 
 #ifdef DEBUG

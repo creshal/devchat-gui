@@ -77,13 +77,11 @@ main (int argc, char *argv[])
       "showhidden", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "SHOWHIDDEN", &e),"true") == 0,
       "coloruser", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "COLORUSER", &e),"true") == 0,
       "x", g_key_file_get_integer (keyfile, g, "X", &e),
-      "y", g_key_file_get_integer (keyfile, g, "Y", &e),NULL);
-      g_object_set (self, "width", g_key_file_get_integer (keyfile, g, "WIDTH", &e),NULL);
-      g_object_set (self, "height", g_key_file_get_integer (keyfile, g, "HEIGHT", &e),NULL);
-      if (g_key_file_has_key (keyfile, g, "HANDLE_WIDTH", &e))
-        g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLE_WIDTH", &e),NULL);
-      else
-        g_object_set (self, "handle_width", 400, NULL);
+      "y", g_key_file_get_integer (keyfile, g, "Y", &e),
+      "width", g_key_file_get_integer (keyfile, g, "WIDTH", &e),
+      "height", g_key_file_get_integer (keyfile, g, "HEIGHT", &e),NULL);
+      if (g_key_file_has_key (keyfile, g, "MAXIMIZED", &e))
+        g_object_set (self, "maximized", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "MAXIMIZED", &e),"true") == 0, NULL);
       if (g_key_file_has_key (keyfile, g, "AVATARSIZE", &e))
         self->settings.avatar_size = g_key_file_get_integer (keyfile, g, "AVATARSIZE", &e);
       else
@@ -117,6 +115,10 @@ main (int argc, char *argv[])
 
       devchat_window_refresh_presets (self);
 
+      if (g_key_file_has_key (keyfile, g, "HANDLE_WIDTH", &e))
+        g_object_set (self, "handle_width", g_key_file_get_integer (keyfile, g, "HANDLE_WIDTH", &e),NULL);
+      else
+        g_object_set (self, "handle_width", 400, NULL);
 
       g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0, NULL);
 

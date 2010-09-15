@@ -88,7 +88,7 @@ typedef struct dc_settings
   gint y;
   guint update_time;
   guint avatar_size;
-  guint handle_width;
+  gint handle_width;
   GSList* keywords;
   gchar* presets[10];
   gboolean showid;
@@ -99,6 +99,7 @@ typedef struct dc_settings
   gboolean store_pass;
   gboolean showtray;
   gboolean jumptab;
+  gboolean maximized;
 } dc_settings;
 
 enum
