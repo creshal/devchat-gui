@@ -1,5 +1,5 @@
 pkgname=dcgui
-pkgver=0.5.4
+pkgver=0.5.5
 pkgrel=1
 pkgdesc="A Gtk+ based Devchat client."
 arch=('i686' 'x86_64')
@@ -8,7 +8,7 @@ license=('GPL')
 depends=('libsoup' 'gtk2' 'libnotify' 'hicolor-icon-theme' 'libxml2')
 makedepends=('pkgconfig' 'clang')
 source=(http://dev.yaki-syndicate.de/git/cgit.cgi/$pkgname/snapshot/$pkgname-$pkgver.tar.bz2)
-md5sums=(8e27dfc71ec69a900c90d68e69f2bd9d)
+md5sums=(9d21baf7594e231c98daf53c87a18eb0)
 conflicts=('devchat-gui')
 provides=('devchat-gui')
 
