@@ -1091,6 +1091,14 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
     gtk_widget_set_sensitive(data->window->user_entry,TRUE);
     gtk_widget_set_sensitive(data->window->pass_entry,TRUE);
   }
+  else if (g_strrstr(msg->response_body->data,"Visual Confirmation"))
+  {
+    err ("Login failed, limit reached.");
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login failed, account locked. Please visit the forum and re-activate manually.");
+    gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
+    gtk_widget_set_sensitive(data->window->user_entry,TRUE);
+    gtk_widget_set_sensitive(data->window->pass_entry,TRUE);
+  }
   else
   {
   #ifdef DEBUG
