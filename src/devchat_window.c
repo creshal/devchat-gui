@@ -590,24 +590,24 @@ devchat_window_init (DevchatWindow* self)
   otrl_privkey_read (self->otr_state, otr_key_filename);
   otrl_privkey_read_fingerprints (self->otr_state, otr_fingerprint_filename, NULL, NULL); /*TODO: Callback?*/
   /*TODO: Fill self->otr_funcs*/
-  self->otr_funcs.policy = otr_policy;
-  self->otr_funcs.create_privkey = otr_create_privkey;
-  self->otr_funcs.is_logged_in = otr_is_logged_in;
-  self->otr_funcs.inject_message = otr_inject_message;
-  self->otr_funcs.notify = otr_notify;
-  self->otr_funcs.display_otr_message = otr_display_otr_message;
-  self->otr_funcs.update_context_list = otr_update_context_list;
-  self->otr_funcs.protocol_name = otr_protocol_name;
-  self->otr_funcs.protocol_name_free = otr_protocol_name_free;
-  self->otr_funcs.new_fingerprint = otr_new_fingerprint;
-  self->otr_funcs.write_fingerprints = otr_write_fingerprints;
-  self->otr_funcs.gone_secure = otr_gone_secure;
-  self->otr_funcs.gone_insecure = otr_gone_insecure;
-  self->otr_funcs.still_secure = otr_still_secure;
-  self->otr_funcs.log_message = otr_log_message;
-  self->otr_funcs.max_message_size = otr_max_message_size; /*8192 to keep the server load acceptable*/
-  self->otr_funcs.account_name = otr_account_name;
-  self->otr_funcs.account_name_free = otr_protocol_name_free;
+  self->otr_funcs.policy = (OtrlPolicy (*)(void *, ConnContext *)) otr_policy;
+  self->otr_funcs.create_privkey = (void (*)(void *, char const *, char const *)) otr_create_privkey;
+  self->otr_funcs.is_logged_in = (int (*)(void *, char const *, char const *, char const *)) otr_is_logged_in;
+  self->otr_funcs.inject_message = (void (*)(void *, char const *, char const *, char const *, char const *)) otr_inject_message;
+  self->otr_funcs.notify = (void (*)(void *, OtrlNotifyLevel, char const *, char const *, char const *, char const *, char const *, char const *)) otr_notify;
+  self->otr_funcs.display_otr_message = (int (*)(void *, char const *, char const *, char const *, char const *)) otr_display_otr_message;
+  self->otr_funcs.update_context_list = (void (*)(void *)) otr_update_context_list;
+  self->otr_funcs.protocol_name = (char const *(*)(void *, char const *)) otr_protocol_name;
+  self->otr_funcs.protocol_name_free = (void (*)(void *, char const *)) otr_protocol_name_free;
+  self->otr_funcs.new_fingerprint = (void (*)(void *, OtrlUserState, char const *, char const *, char const *, unsigned char *)) otr_new_fingerprint;
+  self->otr_funcs.write_fingerprints = (void (*)(void *)) otr_write_fingerprints;
+  self->otr_funcs.gone_secure = (void (*)(void *, ConnContext *)) otr_gone_secure;
+  self->otr_funcs.gone_insecure = (void (*)(void *, ConnContext *)) otr_gone_insecure;
+  self->otr_funcs.still_secure = (void (*)(void *, ConnContext *, int)) otr_still_secure;
+  self->otr_funcs.log_message = (void (*)(void *, char const *)) otr_log_message;
+  self->otr_funcs.max_message_size = (int (*)(void *, ConnContext *)) otr_max_message_size; /*8192 to keep the server load acceptable*/
+  self->otr_funcs.account_name = (char const *(*)(void *, char const *, char const *)) otr_account_name;
+  self->otr_funcs.account_name_free = (void (*)(void *, char const *)) otr_protocol_name_free;
 #endif
 
   self->users_without_avatar = NULL;
@@ -2080,7 +2080,7 @@ gboolean badass (gchar* name, DevchatCBData* data)
 
 void parse_message (gchar* message_d, DevchatCBData* data)
 {
-
+  /*Abandon all hope, ye who enter here.*/
   enum
   {
     STATE_DATA,
@@ -3692,6 +3692,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   GtkTextIter start;
   GtkTextIter end;
   GtkWidget* chk_raw;
+#ifdef OTR
+  gchar* target = NULL;
+#endif
 
   if (pagenum == 0)
   {
@@ -3709,7 +3712,10 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   #ifdef DEBUG
     dbg ("Sending PM.");
   #endif
-    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+  #ifndef OTR
+    gchar* target;
+  #endif
+    target = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum)));
     DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
     buf = conv->in_buffer;
     chk_raw = conv->chk_raw;
@@ -3744,7 +3750,22 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       gtk_text_buffer_set_text (buf, "", 0);
     data->window->buf_current = 0;
 
-
+  #ifdef OTR
+    if (target)
+    {
+      gchar* new_text = NULL;
+      if (otrl_message_sending (data->window->otr_state, &(data->window->otr_funcs), data->window, data->window->settings.username, "x-devchat", target, text, NULL, &new_text, NULL, NULL) != 0)
+      {
+        err ("OTR encryption failed!");
+        return;
+      }
+      if (new_text)
+      {
+        g_free (text);
+        text = new_text;
+      }
+    }
+  #endif
 
     gchar* enc_text = "";
 
@@ -3841,6 +3862,11 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     g_free (enc_text);
     g_free (tmp);
   }
+#ifndef OTR
+  g_free (text);
+#else
+  otrl_message_free (text);
+#endif
 }
 
 void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
@@ -4313,6 +4339,63 @@ gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatC
 
   return TRUE;
 }
+
+#ifdef OTR
+OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt)
+{}
+
+void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol)
+{}
+
+int otr_is_logged_in (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient)
+{}
+
+void otr_inject_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient, const gchar* message)
+{}
+
+void otr_notify (DevchatWindow* window, OtrlNotifyLevel l, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* title, const gchar* primary, const gchar* secondary)
+{}
+
+int otr_display_otr_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* message)
+{}
+
+void otr_update_context_list (DevchatWindow* window)
+{}
+
+const gchar* otr_protocol_name (DevchatWindow* window, const gchar* protocol)
+{}
+
+const gchar* otr_protocol_name_free (DevchatWindow* window, const gchar* string)
+{}
+
+void otr_new_fingerprint (DevchatWindow* window, OtrlUserState us, const gchar* accname, const gchar* protocol, const gchar* username, guchar fingerprint[20])
+{}
+
+void otr_write_fingerprints (DevchatWindow* window)
+{}
+
+void otr_gone_secure (DevchatWindow* window, ConnContext* ctxt)
+{}
+
+void otr_gone_insecure (DevchatWindow* window, ConnContext* ctxt)
+{}
+
+void otr_still_secure (DevchatWindow* window, ConnContext* ctxt, int is_reply)
+{}
+
+void otr_log_message (DevchatWindow* window, gchar* message)
+{}
+
+int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt)
+{
+  return 8192;
+}
+
+const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol)
+{
+
+}
+#endif
 
 gchar* current_time ()
 {
