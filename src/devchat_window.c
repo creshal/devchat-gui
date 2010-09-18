@@ -1290,235 +1290,243 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
   #endif
 
-  if (data->window->users_online)
+  if (m->status_code == 200)
   {
-    g_slist_free (data->window->users_online);
-    data->window->users_online = NULL;
-  }
-
-  data->window->usr_list_parsed = TRUE;
-
-  gchar* userlist = g_strdup (m->response_body->data);
-  if (userlist)
-  {
-  #ifdef DEBUG
-    dbg ("Got non-empty userlist.");
-  #else
-    gchar* dbg_msg;
-  #endif
-    dbg_msg = g_strdup_printf("Last Update: %s",current_time());
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
-    g_free (dbg_msg);
-
-    xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT));
-    xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
-
-    GdkColor l1;
-    gdk_color_parse (data->window->settings.color_l1, &l1);
-
-    gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
-
-    GtkSizeGroup* sg = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
-
-    guint usercount = 0;
-    while (xmlTextReaderRead (userparser) > 0)
+    if (data->window->users_online)
     {
-      gchar* node = (gchar*) xmlTextReaderLocalName(userparser);
+      g_slist_free (data->window->users_online);
+      data->window->users_online = NULL;
+    }
 
-      if (node && (g_strcmp0 (node,"cu") == 0))
+    data->window->usr_list_parsed = TRUE;
+
+    gchar* userlist = g_strdup (m->response_body->data);
+    if (userlist)
+    {
+    #ifdef DEBUG
+      dbg ("Got non-empty userlist.");
+    #else
+      gchar* dbg_msg;
+    #endif
+      dbg_msg = g_strdup_printf("Last Update: %s",current_time());
+      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
+      g_free (dbg_msg);
+
+      xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT));
+      xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
+
+      GdkColor l1;
+      gdk_color_parse (data->window->settings.color_l1, &l1);
+
+      gtk_container_foreach (GTK_CONTAINER (data->window->userlist), (GtkCallback) user_list_clear_cb, data);
+
+      GtkSizeGroup* sg = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+
+      guint usercount = 0;
+      while (xmlTextReaderRead (userparser) > 0)
       {
-        usercount++;
-        gchar* name = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "n");
-        gchar* uid = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "uid");
-        gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
-        gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
+        gchar* node = (gchar*) xmlTextReaderLocalName(userparser);
 
-        g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
-        data->window->users_online = g_slist_prepend (data->window->users_online, g_strdup (uid));
-
-        if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
+        if (node && (g_strcmp0 (node,"cu") == 0))
         {
+          usercount++;
+          gchar* name = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "n");
+          gchar* uid = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "uid");
+          gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
+          gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
 
-          if (!g_slist_find_custom (data->window->users_without_avatar,uid, (GCompareFunc) user_lookup) && !g_hash_table_lookup (data->window->avatars, uid))
+          g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
+          data->window->users_online = g_slist_prepend (data->window->users_online, g_strdup (uid));
+
+          if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
           {
-            gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
 
-          #ifdef DEBUG
-            dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
-
-            if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
+            if (!g_slist_find_custom (data->window->users_without_avatar,uid, (GCompareFunc) user_lookup) && !g_hash_table_lookup (data->window->avatars, uid))
             {
+              gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
+
             #ifdef DEBUG
-              dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
+              dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
               dbg (dbg_msg);
               g_free (dbg_msg);
             #endif
 
-              SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
-              soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
-            #ifdef DEBUG
-              dbg ("Search request queued, will be executed when idling.");
-            #endif
-              data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
-            }
-            else
-            {
-            #ifdef DEBUG
-              dbg_msg = g_strdup_printf ("Found avatar for %s, checking whether avatar is too old...",name);
-              dbg (dbg_msg);
-              g_free (dbg_msg);
-            #endif
-
-              struct stat buf;
-              if (g_stat (ava_filename, &buf) == 0)
+              if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
               {
-                if ((time(NULL) - buf.st_mtime) > 86400)
+              #ifdef DEBUG
+                dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
+                dbg (dbg_msg);
+                g_free (dbg_msg);
+              #endif
+
+                SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
+              #ifdef DEBUG
+                dbg ("Search request queued, will be executed when idling.");
+              #endif
+                data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
+              }
+              else
+              {
+              #ifdef DEBUG
+                dbg_msg = g_strdup_printf ("Found avatar for %s, checking whether avatar is too old...",name);
+                dbg (dbg_msg);
+                g_free (dbg_msg);
+              #endif
+
+                struct stat buf;
+                if (g_stat (ava_filename, &buf) == 0)
                 {
-                  /*Avatar was last modified more than one day ago, checking for new one.*/
+                  if ((time(NULL) - buf.st_mtime) > 86400)
+                  {
+                    /*Avatar was last modified more than one day ago, checking for new one.*/
+                    SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                    soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
+                    data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
+                  }
+                  else
+                  {
+                    g_hash_table_insert (data->window->avatars, g_strdup(uid), gdk_pixbuf_new_from_file_at_size (ava_filename,data->window->settings.avatar_size,data->window->settings.avatar_size,NULL));
+                  }
+                }
+                else
+                {
+                  err ("Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory.");
+
                   SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                   soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
                   data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
                 }
-                else
-                {
-                  g_hash_table_insert (data->window->avatars, g_strdup(uid), gdk_pixbuf_new_from_file_at_size (ava_filename,data->window->settings.avatar_size,data->window->settings.avatar_size,NULL));
-                }
+
+              }
+              g_free (ava_filename);
+            }
+          #ifdef DEBUG
+            dbg_msg = g_strdup_printf("Adding user %s.",name);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          #endif
+
+            GtkWidget* label = gtk_label_new(NULL);
+            GtkWidget* container = gtk_hbox_new(FALSE,0);
+            GtkWidget* at_btn = gtk_button_new();
+            GtkWidget* profile_btn = gtk_button_new();
+            GtkWidget* pm_btn = gtk_button_new_with_label("PM");
+
+            gulong real_level = strtoll(g_strndup(level,1),NULL,10);
+            gchar* color;
+            gchar* style;
+            gchar* strike;
+
+
+            gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
+
+            gchar* at_text = g_strdup_printf ("View the forum profile of %s.",name);
+            gtk_widget_set_tooltip_text (at_btn, at_text);
+            g_free (at_text);
+
+            GdkPixbuf* ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, uid);
+
+            if (!(ava))
+              ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, "default");
+
+            gtk_button_set_image (GTK_BUTTON (profile_btn), gtk_image_new_from_pixbuf (ava));
+            gtk_size_group_add_widget (sg, profile_btn);
+            gint uid_i = (int) strtoll (uid, NULL, 10);
+            g_signal_connect (profile_btn, "clicked", G_CALLBACK (go_forum), devchat_cb_data_new (data->window, GINT_TO_POINTER (uid_i)));
+
+            if (real_level > 6)
+              color = data->window->settings.color_goldies;
+            else if (real_level == 6)
+              color = data->window->settings.color_greens;
+            else
+              color = data->window->settings.color_blues;
+
+            if (g_strcmp0("",status) != 0)
+            {
+              style = "italic";
+              gtk_widget_set_has_tooltip(label, TRUE);
+              gchar* status_d;
+              if (g_strcmp0 ("DND",status) == 0)
+              {
+                strike = "true";
+                status_d = g_strdup ("Do NOT disturb.");
               }
               else
               {
-                err ("Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory.");
-
-                SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
-                soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
-                data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
+                status_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) status, XML_SUBSTITUTE_BOTH, 0,0,0);
+                strike = "false";
               }
+              gtk_widget_set_tooltip_text(at_btn, status_d);
+              g_free (status_d);
 
-            }
-            g_free (ava_filename);
-          }
-        #ifdef DEBUG
-          dbg_msg = g_strdup_printf("Adding user %s.",name);
-          dbg (dbg_msg);
-          g_free (dbg_msg);
-        #endif
-
-          GtkWidget* label = gtk_label_new(NULL);
-          GtkWidget* container = gtk_hbox_new(FALSE,0);
-          GtkWidget* at_btn = gtk_button_new();
-          GtkWidget* profile_btn = gtk_button_new();
-          GtkWidget* pm_btn = gtk_button_new_with_label("PM");
-
-          gulong real_level = strtoll(g_strndup(level,1),NULL,10);
-          gchar* color;
-          gchar* style;
-          gchar* strike;
-
-
-          gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
-
-          gchar* at_text = g_strdup_printf ("View the forum profile of %s.",name);
-          gtk_widget_set_tooltip_text (at_btn, at_text);
-          g_free (at_text);
-
-          GdkPixbuf* ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, uid);
-
-          if (!(ava))
-            ava = (GdkPixbuf*) g_hash_table_lookup (data->window->avatars, "default");
-
-          gtk_button_set_image (GTK_BUTTON (profile_btn), gtk_image_new_from_pixbuf (ava));
-          gtk_size_group_add_widget (sg, profile_btn);
-          gint uid_i = (int) strtoll (uid, NULL, 10);
-          g_signal_connect (profile_btn, "clicked", G_CALLBACK (go_forum), devchat_cb_data_new (data->window, GINT_TO_POINTER (uid_i)));
-
-          if (real_level > 6)
-            color = data->window->settings.color_goldies;
-          else if (real_level == 6)
-            color = data->window->settings.color_greens;
-          else
-            color = data->window->settings.color_blues;
-
-          if (g_strcmp0("",status) != 0)
-          {
-            style = "italic";
-            gtk_widget_set_has_tooltip(label, TRUE);
-            gchar* status_d;
-            if (g_strcmp0 ("DND",status) == 0)
-            {
-              strike = "true";
-              status_d = g_strdup ("Do NOT disturb.");
+              color = data->window->settings.color_time;
             }
             else
             {
-              status_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) status, XML_SUBSTITUTE_BOTH, 0,0,0);
+              style = "normal";
               strike = "false";
+              gchar* at_text = g_strdup_printf ("Poke %s",name);
+              gtk_widget_set_tooltip_text(at_btn, at_text);
+              g_free (at_text);
             }
-            gtk_widget_set_tooltip_text(at_btn, status_d);
-            g_free (status_d);
+            gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s' strikethrough='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,strike,name,data->window->settings.color_font,level);
+            gtk_label_set_markup (GTK_LABEL (label),markup);
+            g_free (markup);
 
-            color = data->window->settings.color_time;
+            g_signal_connect (at_btn, "clicked", G_CALLBACK (at_cb), devchat_cb_data_new (data->window,g_strdup(name)));
+            gtk_container_add (GTK_CONTAINER (at_btn), label);
+            gtk_button_set_relief (GTK_BUTTON(at_btn), GTK_RELIEF_NONE);
+
+            g_signal_connect (pm_btn, "clicked", G_CALLBACK (pm_cb), devchat_cb_data_new (data->window,g_strdup(name)));
+
+            gchar* pm_text = g_strdup_printf ("Open a conversation with %s.",name);
+            gtk_widget_set_tooltip_text (pm_btn, pm_text);
+            g_free (pm_text);
+
+            if (data->window->settings.coloruser)
+            {
+              gtk_widget_modify_bg (at_btn, GTK_STATE_PRELIGHT, &l1);
+              gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);
+            }
+
+            gtk_box_pack_start (GTK_BOX (container),profile_btn,FALSE,FALSE,0);
+            gtk_box_pack_start (GTK_BOX (container),at_btn,TRUE,TRUE,0);
+            gtk_box_pack_start (GTK_BOX (container),pm_btn,FALSE,FALSE,0);
+
+            gtk_box_pack_start (GTK_BOX (data->window->userlist),container,FALSE,FALSE,0);
           }
-          else
-          {
-            style = "normal";
-            strike = "false";
-            gchar* at_text = g_strdup_printf ("Poke %s",name);
-            gtk_widget_set_tooltip_text(at_btn, at_text);
-            g_free (at_text);
-          }
-          gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s' strikethrough='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,strike,name,data->window->settings.color_font,level);
-          gtk_label_set_markup (GTK_LABEL (label),markup);
-          g_free (markup);
-
-          g_signal_connect (at_btn, "clicked", G_CALLBACK (at_cb), devchat_cb_data_new (data->window,g_strdup(name)));
-          gtk_container_add (GTK_CONTAINER (at_btn), label);
-          gtk_button_set_relief (GTK_BUTTON(at_btn), GTK_RELIEF_NONE);
-
-          g_signal_connect (pm_btn, "clicked", G_CALLBACK (pm_cb), devchat_cb_data_new (data->window,g_strdup(name)));
-
-          gchar* pm_text = g_strdup_printf ("Open a conversation with %s.",name);
-          gtk_widget_set_tooltip_text (pm_btn, pm_text);
-          g_free (pm_text);
-
-          if (data->window->settings.coloruser)
-          {
-            gtk_widget_modify_bg (at_btn, GTK_STATE_PRELIGHT, &l1);
-            gtk_widget_modify_bg (profile_btn, GTK_STATE_PRELIGHT, &l1);
-          }
-
-          gtk_box_pack_start (GTK_BOX (container),profile_btn,FALSE,FALSE,0);
-          gtk_box_pack_start (GTK_BOX (container),at_btn,TRUE,TRUE,0);
-          gtk_box_pack_start (GTK_BOX (container),pm_btn,FALSE,FALSE,0);
-
-          gtk_box_pack_start (GTK_BOX (data->window->userlist),container,FALSE,FALSE,0);
+          g_free (uid);
+          g_free (name);
+          g_free (level);
+          g_free (status);
+          g_free (node);
         }
-        g_free (uid);
-        g_free (name);
-        g_free (level);
-        g_free (status);
-        g_free (node);
       }
+
+      gchar* ul_text = g_strdup_printf ("%i user%s online", usercount, usercount==1?"":"s");
+      gtk_label_set_text (GTK_LABEL (data->window->userlabel), ul_text);
+      g_free (ul_text);
+
+      /*If the server failed to submit an incremental update, request complete list.*/
+      if (usercount == 0)
+        data->window->users_online = NULL;
+
+      gtk_widget_show_all (data->window->userlist);
+      xmlFreeTextReader (userparser);
+      xmlFreeParserCtxt (ctxt);
+      g_free (userlist);
     }
-
-    gchar* ul_text = g_strdup_printf ("%i user%s online", usercount, usercount==1?"":"s");
-    gtk_label_set_text (GTK_LABEL (data->window->userlabel), ul_text);
-    g_free (ul_text);
-
-    /*If the server failed to submit an incremental update, request complete list.*/
-    if (usercount == 0)
+    else
+    {
+      /*If the server failed to submit an incremental update, request complete list.*/
       data->window->users_online = NULL;
-
-    gtk_widget_show_all (data->window->userlist);
-    xmlFreeTextReader (userparser);
-    xmlFreeParserCtxt (ctxt);
-    g_free (userlist);
+    }
   }
-  else
+  else if (m->status_code == 4)
   {
-    /*If the server failed to submit an incremental update, request complete list.*/
-    data->window->users_online = NULL;
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+    reconnect (NULL, data);
   }
 }
 
@@ -1622,15 +1630,23 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     dbg (dbg_msg);
     g_free (dbg_msg);
   #endif
-  gchar* msglist = g_strdup (m->response_body->data);
-  if (msglist)
+  if (m->status_code == 200)
   {
-    ce_parse (msglist, data, "");
-  #ifdef DEBUG
-    dbg ("Parsing done.");
-  #endif
+    gchar* msglist = g_strdup (m->response_body->data);
+    if (msglist)
+    {
+      ce_parse (msglist, data, "");
+    #ifdef DEBUG
+      dbg ("Parsing done.");
+    #endif
+    }
+    data->window->msg_list_parsed = TRUE;
   }
-  data->window->msg_list_parsed = TRUE;
+  else
+  {
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+    reconnect (NULL, data);
+  }
 }
 
 void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
@@ -3075,7 +3091,6 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox13), combo_theme, FALSE, FALSE, 0);
 
   gchar* gtkrc;
-  gchar* theme_name;
   gchar** rc_lines;
   int i;
 

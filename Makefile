@@ -1,6 +1,6 @@
 CC = clang
-LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4 libotr
-DESTDIR = /usr/local/bin
+LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
+DESTDIR = /usr/local
 CCARGS = -O2 -Wall -march=native
 
 all:
@@ -30,3 +30,9 @@ install:
 	install -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
 	mkdir -m755 -p ${DESTDIR}/share/sounds/devchat
 	install -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat
+
+uninstall:
+	rm $(DESTDIR)/bin/devchat-gui
+	rm $(DESTDIR)/share/applications/devchat-gui.desktop
+	rm -r $(DESTDIR)/share/pixmaps/devchat
+	rm -r $(DESTDIR)/share/sounds/devchat

@@ -35,10 +35,16 @@ install:
 \tinstall -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
 \tmkdir -m755 -p ${DESTDIR}/share/sounds/devchat
 \tinstall -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat
+
+uninstall:
+\trm $(DESTDIR)/bin/devchat-gui
+\trm $(DESTDIR)/share/applications/devchat-gui.desktop
+\trm -r $(DESTDIR)/share/pixmaps/devchat
+\trm -r $(DESTDIR)/share/sounds/devchat
 """
 
 parser = optparse.OptionParser()
-parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local/bin",help="Installation prefix.")
+parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local",help="Installation prefix.")
 parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
 parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Like debug, but without the textwalls of doom(tm). Useful for automated debugging.")
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
