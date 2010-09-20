@@ -3875,10 +3875,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
     g_free (enc_text);
-    g_free (tmp);
   }
 #ifndef OTR
-  g_free (text);
+  g_free (tmp);
 #else
   otrl_message_free (text);
 #endif
