@@ -61,7 +61,13 @@ enum {
   SETTINGS_X,
   SETTINGS_Y,
   SETTINGS_TRAYICON,
-  SETTINGS_MAXIMIZED
+  SETTINGS_MAXIMIZED,
+  SETTINGS_COLOR_RED,
+  SETTINGS_COLOR_CYAN,
+  SETTINGS_COLOR_YELLOW,
+  SETTINGS_COLOR_BLUE,
+  SETTINGS_COLOR_GREEN,
+  SETTINGS_COLOR_MAGENTA
 } params;
 
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
@@ -114,7 +120,6 @@ gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
 void parse_message (gchar* message, DevchatCBData* self);
-gchar* color_lookup (gchar* color);
 void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data);
 gchar* current_time ();
 
@@ -177,6 +182,12 @@ devchat_window_init (DevchatWindow* self)
   self->settings.color_url_visited = g_strdup("#ff0");
   self->settings.color_url_hover = g_strdup("#fff");
   self->settings.color_highlight = g_strdup("#c00");
+  self->settings.color_red = g_strdup ("#f00");
+  self->settings.color_green = g_strdup ("#0f0");
+  self->settings.color_blue = g_strdup ("#00f");
+  self->settings.color_magenta = g_strdup ("#f0f");
+  self->settings.color_yellow = g_strdup ("#ff0");
+  self->settings.color_cyan = g_strdup ("#0ff");
   self->settings.user = g_strdup(g_get_user_name());
   self->settings.pass = g_strdup("hidden");
   self->settings.store_pass = FALSE;
@@ -779,6 +790,36 @@ devchat_window_class_init (DevchatWindowClass* klass)
                                                        "Indicates whether the window should be maximized.", FALSE,
                                                        (G_PARAM_READABLE | G_PARAM_WRITABLE)
                                                      ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_RED, g_param_spec_string
+                                                     ( "color_red", "Red Color",
+                                                       "Color used for red text.", "#f00",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_GREEN, g_param_spec_string
+                                                     ( "color_green", "Green Color",
+                                                       "Color used for green text.", "#0f0",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_BLUE, g_param_spec_string
+                                                     ( "color_blue", "Blue Color",
+                                                       "Color used for blue text.", "#00f",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_CYAN, g_param_spec_string
+                                                     ( "color_cyan", "Cyan color",
+                                                       "Color used for cyan text.", "#0ff",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_YELLOW, g_param_spec_string
+                                                     ( "color_yellow", "Yellow color",
+                                                       "Color used for yellow text.", "#ff0",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
+  g_object_class_install_property (gobject_class, SETTINGS_COLOR_MAGENTA, g_param_spec_string
+                                                     ( "color_magenta", "Magenta color",
+                                                       "Color used for magenta text.", "#f0f",
+                                                       (G_PARAM_READABLE | G_PARAM_WRITABLE)
+                                                     ));
 }
 
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec)
@@ -878,6 +919,36 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
                                gtk_window_maximize (GTK_WINDOW (window->window));
                              else
                                gtk_window_unmaximize (GTK_WINDOW (window->window)); break;
+    case SETTINGS_COLOR_RED: window->settings.color_red = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "red");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_GREEN: window->settings.color_green = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "green");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_BLUE: window->settings.color_blue = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "blue");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_YELLOW: window->settings.color_yellow = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "yellow");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_CYAN: window->settings.color_cyan = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "cyan");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
+    case SETTINGS_COLOR_MAGENTA: window->settings.color_magenta = g_value_dup_string (value);
+                                t = gtk_text_buffer_get_tag_table (window->output);
+                                tag = gtk_text_tag_table_lookup (t, "magenta");
+                                g_object_set (tag, "foreground", g_value_dup_string (value), NULL);
+                                g_hash_table_foreach (window->conversations, (GHFunc) update_tags, devchat_cb_data_new(window, GINT_TO_POINTER(id))); break;
   }
 }
 
@@ -920,6 +991,24 @@ void update_tags (gchar* key, DevchatConversation* value, DevchatCBData* data)
                              gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, data->window->settings.color_url); break;
     case SETTINGS_COLOR_URL_VISITED: t = gtk_text_buffer_get_tag_table (value->out_buffer);
                              gtk_text_tag_table_foreach (t, (GtkTextTagTableForeach) url_tag_nv_color_cb, data->window->settings.color_url_visited); break;
+    case SETTINGS_COLOR_RED: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "red");
+                                g_object_set (tag, "foreground", data->window->settings.color_red, NULL); break;
+    case SETTINGS_COLOR_GREEN: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "green");
+                                g_object_set (tag, "foreground", data->window->settings.color_green, NULL); break;
+    case SETTINGS_COLOR_BLUE: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "blue");
+                                g_object_set (tag, "foreground", data->window->settings.color_blue, NULL); break;
+    case SETTINGS_COLOR_MAGENTA: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "magenta");
+                                g_object_set (tag, "foreground", data->window->settings.color_magenta, NULL); break;
+    case SETTINGS_COLOR_CYAN: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "cyan");
+                                g_object_set (tag, "foreground", data->window->settings.color_cyan, NULL); break;
+    case SETTINGS_COLOR_YELLOW: t = gtk_text_buffer_get_tag_table (value->out_buffer);
+                                tag = gtk_text_tag_table_lookup (t, "yellow");
+                                g_object_set (tag, "foreground", data->window->settings.color_yellow, NULL); break;
   }
 }
 
@@ -1035,6 +1124,12 @@ void save_settings (DevchatWindow* w)
                                  "COLOR_URL_VISITED=",w->settings.color_url_visited, "\n",
                                  "COLOR_URL_HOVER=",w->settings.color_url_hover, "\n",
                                  "COLOR_HIGHLIGHT=",w->settings.color_highlight, "\n",
+                                 "COLOR_GREEN=",w->settings.color_green, "\n",
+                                 "COLOR_BLUE=",w->settings.color_blue, "\n",
+                                 "COLOR_RED=",w->settings.color_red, "\n",
+                                 "COLOR_MAGENTA=",w->settings.color_magenta, "\n",
+                                 "COLOR_CYAN=",w->settings.color_cyan, "\n",
+                                 "COLOR_YELLOW=",w->settings.color_yellow, "\n",
                                  "USER=",w->settings.user, "\n",
                                  "PASS=",w->settings.store_pass? w->settings.pass : "<none>", "\n",
                                  "NOTIFY=",w->settings.notify, "\n",
@@ -2067,6 +2162,12 @@ void devchat_window_create_tags (GtkTextBuffer* buf, DevchatCBData* data)
   gtk_text_buffer_create_tag (buf, "ul3", NULL);
   gtk_text_buffer_create_tag (buf, "ul5", NULL);
   gtk_text_buffer_create_tag (buf, "ul6", NULL);
+  gtk_text_buffer_create_tag (buf, "red", "foreground", data->window->settings.color_red, NULL);
+  gtk_text_buffer_create_tag (buf, "green", "foreground", data->window->settings.color_green, NULL);
+  gtk_text_buffer_create_tag (buf, "blue", "foreground", data->window->settings.color_blue, NULL);
+  gtk_text_buffer_create_tag (buf, "cyan", "foreground", data->window->settings.color_cyan, NULL);
+  gtk_text_buffer_create_tag (buf, "yellow", "foreground", data->window->settings.color_yellow, NULL);
+  gtk_text_buffer_create_tag (buf, "magenta", "foreground", data->window->settings.color_magenta, NULL);
 }
 
 gboolean badass (gchar* name, DevchatCBData* data)
@@ -2284,16 +2385,20 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
           if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "color") == 0)
           {
-            tagname = color_lookup (((DevchatHTMLAttr*) top->attrs->data)->value);
+            gchar* raw_color = ((DevchatHTMLAttr*) top->attrs->data)->value;
 
-          #ifdef DEBUG
-            dbg_msg = g_strdup_printf ("Color attribute with value %s.", tagname);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
-
-            if (!gtk_text_tag_table_lookup (table, tagname))
-              gtk_text_buffer_create_tag (GTK_TEXT_BUFFER (data->data), tagname, "foreground", tagname, NULL);
+            if (g_strcmp0 (raw_color, "#ff0000") == 0)
+              tagname = "red";
+            else if (g_strcmp0 (raw_color, "#00ff00") == 0)
+              tagname = "green";
+            else if (g_strcmp0 (raw_color, "#0000ff") == 0)
+              tagname = "blue";
+            else if (g_strcmp0 (raw_color, "#ffff00") == 0)
+              tagname = "yellow";
+            else if (g_strcmp0 (raw_color, "#00ffff") == 0)
+              tagname = "cyan";
+            else if (g_strcmp0 (raw_color, "#ff00ff") == 0)
+              tagname = "magenta";
           }
         }
         else if (g_strcmp0 (top->name,"i")==0)
@@ -2829,12 +2934,6 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
   return FALSE;
 }
 
-gchar* color_lookup (gchar* color)
-{
-  /*TODO: Substitute colors based on current theme.*/
-  return color;
-}
-
 void config_cb(GtkWidget* widget, DevchatCBData* data)
 {
   GtkWidget* dialog = gtk_dialog_new_with_buttons ("Devchat settings", GTK_WINDOW (data->window->window),
@@ -2933,9 +3032,43 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* btn_col_gold = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox12), label_col_gold,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(hbox12), btn_col_gold,FALSE,FALSE,0);
-  gtk_box_pack_start (GTK_BOX(hbox12), gtk_hbox_new (TRUE,0),FALSE,FALSE,0); // Hack
-  gtk_box_pack_start (GTK_BOX(hbox12), gtk_hbox_new (TRUE,0),FALSE,FALSE,0);//  to make it look symmetric.
 
+  GtkWidget* hbox15 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* hbox16 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* label_col_cyan = gtk_label_new ("[cyan]");
+  gdk_color_parse (data->window->settings.color_cyan, &c);
+  GtkWidget* btn_col_cyan = gtk_color_button_new_with_color (&c);
+  GtkWidget* label_col_red = gtk_label_new ("[red]");
+  gdk_color_parse (data->window->settings.color_red, &c);
+  GtkWidget* btn_col_red = gtk_color_button_new_with_color (&c);
+  gtk_box_pack_start (GTK_BOX (hbox15), label_col_cyan, FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox15), btn_col_cyan, FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX(hbox12), hbox15,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox16), label_col_red, FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox16), btn_col_red, FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX(hbox12), hbox16,FALSE,FALSE,0);
+
+  GtkWidget* hbox17 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* label_col_yellow = gtk_label_new ("[yellow]");
+  gdk_color_parse (data->window->settings.color_yellow, &c);
+  GtkWidget* btn_col_yellow = gtk_color_button_new_with_color (&c);
+  GtkWidget* label_col_greenX = gtk_label_new ("[green]");
+  gdk_color_parse (data->window->settings.color_green, &c);
+  GtkWidget* btn_col_greenX = gtk_color_button_new_with_color (&c);
+  GtkWidget* label_col_blueX = gtk_label_new ("[blue]");
+  gdk_color_parse (data->window->settings.color_blue, &c);
+  GtkWidget* btn_col_blueX = gtk_color_button_new_with_color (&c);
+  GtkWidget* label_col_magenta = gtk_label_new ("[magenta]");
+  gdk_color_parse (data->window->settings.color_magenta, &c);
+  GtkWidget* btn_col_magenta = gtk_color_button_new_with_color (&c);
+  gtk_box_pack_start (GTK_BOX (hbox17), label_col_yellow,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), btn_col_yellow,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), label_col_greenX,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), btn_col_greenX,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), label_col_blueX,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), btn_col_blueX,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), label_col_magenta,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox17), btn_col_magenta,FALSE,FALSE,0);
 
   GtkWidget* vbox1 = gtk_vbox_new (FALSE, 1);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox1,FALSE,FALSE,0);
@@ -2945,6 +3078,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox1), hbox5,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox7,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox12,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (vbox1), hbox17,FALSE,FALSE,0);
 
   gtk_notebook_append_page ( GTK_NOTEBOOK (nb), vbox1, gtk_label_new ("Color settings"));
 
@@ -3179,7 +3313,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gint result = gtk_dialog_run (GTK_DIALOG (dialog));
 
   GdkColor color_time, color_font, color_l1, color_l3, color_l5, color_l6, color_greens, color_blues, color_url,
-           color_url_visited, color_url_hover, color_highlight, color_gold;
+           color_url_visited, color_url_hover, color_highlight, color_gold, color_green, color_blue, color_yellow,
+           color_magenta, color_cyan, color_red;
 
   switch (result)
   {
@@ -3206,6 +3341,12 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "color_url_visited", data->window->settings_backup.color_url_visited,
                                   "color_url_hover", data->window->settings_backup.color_url_hover,
                                   "color_highlight", data->window->settings_backup.color_highlight,
+                                  "color_green", data->window->settings_backup.color_green,
+                                  "color_red", data->window->settings_backup.color_red,
+                                  "color_blue", data->window->settings_backup.color_blue,
+                                  "color_cyan", data->window->settings_backup.color_cyan,
+                                  "color_yellow", data->window->settings_backup.color_yellow,
+                                  "color_magenta", data->window->settings_backup.color_magenta,
                                   "showid", data->window->settings_backup.showid,
                                   "showhidden", data->window->settings_backup.showhidden,
                                   "autojoin", data->window->settings_backup.autojoin,
@@ -3237,6 +3378,12 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_hurl), &color_url_hover);
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_high), &color_highlight);
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_gold), &color_gold);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_greenX), &color_green);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_blueX), &color_blue);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_yellow), &color_yellow);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_magenta), &color_magenta);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_cyan), &color_cyan);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_red), &color_red);
       g_object_set (data->window, "color_time", gdk_color_to_string (&color_time),
                                   "color_font", gdk_color_to_string (&color_font),
                                   "color_l1", gdk_color_to_string (&color_l1),
@@ -3259,6 +3406,12 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "notify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_notify)),
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
                                   "trayicon", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_tray)),
+                                  "color_green", gdk_color_to_string (&color_green),
+                                  "color_red", gdk_color_to_string (&color_red),
+                                  "color_blue", gdk_color_to_string (&color_blue),
+                                  "color_cyan", gdk_color_to_string (&color_cyan),
+                                  "color_yellow", gdk_color_to_string (&color_yellow),
+                                  "color_magenta", gdk_color_to_string (&color_magenta),
                                   NULL);
 
     #ifdef G_OS_WIN32

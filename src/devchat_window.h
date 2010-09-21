@@ -77,6 +77,12 @@ typedef struct dc_settings
   gchar* color_url_visited;
   gchar* color_url_hover;
   gchar* color_highlight;
+  gchar* color_red;
+  gchar* color_green;
+  gchar* color_blue;
+  gchar* color_magenta;
+  gchar* color_yellow;
+  gchar* color_cyan;
   gchar* user;
   gchar* pass;
   gchar* notify;

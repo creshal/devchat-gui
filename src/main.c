@@ -120,6 +120,16 @@ main (int argc, char *argv[])
       else
         g_object_set (self, "handle_width", 400, NULL);
 
+      if (g_key_file_has_key (keyfile, g, "COLOR_GREEN", &e))
+      {
+        g_object_set (self, "color_green", g_key_file_get_string (keyfile, g, "COLOR_GREEN", &e),
+                      "color_red", g_key_file_get_string (keyfile, g, "COLOR_RED", &e),
+                      "color_blue", g_key_file_get_string (keyfile, g, "COLOR_BLUE", &e),
+                      "color_cyan", g_key_file_get_string (keyfile, g, "COLOR_CYAN", &e),
+                      "color_yellow", g_key_file_get_string (keyfile, g, "COLOR_YELLOW", &e),
+                      "color_magenta", g_key_file_get_string (keyfile, g, "COLOR_MAGENTA", &e), NULL);
+      }
+
       g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0, NULL);
 
       if (e)
