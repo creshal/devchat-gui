@@ -1387,6 +1387,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
   if (m->status_code == 200)
   {
+    data->window->errorcount = MAX (0, data->window->errorcount-1);
     if (data->window->users_online)
     {
       g_slist_free (data->window->users_online);
@@ -1620,8 +1621,12 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   }
   else if (m->status_code == 4)
   {
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
-    reconnect (NULL, data);
+    data->window->errorcount++;
+    if (data->window->errorcount > 3)
+    {
+      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+      reconnect (NULL, data);
+    }
   }
 }
 
@@ -1727,6 +1732,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   #endif
   if (m->status_code == 200)
   {
+    data->window->errorcount = MAX (0, data->window->errorcount-1);
     gchar* msglist = g_strdup (m->response_body->data);
     if (msglist)
     {
@@ -1739,8 +1745,13 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   }
   else
   {
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
-    reconnect (NULL, data);
+    data->window->errorcount++;
+
+    if (data->window->errorcount > 3)
+    {
+      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+      reconnect (NULL, data);
+    }
   }
 }
 

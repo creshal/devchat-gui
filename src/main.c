@@ -144,22 +144,33 @@ main (int argc, char *argv[])
     g_key_file_free (keyfile);
   }
 
+  self->workingdir = NULL;
+  const gchar* const* dirs = g_get_system_data_dirs ();
 
-#ifdef G_OS_WIN32
-  self->workingdir = g_build_filename (g_getenv("PROGRAMFILES"),"Devchat","pixmaps",NULL);
-#else
-  #ifdef G_OS_UNIX
-    if (!g_file_test (g_build_filename("/","usr","share","pixmaps","devchat",NULL), G_FILE_TEST_IS_DIR))
+  int i;
+
+  for (i=0; dirs[i]; i++)
+  {
+    if (g_file_test (g_build_filename (dirs[i], "pixmaps", "devchat", NULL), G_FILE_TEST_IS_DIR))
     {
-      if (g_file_test (g_build_filename(g_get_user_data_dir (),"pixmaps","devchat",NULL), G_FILE_TEST_IS_DIR))
-        self->workingdir = g_build_filename(g_get_user_data_dir (),"pixmaps","devchat",NULL);
-      else
-        err("Could not find working dir.\n");
+      self->workingdir = g_build_filename (dirs[i], "pixmaps", "devchat", NULL);
+      break;
+    }
+  }
+
+  if (!self->workingdir)
+  {
+    if (g_file_test (g_build_filename (g_get_user_data_dir (), "pixmaps", "devchat", NULL), G_FILE_TEST_IS_DIR))
+    {
+      self->workingdir = g_build_filename (g_get_user_data_dir (), "pixmaps", "devchat", NULL);
     }
     else
-      self->workingdir = g_build_filename("/","usr","share","pixmaps","devchat",NULL);
-  #endif
-#endif
+    {
+      err ("Could not find working dir!");
+      return -1;
+    }
+  }
+
 
 #ifdef DEBUG
   dbg_msg = g_strdup_printf ("Working dir determined to be %s \n", self->workingdir);

@@ -194,6 +194,8 @@ struct _DevchatWindow
 
   GSList* users_online;
 
+  gint errorcount;
+
 #ifdef OTR
   OtrlUserState otr_state;
   OtrlMessageAppOps otr_funcs;
