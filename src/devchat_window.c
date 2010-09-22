@@ -1627,6 +1627,16 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
       reconnect (NULL, data);
     }
+    else
+    {
+      if (data->window->users_online)
+      {
+        g_slist_free (data->window->users_online);
+        data->window->users_online = NULL;
+      }
+
+      data->window->usr_list_parsed = TRUE;
+    }
   }
 }
 
@@ -1752,6 +1762,8 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
       reconnect (NULL, data);
     }
+    else
+      data->window->msg_list_parsed = TRUE;
   }
 }
 
