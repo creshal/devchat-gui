@@ -1622,7 +1622,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else if (m->status_code == 4)
   {
     data->window->errorcount++;
-    if (data->window->errorcount > 3)
+    if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
       reconnect (NULL, data);
@@ -1753,11 +1753,11 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     }
     data->window->msg_list_parsed = TRUE;
   }
-  else
+  else if (m->status_code == 4)
   {
     data->window->errorcount++;
 
-    if (data->window->errorcount > 3)
+    if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
       reconnect (NULL, data);
@@ -3635,6 +3635,7 @@ void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
 
 void reconnect(GtkWidget* widget, DevchatCBData* data)
 {
+  data->window->errorcount = 0;
 #ifdef DEBUG
   dbg ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit... *ahem* Sorry, I'll continue.)\n");
 #endif
