@@ -27,9 +27,8 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef DEBUG
-  gchar* dbg_msg;
-#endif
+gchar* dbg_msg;
+
 
 enum {
   SETTINGS_BROWSER = 1,
@@ -625,9 +624,9 @@ devchat_window_init (DevchatWindow* self)
   self->firstrun = TRUE;
   self->no_halt_requested = TRUE;
   self->lastid = g_strdup("1");
-#ifdef DEBUG
-  dbg("Initalising libsoup...");
-#endif
+  if (debug)
+    dbg("Initalising libsoup...");
+
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
 
@@ -1058,15 +1057,16 @@ void destroy (GtkObject* widget, DevchatCBData* data)
 
 void save_settings (DevchatWindow* w)
 {
+  if (no_config)
+    return;
+
   gchar* settingsfile = g_build_filename(g_get_user_config_dir(),"devchat", NULL);
 
-  if (!g_file_test (settingsfile, G_FILE_TEST_EXISTS))
+  if (debug && !g_file_test (settingsfile, G_FILE_TEST_EXISTS))
   {
-#ifdef DEBUG
     gchar* dbg_msg = g_strdup_printf ("Settings file not found, search path was %s. Creating.\n", settingsfile);
     dbg (dbg_msg);
     g_free (dbg_msg);
-#endif
   }
 
   GSList* tmp_kw = w->settings.keywords;
@@ -1145,12 +1145,9 @@ void save_settings (DevchatWindow* w)
                                  presets_string, "\n",
                                  bools_string,
                                  NULL);
-  if(!g_file_set_contents (settingsfile, settings, -1, NULL))
-  {
-    #ifdef DEBUG
-      dbg ("Error writing settings file.");
-    #endif
-  }
+  if (debug && !g_file_set_contents (settingsfile, settings, -1, NULL))
+    dbg ("Error writing settings file.");
+
   g_free (settings);
   g_free (bools_string);
   g_free (keywords_string);
@@ -1162,9 +1159,9 @@ void login (GtkWidget* widget, DevchatCBData* data)
   gtk_widget_set_sensitive(data->window->btn_connect,FALSE);
   gtk_widget_set_sensitive(data->window->user_entry,FALSE);
   gtk_widget_set_sensitive(data->window->pass_entry,FALSE);
-#ifdef DEBUG
-  dbg ("Logging in...");
-#endif
+  if (debug)
+    dbg ("Logging in...");
+
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Logging in...");
   data->window->settings.user = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->user_entry)));
   data->window->settings.pass = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->pass_entry)));
@@ -1174,9 +1171,9 @@ void login (GtkWidget* widget, DevchatCBData* data)
 
 void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
 {
-#ifdef DEBUG
-  dbg ("Got login response from server.");
-#endif
+  if (debug)
+    dbg ("Got login response from server.");
+
   if (g_strrstr(msg->response_body->data,"invalid password"))
   {
     err ("Login failed.");
@@ -1195,14 +1192,15 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   }
   else
   {
-  #ifdef DEBUG
-    dbg ("Login successful.");
-  #endif
+    if (debug)
+      dbg ("Login successful.");
+
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login successful! Determining user level...");
     SoupMessage* step2 = soup_message_new("GET","http://www.egosoft.com");
-  #ifdef DEBUG
-    dbg ("Trying to determine userlevel...");
-  #endif
+
+    if (debug)
+      dbg ("Trying to determine userlevel...");
+
     soup_session_queue_message (data->window->session, step2, SOUP_SESSION_CALLBACK(remote_level), data);
   }
 }
@@ -1294,11 +1292,11 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->userlevel = 1;
   }
-#ifdef DEBUG
-  dbg_msg = g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel);
-  dbg (dbg_msg);
-  g_free (dbg_msg);
-#endif
+  if (debug) {
+    dbg_msg = g_strdup_printf("Determined userlevel to be %i.", data->window->userlevel);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  }
 
   if (!data->window->settings.stealthjoin)
   {
@@ -1320,9 +1318,9 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_show_all (data->window->inputbar);
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
-#ifdef DEBUG
-  dbg ("Starting requests...");
-#endif
+  if (debug)
+    dbg ("Starting requests...");
+
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
   data->window->msg_list_parsed = TRUE;
   data->window->usr_list_parsed = TRUE;
@@ -1335,9 +1333,9 @@ user_list_poll (DevchatCBData* data)
 {
   if (data->window->usr_list_parsed)
   {
-  #ifdef DEBUG
+   if (debug)
     dbg ("Starting user list poll...");
-  #endif
+
 
     GSList* tmp = data->window->users_online;
 
@@ -1361,9 +1359,9 @@ message_list_poll (DevchatCBData* data)
 {
   if (data->window->msg_list_parsed)
   {
-  #ifdef DEBUG
-    dbg ("Starting message list poll...");
-  #endif
+    if (debug)
+      dbg ("Starting message list poll...");
+
     SoupMessage* listmessages = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
     data->window->msg_list_parsed = FALSE;
@@ -1378,11 +1376,11 @@ void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
 
 void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
-  #ifdef DEBUG
+  if (debug) {
     dbg_msg = g_strdup_printf ("(XX) User list response:\n\nStatus code: %i -> Status Message: %s.\n\nResponse Body: %s.\n\n\n", m->status_code, m->reason_phrase, m->response_body->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
-  #endif
+  }
 
   if (m->status_code == 200)
   {
@@ -1398,11 +1396,9 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gchar* userlist = g_strdup (m->response_body->data);
     if (userlist)
     {
-    #ifdef DEBUG
-      dbg ("Got non-empty userlist.");
-    #else
-      gchar* dbg_msg;
-    #endif
+      if (debug)
+        dbg ("Got non-empty userlist.");
+
       dbg_msg = g_strdup_printf("Last Update: %s",current_time());
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
       g_free (dbg_msg);
@@ -1440,34 +1436,34 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             {
               gchar* ava_filename = g_build_filename (data->window->avadir,uid,NULL);
 
-            #ifdef DEBUG
-              dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
-              dbg (dbg_msg);
-              g_free (dbg_msg);
-            #endif
+              if (debug) {
+                dbg_msg = g_strdup_printf ("Searching for avatar %s...", ava_filename);
+                dbg (dbg_msg);
+                g_free (dbg_msg);
+              }
 
               if (!g_file_test (ava_filename, G_FILE_TEST_EXISTS))
               {
-              #ifdef DEBUG
-                dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
-                dbg (dbg_msg);
-                g_free (dbg_msg);
-              #endif
+                if (debug) {
+                  dbg_msg = g_strdup_printf ("Avatar %s not found. Searching...",uid);
+                  dbg (dbg_msg);
+                  g_free (dbg_msg);
+                }
 
                 SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                 soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
-              #ifdef DEBUG
-                dbg ("Search request queued, will be executed when idling.");
-              #endif
+                if (debug)
+                  dbg ("Search request queued, will be executed when idling.");
+
                 data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
               }
               else
               {
-              #ifdef DEBUG
-                dbg_msg = g_strdup_printf ("Found avatar for %s, checking whether avatar is too old...",name);
-                dbg (dbg_msg);
-                g_free (dbg_msg);
-              #endif
+                if (debug) {
+                  dbg_msg = g_strdup_printf ("Found avatar for %s, checking whether avatar is too old...",name);
+                  dbg (dbg_msg);
+                  g_free (dbg_msg);
+                }
 
                 struct stat buf;
                 if (g_stat (ava_filename, &buf) == 0)
@@ -1496,11 +1492,12 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
               }
               g_free (ava_filename);
             }
-          #ifdef DEBUG
-            dbg_msg = g_strdup_printf("Adding user %s.",name);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
+            if (debug)
+            {
+              dbg_msg = g_strdup_printf("Adding user %s.",name);
+              dbg (dbg_msg);
+              g_free (dbg_msg);
+            }
 
             GtkWidget* label = gtk_label_new(NULL);
             GtkWidget* container = gtk_hbox_new(FALSE,0);
@@ -1652,11 +1649,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
   if (profile)
   {
-  #ifdef DEBUG
-    dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...", (gchar*) data->data);
-    dbg (dbg_msg);
-    g_free (dbg_msg);
-  #endif
+    if (debug) {
+      dbg_msg = g_strdup_printf ("Got the forum profile of %s. Now searching for the avatar...", (gchar*) data->data);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    }
 
     GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
@@ -1675,11 +1672,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
         if (!g_str_has_prefix(match,"<img src=\"http://www.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
         {
-        #ifdef DEBUG
-          dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
-          dbg (dbg_msg);
-          g_free (dbg_msg);
-        #endif
+          if (debug) {
+            dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          }
           found = TRUE;
           ava_url = g_strdup (match+10);
         }
@@ -1690,11 +1687,11 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     if(found)
     {
-    #ifdef DEBUG
-      dbg_msg = g_strdup_printf ("Now commencing avatar write: %s", ava_url);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    #endif
+      if (debug) {
+        dbg_msg = g_strdup_printf ("Now commencing avatar write: %s", ava_url);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
+      }
       data->window->users_without_avatar = g_slist_delete_link (data->window->users_without_avatar,
         g_slist_find_custom (data->window->users_without_avatar,data->data, (GCompareFunc) user_lookup));
       SoupMessage* a_m = soup_message_new ("GET", ava_url);
@@ -1713,12 +1710,10 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           g_free (filename);
         }
       }
-    #ifdef DEBUG
-      else
+      else if (debug)
       {
         dbg ("Error downloading avatar!");
       }
-    #endif
     }
 
     g_regex_unref (regex);
@@ -1726,19 +1721,19 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     g_free (profile);
 
-  #ifdef DEBUG
-    dbg ("Avatar search done.");
-  #endif
+    if (debug)
+      dbg ("Avatar search done.");
   }
 }
 
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
-  #ifdef DEBUG
+  if (debug) {
     dbg_msg = g_strdup_printf ("(XX) Message list response:\n\nStatus code: %i -> Status Message: %s.\n\nResponse Body: %s.\n\n\n", m->status_code, m->reason_phrase, m->response_body->data);
     dbg (dbg_msg);
     g_free (dbg_msg);
-  #endif
+  }
+
   if (m->status_code == 200)
   {
     data->window->errorcount = MAX (0, data->window->errorcount-1);
@@ -1746,9 +1741,6 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     if (msglist)
     {
       ce_parse (msglist, data, "");
-    #ifdef DEBUG
-      dbg ("Parsing done.");
-    #endif
     }
     data->window->msg_list_parsed = TRUE;
   }
@@ -1801,20 +1793,17 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     else if (node && (g_strcmp0 (node,"ce") == 0))
     {
       message_found = TRUE;
-    #ifdef DEBUG
-      dbg ("Processing message node...");
-    #endif
       gchar* name = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "a");
       gchar* mode = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "u");
       gchar* time_attr = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "t");
       gchar* lid = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "i");
       gchar* message = (gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "m");
 
-    #ifdef DEBUG
-      dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time_attr, lid, message);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    #endif
+      if (debug) {
+        dbg_msg = g_strdup_printf ("Message parameters: username %s, mode %s, time %s, lid %s, message %s.", name, mode, time_attr, lid, message);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
+      }
 
       gint show_name = g_strcmp0 ("0", g_strndup(mode,1));
       gulong user_level = strtoll (g_strndup(mode+1,1),NULL,10);
@@ -1836,11 +1825,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             gchar** msg_cmps = g_strsplit (message+66, "</font>", 2);
             gchar* target_name = g_strdup (msg_cmps[0]);
             g_strfreev (msg_cmps);
-          #ifdef DEBUG
-            dbg_msg = g_strdup_printf ("PM to: %s.\n", target_name);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
             name = g_strdup (self->window->settings.user);
             user_level = self->window->userlevel;
             if (g_strcmp0 (name, target_name) == 0) /*Make self-PMs only appear once and cancel processing in that case*/
@@ -1864,11 +1848,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           }
           else
           {
-          #ifdef DEBUG
-            dbg_msg = g_strdup_printf ("PM from: %s.\n", name);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
             if (g_strcmp0 (name, "(ChatServer)") != 0)
             {
               gchar* tmp = message;
@@ -1952,12 +1931,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
-    #ifdef DEBUG
-      dbg_msg = g_strdup_printf ("(!!) Message: %s.", message_t);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    #endif
-
       gboolean kw_found = FALSE;
       if (g_strcmp0 (date, "") == 0)
       {
@@ -2004,9 +1977,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
         if (g_strstr_len (message_up, -1, kickmsg) && badass (name, self) && !(self->window->firstrun))
         {
-        #ifdef DEBUG
-          dbg ("IN SOVIET RUSSIA, CHAT KICKS YOU.");
-        #endif
           gchar* kickmsg;
           if (g_strcmp0 (self->window->settings.servername, "SovietServer") == 0)
             kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
@@ -2073,10 +2043,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       g_free (message_t);
 
-    #ifdef DEBUG
-      dbg ("Message parsed, applying level tags...");
-    #endif
-
       GtkTextIter start;
       gtk_text_buffer_get_iter_at_mark (buf, &start, old_start);
       gtk_text_buffer_get_end_iter (buf, &end);
@@ -2118,9 +2084,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
     g_free (node);
   }
-#ifdef DEBUG
-  dbg ("Message list parsed.");
-#endif
+  if (debug)
+    dbg ("Message list parsed.");
 
   if (message_found)
   {
@@ -2250,33 +2215,31 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
   gint i;
 
-#ifdef DEBUG
-  dbg ("Starting parser loop...");
-#endif
+  if (debug)
+    dbg ("Starting parser loop...");
 
   for (i=0; i < strlen (message_d); i++)
   {
     current[0] = message_d[i];
 
-  #ifdef REAL_DEBUG
-    dbg_msg = g_strdup_printf ("Current char: %s.", current);
-    dbg (dbg_msg);
-    g_free (dbg_msg);
-  #endif
+    if (real_debug) {
+      dbg_msg = g_strdup_printf ("Current char: %s.", current);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    }
 
     if (state == STATE_DATA)
     {
-    #ifdef REAL_DEBUG
-      dbg ("State: Data");
-    #endif
+      if (real_debug)
+        dbg ("State: Data");
 
       if (g_strcmp0 (current, "<") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg_msg = g_strdup_printf ("Detected <, switching to state typecheck and dumping content %s.", content);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
+        if (real_debug) {
+          dbg_msg = g_strdup_printf ("Detected <, switching to state typecheck and dumping content %s.", content);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
+        }
 
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
@@ -2335,9 +2298,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding char to content.");
-      #endif
+        if (real_debug)
+          dbg ("Adding char to content.");
 
         content = g_strconcat (content, current, NULL);
 
@@ -2345,15 +2307,13 @@ void parse_message (gchar* message_d, DevchatCBData* data)
     }
     else if (state == STATE_TYPECHECK)
     {
-    #ifdef REAL_DEBUG
-      dbg ("State: Type check.");
-    #endif
+      if (real_debug)
+        dbg ("State: Type check.");
 
       if (g_strcmp0 (current, "/") == 0 && g_strcmp0 (stack->data, "O") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Detecting closing tag.");
-      #endif
+        if (real_debug)
+          dbg ("Detecting closing tag.");
 
         GSList* tmp = stack;
         stack = stack->next;
@@ -2363,9 +2323,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding current to tag name and switching to state open tag.");
-      #endif
+        if (real_debug)
+          dbg ("Adding current to tag name and switching to state open tag.");
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
 
@@ -2375,9 +2334,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
     }
     else if (state == STATE_CLOSETAG)
     {
-    #ifdef REAL_DEBUG
-      dbg ("State: Close tag.");
-    #endif
+      if (real_debug)
+        dbg ("State: Close tag.");
 
       if (g_strcmp0 (current, ">") == 0 && g_strcmp0 (stack->data,"O") == 0)
       {
@@ -2390,20 +2348,20 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         DevchatHTMLTag* top = tmp->data;
         /*TODO: Close actually closed tag, not the last one.*/
 
-      #ifdef REAL_DEBUG
-        dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
+        if (real_debug) {
+          dbg_msg = g_strdup_printf ("Closing Tag %s.", top->name);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
+        }
 
         gchar* tagname = NULL;
         if (g_strcmp0 (top->name,"font")==0)
         {
-        #ifdef REAL_DEBUG
+        if (real_debug) {
           dbg_msg = g_strdup_printf ("Found font tag! Attribute:%s ",((DevchatHTMLAttr*) top->attrs->data)->name);
           dbg (dbg_msg);
           g_free (dbg_msg);
-        #endif
+        }
 
           if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "color") == 0)
           {
@@ -2451,9 +2409,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         }
         else if (g_strcmp0 (top->name,"img")==0)
         {
-        #ifdef REAL_DEBUG
-          dbg ("Parsing img tag...");
-        #endif
+          if (real_debug)
+            dbg ("Parsing img tag...");
+
           gchar* smilie = NULL;
           gchar* uri = NULL;
 
@@ -2463,9 +2421,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
           if (smilie)
           {
-          #ifdef REAL_DEBUG
-            dbg ("Found smilie in database.");
-          #endif
+            if (real_debug)
+              dbg ("Found smilie in database.");
+
             GtkWidget* img = gtk_image_new_from_file (smilie);
 
             GtkTextIter fnord;
@@ -2479,11 +2437,11 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           /*XXX*/
           else if (uri)
           {
-          #ifdef REAL_DEBUG
-            dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
+            if (real_debug) {
+              dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
+              dbg (dbg_msg);
+              g_free (dbg_msg);
+            }
 
             gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
 
@@ -2496,17 +2454,17 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         #endif
             g_strfreev (uri_parts);
 
-          #ifdef REAL_DEBUG
-            dbg_msg = g_strdup_printf ("Writing image to %s.", filename);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
+            if (real_debug) {
+              dbg_msg = g_strdup_printf ("Writing image to %s.", filename);
+              dbg (dbg_msg);
+              g_free (dbg_msg);
+            }
 
             if (!g_file_test (filename, G_FILE_TEST_EXISTS))
             {
-            #ifdef REAL_DEBUG
-              dbg ("File not in cache, downloading...");
-            #endif
+              if (real_debug)
+                dbg ("File not in cache, downloading...");
+
               SoupMessage* i_m = soup_message_new ("GET", uri);
               if (soup_session_send_message (data->window->session, i_m) == 200)
               {
@@ -2565,11 +2523,11 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
             tagname = tagname_d;
 
-          #ifdef REAL_DEBUG
-            dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
-            dbg (dbg_msg);
-            g_free (dbg_msg);
-          #endif
+            if (real_debug) {
+              dbg_msg = g_strdup_printf ("Inserting link to %s.", tagname);
+              dbg (dbg_msg);
+              g_free (dbg_msg);
+            }
 
             if (!gtk_text_tag_table_lookup (table, tagname))
             {
@@ -2581,9 +2539,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         }
         else if (g_strcmp0 (top->name,"!--") == 0)
         {
-        #ifdef REAL_DEBUG
-          dbg ("Detected comment.");
-        #endif
+          if (real_debug)
+            dbg ("Detected comment.");
+
           if (data->window->settings.showhidden)
           {
             top->attrs = g_slist_reverse (top->attrs);
@@ -2602,21 +2560,18 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
         }
-        #ifdef DEBUG
-        else
+        else if (debug)
         {
           g_warning ("Tag %s not implemented.", top->name);
         }
-        #endif
-
 
         if (tagname)
         {
-        #ifdef DEBUG
-          dbg_msg = g_strdup_printf ("Applying tag %s.", tagname);
-          dbg (dbg_msg);
-          g_free (dbg_msg);
-        #endif
+          if (debug) {
+            dbg_msg = g_strdup_printf ("Applying tag %s.", tagname);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          }
 
           GtkTextIter end;
           GtkTextIter start;
@@ -2636,9 +2591,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else if (g_strcmp0 (stack->data,"O") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding current to tag name.");
-      #endif
+        if (real_debug)
+          dbg ("Adding current to tag name.");
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
       }
@@ -2650,23 +2604,22 @@ void parse_message (gchar* message_d, DevchatCBData* data)
     }
     else if (state == STATE_OPENTAG)
     {
-    #ifdef REAL_DEBUG
-      dbg ("State: Open tag.");
-    #endif
+      if (real_debug)
+        dbg ("State: Open tag.");
 
       if (g_strcmp0 (current, ">") == 0)
       {
-      #ifdef DEBUG
-        dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
+        if (real_debug) {
+          dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
+        }
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
         if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0 || g_strcmp0 (current_tag->name, "!--") == 0)
         {
-        #ifdef DEBUG
-          dbg ("Closing void tag.");
-        #endif
+          if (real_debug)
+            dbg ("Closing void tag.");
+
           state = STATE_CLOSETAG;
           i--;
         }
@@ -2684,31 +2637,29 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else if (g_strcmp0 (current, " ") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Detecting end of tag name definition, switching to state attribute.");
-      #endif
+        if (real_debug)
+          dbg ("Detecting end of tag name definition, switching to state attribute.");
+
         state = STATE_ATTR;
       }
       else
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding current to tag name.");
-      #endif
+        if (real_debug)
+          dbg ("Adding current to tag name.");
+
 
         current_tag->name = g_strconcat (current_tag->name, current, NULL);
       }
     }
     else if (state == STATE_ATTR)
     {
-    #ifdef REAL_DEBUG
-      dbg ("State: Attribute.");
-    #endif
+      if (real_debug)
+        dbg ("State: Attribute.");
 
       if (g_strcmp0 (current, "=") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Detecting value definition start. Switching to state attribute content.");
-      #endif
+        if (real_debug)
+          dbg ("Detecting value definition start. Switching to state attribute content.");
 
         i++;
         stack = g_slist_prepend (stack, g_strdup ("\""));
@@ -2716,9 +2667,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else if (g_strcmp0 (current, " ") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Detecting end of attribute, switching back to state open tag.");
-      #endif
+        if (real_debug)
+          dbg ("Detecting end of attribute, switching back to state open tag.");
 
         current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
         current_attr = devchat_html_attr_new ();
@@ -2727,17 +2677,18 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else if (g_strcmp0 (current, ">") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      #endif
+        if (real_debug) {
+          dbg_msg = g_strdup_printf ("Detecting closing of %s tag definition, going back to data state or close tag, if tag is void.",current_tag->name);
+          dbg (dbg_msg);
+          g_free (dbg_msg);
+        }
+
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
         if (g_strcmp0 (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0 || g_strcmp0 (current_tag->name, "!--") == 0)
         {
-        #ifdef REAL_DEBUG
-          dbg ("Closing void tag.");
-        #endif
+          if (real_debug)
+            dbg ("Closing void tag.");
+
           state = STATE_CLOSETAG;
           i--;
         }
@@ -2758,9 +2709,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding current to attribute name.");
-      #endif
+        if (real_debug)
+          dbg ("Adding current to attribute name.");
+
         current_attr->name = g_strconcat (current_attr->name, current, NULL);
       }
     }
@@ -2768,9 +2719,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
     {
       if (g_strcmp0 (current, "\"") == 0)
       {
-      #ifdef REAL_DEBUG
-        dbg ("Detected \", switching back to state attribute and pop()'ing stack.");
-      #endif
+        if (real_debug)
+          dbg ("Detected \", switching back to state attribute and pop()'ing stack.");
 
         state = STATE_ATTR;
 
@@ -2827,18 +2777,17 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
       else
       {
-      #ifdef REAL_DEBUG
-        dbg ("Adding current to attribute valute.");
-      #endif
+        if (real_debug)
+          dbg ("Adding current to attribute valute.");
 
         current_attr->value = g_strconcat (current_attr->value, current, NULL);
       }
     }
   }
   g_free (plus);
-#ifdef DEBUG
-  dbg ("Parsing done.");
-#endif
+
+  if (debug)
+    dbg ("Parsing done.");
 }
 
 gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
@@ -3282,10 +3231,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   {
     if (!g_file_get_contents (g_build_filename (g_getenv("PROGRAMFILES"), "Devchat", "etc", "gtk-2.0", "gtkrc", NULL), &gtkrc, NULL, NULL))
     {
-    #ifdef DEBUG
-      dbg ("\n\nYour installation is f'ed up. Please reinstall.\n\n");
+      err ("\n\nYour installation is f'ed up. Please reinstall.\n\n");
       return;
-    #endif
     }
   }
 
@@ -3639,11 +3586,11 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
     default: url = g_strdup_printf ("%sprofile.php?mode=viewprofile&u=%i", url, GPOINTER_TO_INT (data->data)); break;
   }
 
-#ifdef DEBUG
-  dbg_msg = g_strdup_printf ("URL to open: %s\n", url);
-  dbg (dbg_msg);
-  g_free (dbg_msg);
-#endif
+  if (debug) {
+    dbg_msg = g_strdup_printf ("URL to open: %s\n", url);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  }
 
   launch_browser (NULL, url, data);
   g_free (url);
@@ -3672,9 +3619,9 @@ void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
 void reconnect(GtkWidget* widget, DevchatCBData* data)
 {
   data->window->errorcount = 0;
-#ifdef DEBUG
-  dbg ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit... *ahem* Sorry, I'll continue.)\n");
-#endif
+  if (debug)
+    dbg ("Killing soup session... WITH A SPOON.\n(Killing soup with a spoon, get it? Oh, the wit... *ahem* Sorry, I'll continue.)\n");
+
   data->window->firstrun = TRUE;
   data->window->hovertag = NULL;
   soup_session_abort (data->window->session);
@@ -3775,9 +3722,9 @@ void devchat_window_on_mark_set_cb (GtkTextBuffer* buffer, GtkTextIter* iter, Gt
         gchar* uri = name+5;
       #endif
 
-      #ifdef DEBUG
-        dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
-      #endif
+        if (debug)
+          dbg_msg = g_strdup_printf ("Quoted URI: %s\n", uri);
+
         launch_browser (NULL, uri, data);
         g_free (uri);
 
@@ -3911,9 +3858,9 @@ void level_changed (GtkWidget* widget, DevchatCBData* data)
 
 void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 {
-#ifdef DEBUG
-  dbg ("Sending message...");
-#endif
+  if (debug)
+    dbg ("Sending message...");
+
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
   GtkTextBuffer* buf;
   gchar* text;
@@ -3926,9 +3873,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
   if (pagenum == 0)
   {
-  #ifdef DEBUG
-    dbg ("Sending message to main channel.");
-  #endif
     buf = data->window->input;
     gtk_text_buffer_get_start_iter (buf, &start);
     gtk_text_buffer_get_end_iter (buf, &end);
@@ -3937,9 +3881,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-  #ifdef DEBUG
-    dbg ("Sending PM.");
-  #endif
   #ifndef OTR
     gchar* target;
   #endif
@@ -4031,11 +3972,11 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     {
       current[0] = text[i];
 
-    #ifdef REAL_DEBUG
-      dbg_msg = g_strdup_printf ("Current char: %i\n", current[0]);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    #endif
+      if (real_debug) {
+        dbg_msg = g_strdup_printf ("Current char: %i\n", current[0]);
+        dbg (dbg_msg);
+        g_free (dbg_msg);
+      }
 
       /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
       if (current[0] == 45 || current[0] == 46
@@ -4080,19 +4021,17 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       {
         enc_text = g_strconcat (enc_text, "%0D%0A", NULL);
       }
-    #ifdef DEBUG
-      else
+      else if (debug)
       {
         dbg ("Invalid char in sent text. Stop that!");
       }
-    #endif
     }
 
-  #ifdef DEBUG
-    dbg_msg = g_strdup_printf ("Parsed message: %s.\n", enc_text);
-    dbg (dbg_msg);
-    g_free (dbg_msg);
-  #endif
+    if (debug) {
+      dbg_msg = g_strdup_printf ("Parsed message: %s.\n", enc_text);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    }
 
 
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
@@ -4356,12 +4295,6 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 {
   gchar* name = (gchar*) key;
   gchar* icon = (gchar*) value;
-
-#ifdef DEBUG
-  dbg_msg = g_strdup_printf ("Adding smilie %s.", name);
-  dbg (dbg_msg);
-  g_free (dbg_msg);
-#endif
 
   GtkWidget* item = gtk_image_menu_item_new_with_label (name);
   gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item), gtk_image_new_from_file (icon));
@@ -4682,7 +4615,6 @@ void err(gchar* message)
 #endif
 }
 
-#ifdef DEBUG
 void dbg(gchar* message)
 {
 #ifdef G_OS_WIN32
@@ -4694,4 +4626,3 @@ void dbg(gchar* message)
   g_printf ("%s\n", message);
 #endif
 }
-#endif

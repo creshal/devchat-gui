@@ -3,7 +3,8 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.5.8"\n')
+f.write('#define VERSION "0.5.9"\n')
+f.write('int debug;\nint real_debug;\nint no_config;')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 
@@ -45,8 +46,8 @@ uninstall:
 
 parser = optparse.OptionParser()
 parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local",help="Installation prefix.")
-parser.add_option("-d","--enable-debug",action="store_true",dest="debug",default=False,help="Debug mode. Prints out what it does. Not recommended for daily use, since it's *very* chatty (even more than Clippy, you have been warned).")
-parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Like debug, but without the textwalls of doom(tm). Useful for automated debugging.")
+parser.add_option("-d","--enable-debug",action="store_true",dest="debugS",default=False,help="Only kept for compatibility reasons. Equal to --enable-debugging-symbols")
+parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Useful for automated debugging.")
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support. NOTE: UNFINISHED. WILL BREAK COMPILING AND KILL KITTEN. You have been warned.")
 parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations (not implemented).")
@@ -57,9 +58,6 @@ ccargs = "-O2 -Wall -march=native"
 
 print "Writing options to config.h ..."
 
-if options.debug:
-  f.write('#define DEBUG\n')
-  ccargs = "-g -O0 -Wall"
 if options.debugS:
   ccargs = "-g -O0 -Wall"
 if options.notify:

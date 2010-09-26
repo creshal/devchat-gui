@@ -215,9 +215,8 @@ typedef struct devchat_cb_data
 
 void err(gchar* message);
 
-#ifdef DEBUG
 void dbg(gchar* message);
-#endif
+
 
 GType devchat_window_get_type (void);
 
