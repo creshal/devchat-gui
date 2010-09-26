@@ -1,6 +1,6 @@
 CC = clang
 LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
-DESTDIR = /usr
+DESTDIR = /usr/local
 CCARGS = -O2 -Wall -march=native
 
 all:

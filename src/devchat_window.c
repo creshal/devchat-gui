@@ -2519,15 +2519,27 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               }
             }
 
-            GtkWidget* img = gtk_image_new_from_file (filename);
-
             GtkTextIter fnord;
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
-            GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+            GtkWidget* img = gtk_image_new_from_file (filename);
 
-            gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
-            gtk_widget_show (img);
+            GdkPixbuf* p;
+
+            g_object_get (img, "pixbuf", &p, NULL);
+
+            if (gdk_pixbuf_get_width (p) > 320 || gdk_pixbuf_get_height (p) > 240)
+            {
+              p = gdk_pixbuf_scale_simple (p, 320, 240, GDK_INTERP_BILINEAR);
+              gtk_text_buffer_insert_pixbuf (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, p);
+            }
+            else
+            {
+              GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+
+              gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
+              gtk_widget_show (img);
+            }
 
             g_free (filename);
           }
