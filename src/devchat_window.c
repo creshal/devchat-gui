@@ -2069,7 +2069,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (silmsg);
       }
 
-      parse_message (message_t, devchat_cb_data_new (self->window, buf));
+      parse_message (message_t, devchat_cb_data_new (self->window, view));
 
       g_free (message_t);
 
@@ -2232,7 +2232,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
   GtkTextIter old_end;
 
-  GtkTextTagTable* table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (data->data));
+  GtkTextTagTable* table = gtk_text_buffer_get_tag_table (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)));
 
   GRegex* plus = g_regex_new ("&#43;", 0, 0, NULL);
 
@@ -2279,10 +2279,10 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       #endif
 
         GtkTextIter end;
-        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+        gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
 
-        gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &end, content, -1);
+        gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
         content = "";
 
         state = STATE_TYPECHECK;
@@ -2439,9 +2439,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         {
           GtkTextIter fnord;
 
-          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
+          gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
-          gtk_text_buffer_insert (GTK_TEXT_BUFFER (data->data), &fnord, "\n", -1);
+          gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, "\n", -1);
         }
         else if (g_strcmp0 (top->name,"span")==0)
         {
@@ -2454,24 +2454,29 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         #ifdef DEBUG
           dbg ("Parsing img tag...");
         #endif
-          GtkTextIter fnord;
-          GdkPixbuf* smilie = NULL;
+          gchar* smilie = NULL;
           gchar* uri = NULL;
 
           if (top->attrs->next && top->attrs->next->next)
-            smilie = (GdkPixbuf*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
+            smilie = (gchar*) g_hash_table_lookup (data->window->smilies, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
           uri = (gchar*) ((DevchatHTMLAttr*) top->attrs->next->data)->value;
-
 
           if (smilie)
           {
           #ifdef DEBUG
             dbg ("Found smilie in database.");
           #endif
-            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
-            gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, smilie);
-          }
+            GtkWidget* img = gtk_image_new_from_file (smilie);
 
+            GtkTextIter fnord;
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+
+            GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+
+            gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
+            gtk_widget_show (img);
+          }
+          /*XXX*/
           else if (uri)
           {
           #ifdef DEBUG
@@ -2514,22 +2519,15 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               }
             }
 
-            GdkPixbuf* img = gdk_pixbuf_new_from_file (filename, NULL);
-
-            if (gdk_pixbuf_get_width (img) > 320)
-            {
-              img = gdk_pixbuf_scale_simple (img, 320, gdk_pixbuf_get_height (img) / (gdk_pixbuf_get_width (img)/320), GDK_INTERP_BILINEAR);
-            }
-            else if (gdk_pixbuf_get_height (img) > 240)
-            {
-              img = gdk_pixbuf_scale_simple (img, gdk_pixbuf_get_width (img) / (gdk_pixbuf_get_height (img)/240), 240, GDK_INTERP_BILINEAR);
-            }
+            GtkWidget* img = gtk_image_new_from_file (filename);
 
             GtkTextIter fnord;
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
-            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &fnord);
+            GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
-            gtk_text_buffer_insert_pixbuf (GTK_TEXT_BUFFER (data->data), &fnord, img);
+            gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
+            gtk_widget_show (img);
 
             g_free (filename);
           }
@@ -2587,9 +2585,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             }
             GtkTextIter end;
 
-            gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
-            gtk_text_buffer_insert_with_tags_by_name (GTK_TEXT_BUFFER (data->data), &end, comment, -1, "time", NULL);
+            gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
         }
         #ifdef DEBUG
@@ -2610,14 +2608,14 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
           GtkTextIter end;
           GtkTextIter start;
-          gtk_text_buffer_get_iter_at_mark (GTK_TEXT_BUFFER (data->data), &start, top->start_mark);
-          gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &end);
+          gtk_text_buffer_get_iter_at_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, top->start_mark);
+          gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
-          gtk_text_buffer_apply_tag_by_name (GTK_TEXT_BUFFER (data->data), tagname, &start, &end);
+          gtk_text_buffer_apply_tag_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), tagname, &start, &end);
         }
 
         if (top->start_mark)
-          gtk_text_buffer_delete_mark (GTK_TEXT_BUFFER (data->data), top->start_mark);
+          gtk_text_buffer_delete_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), top->start_mark);
         g_slist_free_1 (tmp);
 
         current_tag = devchat_html_tag_new ();
@@ -2665,9 +2663,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           state = STATE_DATA;
         }
 
-        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
+        gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &old_end);
         current_tag->start_mark = gtk_text_mark_new (NULL, TRUE);
-        gtk_text_buffer_add_mark (GTK_TEXT_BUFFER (data->data), current_tag->start_mark, &old_end);
+        gtk_text_buffer_add_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), current_tag->start_mark, &old_end);
 
         taglist = g_slist_prepend (taglist, current_tag);
         current_tag = devchat_html_tag_new ();
@@ -2739,9 +2737,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         current_tag->attrs = g_slist_prepend (current_tag->attrs, current_attr);
         current_attr = devchat_html_attr_new ();
 
-        gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (data->data), &old_end);
+        gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &old_end);
         current_tag->start_mark = gtk_text_mark_new (NULL, TRUE);
-        gtk_text_buffer_add_mark (GTK_TEXT_BUFFER (data->data), current_tag->start_mark, &old_end);
+        gtk_text_buffer_add_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), current_tag->start_mark, &old_end);
 
         taglist = g_slist_prepend (taglist, current_tag);
         current_tag = devchat_html_tag_new ();
@@ -4345,7 +4343,7 @@ void devchat_window_refresh_smilies (DevchatWindow* self)
 void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 {
   gchar* name = (gchar*) key;
-  GdkPixbuf* icon = (GdkPixbuf*) value;
+  gchar* icon = (gchar*) value;
 
 #ifdef DEBUG
   dbg_msg = g_strdup_printf ("Adding smilie %s.", name);
@@ -4354,7 +4352,7 @@ void add_smilie_cb (gpointer key, gpointer value, DevchatCBData* data)
 #endif
 
   GtkWidget* item = gtk_image_menu_item_new_with_label (name);
-  gtk_image_menu_item_set_image ( GTK_IMAGE_MENU_ITEM (item), gtk_image_new_from_pixbuf (icon));
+  gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item), gtk_image_new_from_file (icon));
 
   g_signal_connect (item, "activate", G_CALLBACK (ins_smilie), devchat_cb_data_new (data->window, name));
   gtk_menu_shell_append (data->data, item);

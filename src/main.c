@@ -188,29 +188,29 @@ main (int argc, char *argv[])
   g_free (dbg_msg);
 #endif
 
-  g_hash_table_insert (self->smilies, ":keks:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "atomkeks.png", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":cube:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "cube.png", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":fp:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "fp1.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, "8-)",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_cool.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":wall:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_headbang.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-D",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_mrgreen.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-|",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_neutral.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-S",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_oops.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-P",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_razz.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":oops:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_redface.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":roll:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_rolleyes.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-(",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_sad.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, "o_O",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_sceptic.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-)",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_smile.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":-o",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_surprised.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":==",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_thumb.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":--",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_thumb_down.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":++",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_thumb_up.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ";-)",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_wink.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":wtf:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "icon_wtf.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":ugly:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "ugly.gif", NULL),NULL));
-  g_hash_table_insert (self->smilies, ":wub:",gdk_pixbuf_new_from_file (g_build_filename(self->workingdir, "wub.gif", NULL),NULL));
-  g_hash_table_insert (self->avatars, "default",gdk_pixbuf_new_from_file_at_size (g_build_filename(self->workingdir, "default", NULL),self->settings.avatar_size,self->settings.avatar_size,NULL));
+  g_hash_table_insert (self->smilies, ":keks:", g_build_filename (self->workingdir, "atomkeks.png", NULL));
+  g_hash_table_insert (self->smilies, ":cube:", g_build_filename (self->workingdir, "cube.png", NULL));
+  g_hash_table_insert (self->smilies, ":fp:", g_build_filename (self->workingdir, "fp1.gif", NULL));
+  g_hash_table_insert (self->smilies, "8-)", g_build_filename (self->workingdir, "icon_cool.gif", NULL));
+  g_hash_table_insert (self->smilies, ":wall:", g_build_filename (self->workingdir, "icon_headbang.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-D", g_build_filename (self->workingdir, "icon_mrgreen.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-|", g_build_filename (self->workingdir, "icon_neutral.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-S", g_build_filename (self->workingdir, "icon_oops.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-P", g_build_filename (self->workingdir, "icon_razz.gif", NULL));
+  g_hash_table_insert (self->smilies, ":oops:", g_build_filename (self->workingdir, "icon_redface.gif", NULL));
+  g_hash_table_insert (self->smilies, ":roll:", g_build_filename (self->workingdir, "icon_rolleyes.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-(", g_build_filename (self->workingdir, "icon_sad.gif", NULL));
+  g_hash_table_insert (self->smilies, "o_O", g_build_filename (self->workingdir, "icon_sceptic.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-)", g_build_filename (self->workingdir, "icon_smile.gif", NULL));
+  g_hash_table_insert (self->smilies, ":-o", g_build_filename (self->workingdir, "icon_surprised.gif", NULL));
+  g_hash_table_insert (self->smilies, ":==", g_build_filename (self->workingdir, "icon_thumb.gif", NULL));
+  g_hash_table_insert (self->smilies, ":--", g_build_filename (self->workingdir, "icon_thumb_down.gif", NULL));
+  g_hash_table_insert (self->smilies, ":++", g_build_filename (self->workingdir, "icon_thumb_up.gif", NULL));
+  g_hash_table_insert (self->smilies, ";-)", g_build_filename (self->workingdir, "icon_wink.gif", NULL));
+  g_hash_table_insert (self->smilies, ":wtf:", g_build_filename (self->workingdir, "icon_wtf.gif", NULL));
+  g_hash_table_insert (self->smilies, ":ugly:", g_build_filename (self->workingdir, "ugly.gif", NULL));
+  g_hash_table_insert (self->smilies, ":wub:", g_build_filename (self->workingdir, "wub.gif", NULL));
+  g_hash_table_insert (self->avatars, "default", gdk_pixbuf_new_from_file_at_size (g_build_filename (self->workingdir, "default", NULL), self->settings.avatar_size, self->settings.avatar_size, NULL));
 
   devchat_window_refresh_smilies (self);
 
