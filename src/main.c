@@ -151,6 +151,11 @@ main (int argc, char *argv[])
 
   for (i=0; dirs[i]; i++)
   {
+  #ifdef DEBUG
+    dbg_msg = g_strdup_printf ("Testing for directory %s...\n", g_build_filename (dirs[i], "pixmaps", "devchat", NULL));
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  #endif
     if (g_file_test (g_build_filename (dirs[i], "pixmaps", "devchat", NULL), G_FILE_TEST_IS_DIR))
     {
       self->workingdir = g_build_filename (dirs[i], "pixmaps", "devchat", NULL);
@@ -160,6 +165,11 @@ main (int argc, char *argv[])
 
   if (!self->workingdir)
   {
+  #ifdef DEBUG
+    dbg_msg = g_strdup_printf ("Testing for directory %s...\n", g_build_filename (g_get_user_data_dir (), "pixmaps", "devchat", NULL));
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  #endif
     if (g_file_test (g_build_filename (g_get_user_data_dir (), "pixmaps", "devchat", NULL), G_FILE_TEST_IS_DIR))
     {
       self->workingdir = g_build_filename (g_get_user_data_dir (), "pixmaps", "devchat", NULL);

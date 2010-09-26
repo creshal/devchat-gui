@@ -16,5 +16,5 @@ build() {
   cd ${srcdir}/${pkgname}-${pkgver}
   ./configure --prefix=/usr
   make
-  make DESTDIR="$pkgdir" install || return 1
+  make DESTDIR=$pkgdir/usr install || return 1
 }

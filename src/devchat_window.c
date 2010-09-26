@@ -122,7 +122,7 @@ void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
 void parse_message (gchar* message, DevchatCBData* self);
 void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data);
 gchar* current_time ();
-
+gboolean get_pos_size (DevchatWindow* window);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -630,6 +630,8 @@ devchat_window_init (DevchatWindow* self)
 #endif
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
+
+  g_timeout_add_seconds (5, (GSourceFunc) get_pos_size, self);
 }
 
 static void
@@ -1089,9 +1091,6 @@ void save_settings (DevchatWindow* w)
   {
     presets_string = g_strconcat (presets_string, w->settings.presets[i], "|", NULL);
   }
-
-  gtk_window_get_position (GTK_WINDOW (w->window), &w->settings.x, &w->settings.y);
-  gtk_window_get_size (GTK_WINDOW (w->window), &w->settings.width, &w->settings.height);
 
   GtkPaned* hpaned1 = GTK_PANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
   w->settings.handle_width = gtk_paned_get_position (hpaned1);
@@ -2959,20 +2958,38 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
 
 void config_cb(GtkWidget* widget, DevchatCBData* data)
 {
-  GtkWidget* dialog = gtk_dialog_new_with_buttons ("Devchat settings", GTK_WINDOW (data->window->window),
-                                                   GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                                   "Reset settings", GTK_RESPONSE_REJECT,
-                                                  #ifndef G_OS_WIN32
-                                                    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-                                                  #endif
-                                                    GTK_STOCK_OK, GTK_RESPONSE_OK,
-                                                  #ifdef G_OS_WIN32
-                                                    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-                                                  #endif
-                                                    NULL);
+  GtkWidget* dialog = gtk_dialog_new ();
 
   GtkWidget* note_label = gtk_label_new ("Note: Some settings will apply on restart.");
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area( GTK_DIALOG (dialog))), note_label, FALSE, FALSE, 0);
+
+  gtk_window_set_title (GTK_WINDOW (dialog), "Devchat settings");
+  gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (data->window->window));
+  gtk_window_set_destroy_with_parent (GTK_WINDOW (dialog), TRUE);
+
+  GtkWidget* chk_reset_1 = gtk_check_button_new_with_label ("Reset color");
+  GtkWidget* chk_reset_2 = gtk_check_button_new_with_label ("Reset Misc");
+  GtkWidget* chk_reset_3 = gtk_check_button_new_with_label ("Reset preset texts");
+
+  GtkWidget* vboxBB = gtk_vbox_new (TRUE, 0);
+  GtkWidget* hboxBB = gtk_hbox_new (TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_1, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_2, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (vboxBB), hboxBB, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (vboxBB), chk_reset_3, FALSE, FALSE, 0);
+
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_action_area (GTK_DIALOG (dialog))), vboxBB, FALSE, FALSE, 0);
+
+  gtk_dialog_add_buttons (GTK_DIALOG (dialog), "Reset settings", GTK_RESPONSE_REJECT,
+                                             #ifndef G_OS_WIN32
+                                               GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                             #endif
+                                               GTK_STOCK_OK, GTK_RESPONSE_OK,
+                                             #ifdef G_OS_WIN32
+                                               GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                             #endif
+                                               NULL);
+
   GtkWidget* nb = gtk_notebook_new ();
 
   GdkColor c;
@@ -3342,50 +3359,59 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   switch (result)
   {
     case GTK_RESPONSE_REJECT:
-      g_slist_free (data->window->settings.keywords);
-      data->window->settings.keywords = NULL;
-      for (i_p=0;i_p<10;i_p++)
+      if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_reset_1)))
       {
-        if (g_strcmp0 ("", data->window->settings.presets[i_p]) != 0)
-          g_free (data->window->settings.presets[i_p]);
-        data->window->settings.presets[i_p] = "";
+        g_object_set (data->window, "color_time", data->window->settings_backup.color_time,
+                                    "color_font", data->window->settings_backup.color_font,
+                                    "color_l1", data->window->settings_backup.color_l1,
+                                    "color_l3", data->window->settings_backup.color_l3,
+                                    "color_l5", data->window->settings_backup.color_l5,
+                                    "color_l6", data->window->settings_backup.color_l6,
+                                    "color_goldies", data->window->settings_backup.color_goldies,
+                                    "color_greens", data->window->settings_backup.color_greens,
+                                    "color_blues", data->window->settings_backup.color_blues,
+                                    "color_url", data->window->settings_backup.color_url,
+                                    "color_url_visited", data->window->settings_backup.color_url_visited,
+                                    "color_url_hover", data->window->settings_backup.color_url_hover,
+                                    "color_highlight", data->window->settings_backup.color_highlight,
+                                    "color_green", data->window->settings_backup.color_green,
+                                    "color_red", data->window->settings_backup.color_red,
+                                    "color_blue", data->window->settings_backup.color_blue,
+                                    "color_cyan", data->window->settings_backup.color_cyan,
+                                    "color_yellow", data->window->settings_backup.color_yellow,
+                                    "color_magenta", data->window->settings_backup.color_magenta,
+                                    NULL);
+      }
+      if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_reset_2)))
+      {
+        g_object_set (data->window, "showid", data->window->settings_backup.showid,
+                                    "showhidden", data->window->settings_backup.showhidden,
+                                    "autojoin", data->window->settings_backup.autojoin,
+                                    "stealthjoin", data->window->settings_backup.stealthjoin,
+                                    "coloruser", data->window->settings_backup.coloruser,
+                                    "browser", data->window->settings_backup.browser,
+                                    "notify", data->window->settings_backup.notify,
+                                    "vnotify", data->window->settings_backup.vnotify,
+                                    "trayicon", data->window->settings_backup.showtray,
+                                    NULL);
+        g_slist_free (data->window->settings.keywords);
+        data->window->settings.keywords = NULL;
+        data->window->settings.update_time = data->window->settings_backup.update_time;
+        data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
+        data->window->settings.store_pass = data->window->settings_backup.store_pass;
+        data->window->settings.servername = data->window->settings_backup.servername;
+        data->window->settings.jumptab = data->window->settings_backup.jumptab;
       }
 
-      g_object_set (data->window, "color_time", data->window->settings_backup.color_time,
-                                  "color_font", data->window->settings_backup.color_font,
-                                  "color_l1", data->window->settings_backup.color_l1,
-                                  "color_l3", data->window->settings_backup.color_l3,
-                                  "color_l5", data->window->settings_backup.color_l5,
-                                  "color_l6", data->window->settings_backup.color_l6,
-                                  "color_goldies", data->window->settings_backup.color_goldies,
-                                  "color_greens", data->window->settings_backup.color_greens,
-                                  "color_blues", data->window->settings_backup.color_blues,
-                                  "color_url", data->window->settings_backup.color_url,
-                                  "color_url_visited", data->window->settings_backup.color_url_visited,
-                                  "color_url_hover", data->window->settings_backup.color_url_hover,
-                                  "color_highlight", data->window->settings_backup.color_highlight,
-                                  "color_green", data->window->settings_backup.color_green,
-                                  "color_red", data->window->settings_backup.color_red,
-                                  "color_blue", data->window->settings_backup.color_blue,
-                                  "color_cyan", data->window->settings_backup.color_cyan,
-                                  "color_yellow", data->window->settings_backup.color_yellow,
-                                  "color_magenta", data->window->settings_backup.color_magenta,
-                                  "showid", data->window->settings_backup.showid,
-                                  "showhidden", data->window->settings_backup.showhidden,
-                                  "autojoin", data->window->settings_backup.autojoin,
-                                  "stealthjoin", data->window->settings_backup.stealthjoin,
-                                  "coloruser", data->window->settings_backup.coloruser,
-                                  "browser", data->window->settings_backup.browser,
-                                  "notify", data->window->settings_backup.notify,
-                                  "vnotify", data->window->settings_backup.vnotify,
-                                  "trayicon", data->window->settings_backup.showtray,
-                                  NULL);
-      data->window->settings.update_time = data->window->settings_backup.update_time;
-      data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
-      data->window->settings.store_pass = data->window->settings_backup.store_pass;
-      data->window->settings.servername = data->window->settings_backup.servername;
-      data->window->settings.jumptab = data->window->settings_backup.jumptab;
-
+      if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_reset_3)))
+      {
+        for (i_p=0;i_p<10;i_p++)
+        {
+          if (g_strcmp0 ("", data->window->settings.presets[i_p]) != 0)
+            g_free (data->window->settings.presets[i_p]);
+          data->window->settings.presets[i_p] = "";
+        }
+      }
       break;
     case GTK_RESPONSE_OK:
       gtk_color_button_get_color (GTK_COLOR_BUTTON (btn_col_time), &color_time);
@@ -3918,6 +3944,30 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   gchar* tmp = text;
   text = g_strstrip (text);
+
+  GRegex* custom_smilies[5];
+
+  custom_smilies[0] = g_regex_new (":cube:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[1] = g_regex_new (":ugly:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[2] = g_regex_new (":fp:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[3] = g_regex_new (":wub:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[4] = g_regex_new (":keks:", G_REGEX_UNGREEDY, 0, NULL);
+
+  gchar* custom_smilie_replacements[5];
+
+  custom_smilie_replacements[0] = "[img]http://dl.creshal.de/dc/cube.png[/img]";
+  custom_smilie_replacements[1] = "[img]http://dl.creshal.de/dc/ugly.gif[/img]";
+  custom_smilie_replacements[2] = "[img]http://dl.creshal.de/dc/fp1.gif[/img]";
+  custom_smilie_replacements[3] = "[img]http://dl.creshal.de/dc/wub.gif[/img]";
+  custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/atomkeks.png[/img]";
+
+  int i;
+  for (i=0; i < 5; i++)
+  {
+    gchar* tmp = text;
+    text = g_regex_replace (custom_smilies[i], text, -1, 0, custom_smilie_replacements[i], 0, NULL);
+    g_free (tmp);
+  }
 
   if (g_strcmp0("",text) != 0)
   {
@@ -4527,6 +4577,14 @@ gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatC
     else
       data->window->settings.maximized = FALSE;
   }
+
+  return TRUE;
+}
+
+gboolean get_pos_size (DevchatWindow* window)
+{
+  gtk_window_get_position (GTK_WINDOW (window->window), &window->settings.x, &window->settings.y);
+  gtk_window_get_size (GTK_WINDOW (window->window), &window->settings.width, &window->settings.height);
 
   return TRUE;
 }
