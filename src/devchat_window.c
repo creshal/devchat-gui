@@ -3952,7 +3952,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
     text = g_strconcat ("/msg ", target, " ", gtk_text_buffer_get_text (buf, &start, &end, FALSE), NULL);
   }
-  gchar* tmp = text;
   text = g_strstrip (text);
 
   GRegex* custom_smilies[5];
@@ -3974,9 +3973,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   int i;
   for (i=0; i < 5; i++)
   {
-    gchar* tmp = text;
+    gchar* tmp2 = text;
     text = g_regex_replace (custom_smilies[i], text, -1, 0, custom_smilie_replacements[i], 0, NULL);
-    g_free (tmp);
+    g_free (tmp2);
   }
 
   if (g_strcmp0("",text) != 0)
@@ -3992,6 +3991,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       i--;
     }
     data->window->buffer[1] = g_strdup (text);
+
     if (g_strcmp0 (data->window->buffer[0], "") != 0)
     {
       gtk_text_buffer_set_text (buf, data->window->buffer[0], -1);
@@ -4114,7 +4114,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     g_free (enc_text);
   }
 #ifndef OTR
-  g_free (tmp);
+  g_free (text);
 #else
   otrl_message_free (text);
 #endif
