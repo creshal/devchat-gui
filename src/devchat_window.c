@@ -2434,7 +2434,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
             gtk_widget_show (img);
           }
-          /*XXX*/
           else if (uri)
           {
             if (real_debug) {

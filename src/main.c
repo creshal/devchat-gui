@@ -31,7 +31,6 @@ main (int argc, char *argv[])
 
   if (!g_thread_supported ()) g_thread_init (NULL); /*Fix libsoup-related crash with GLib < 2.24*/
   gtk_init (&argc, &argv);
-  /*TODO: Optparse */
 
   GOptionContext* opt_ctxt = g_option_context_new (" - Gtk+ client for X-Devchat.");
   g_option_context_add_main_entries (opt_ctxt, entries, NULL);
