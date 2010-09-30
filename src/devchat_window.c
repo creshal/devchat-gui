@@ -1406,10 +1406,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       if (debug)
         dbg ("Got non-empty userlist.");
 
-      dbg_msg = g_strdup_printf("Last Update: %s",current_time());
-      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
-      g_free (dbg_msg);
-
       xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT));
       xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
 
@@ -1610,6 +1606,12 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       /*If the server failed to submit an incremental update, request complete list.*/
       if (usercount == 0)
         data->window->users_online = NULL;
+      else
+      {
+        dbg_msg = g_strdup_printf("Last Update: %s",current_time());
+        gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
+        g_free (dbg_msg);
+      }
 
       gtk_widget_show_all (data->window->userlist);
       xmlFreeTextReader (userparser);
@@ -1790,13 +1792,6 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 {
-  if (g_strcmp0 (date, "") == 0)
-  {
-    gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
-    gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
-    g_free (labeltext);
-  }
-
   gboolean message_found = FALSE;
 
   GSList* scroll_tos = NULL;
@@ -2142,6 +2137,14 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       scroll_tos = scroll_tos->next;
       g_slist_free_1 (tmp);
     }
+
+    if (g_strcmp0 (date, "") == 0)
+    {
+      gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
+      gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
+      g_free (labeltext);
+    }
+
   }
 
   gtk_text_buffer_delete_mark (self->window->output, scroll_to);
