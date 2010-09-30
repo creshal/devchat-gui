@@ -1658,6 +1658,8 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
 
+    gchar* filename = g_build_filename (data->window->avadir, data->data, NULL);
+
     gchar* line;
     guint i;
     gchar* ava_url = NULL;
@@ -1701,18 +1703,24 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         if (g_strcmp0 ("404", a_m->response_body->data) != 0)
         {
           GError* error = NULL;
-          gchar* filename = g_build_filename (data->window->avadir,data->data,NULL);
           if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &error))
           {
             err (g_strdup_printf ("Error while saving avatar: %s.", error->message));
             g_error_free (error);
+            found = FALSE;
           }
           g_free (filename);
         }
+        else
+        {
+          found = FALSE;
+        }
       }
-      else if (debug)
+      else
       {
-        dbg ("Error downloading avatar!");
+        found = FALSE;
+        if (debug)
+          dbg ("Error downloading avatar!");
       }
     }
 
@@ -1723,6 +1731,21 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     if (debug)
       dbg ("Avatar search done.");
+
+    if (!found)
+    {
+      data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar, g_strdup ((gchar*) data->data));
+      if (g_file_test (filename, G_FILE_TEST_EXISTS))
+        g_remove (filename);
+    }
+    else
+    {
+      if (data->window->users_online)
+      {
+        g_slist_free (data->window->users_online);
+        data->window->users_online = NULL;
+      }
+    }
   }
 }
 
