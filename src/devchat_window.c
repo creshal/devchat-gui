@@ -570,7 +570,14 @@ devchat_window_init (DevchatWindow* self)
   gtk_paned_pack1 (GTK_PANED(vpaned),hpaned1,TRUE,TRUE);
   gtk_paned_pack2 (GTK_PANED(vpaned),vbox2,FALSE,FALSE);
 
-  gtk_notebook_append_page_menu(GTK_NOTEBOOK(self->notebook),vpaned,gtk_label_new("X-DEVCHAT"),gtk_label_new("X-DEVCHAT"));
+  GtkWidget* main_label = gtk_label_new ("X-DEVCHAT");
+  GtkWidget* event_box = gtk_event_box_new ();
+  gtk_container_add (GTK_CONTAINER (event_box), main_label);
+  g_signal_connect (event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), self_data);
+
+  gtk_widget_show_all (event_box);
+
+  gtk_notebook_append_page_menu (GTK_NOTEBOOK (self->notebook), vpaned, event_box, gtk_label_new("X-DEVCHAT"));
 
   gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK(self->notebook), vpaned, FALSE);
 
@@ -3665,7 +3672,26 @@ void tab_changed (GtkWidget* widget, GtkNotebook* nb, guint pagenum, DevchatCBDa
 
 gboolean devchat_window_tab_changed_win (GtkWidget* widget, GdkEvent* ev, DevchatCBData* data)
 {
-  tab_changed (NULL, GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook)), data);
+  guint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkWidget* w;
+
+  if (pagenum == 0)
+  {
+    w = data->window->inputwidget;
+  }
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    w = conv->in_widget;
+    tab_changed (NULL, GTK_NOTEBOOK (data->window->notebook), pagenum, data);
+  }
+
+  if (w)
+  {
+    gtk_widget_grab_focus (w);
+  }
+
   return FALSE;
 }
 
@@ -4260,17 +4286,23 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
     g_hash_table_insert (data->window->conversations, g_strdup ((gchar*) data->data), conv);
 
     GtkWidget* labelbox = gtk_hbox_new (FALSE, 0);
+    GtkWidget* avatar;
 
     /*Determine icon*/
     if (is_history)
-      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_stock (GTK_STOCK_INFO, GTK_ICON_SIZE_MENU), FALSE, FALSE, 0);
+      avatar = gtk_image_new_from_stock (GTK_STOCK_INFO, GTK_ICON_SIZE_MENU);
     else if (g_hash_table_lookup (data->window->users, (gchar*) data->data)
              && g_hash_table_lookup (data->window->avatars, g_hash_table_lookup (data->window->users, (gchar*) data->data)))
-      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, g_hash_table_lookup (data->window->users, (gchar*) data->data))), FALSE, FALSE, 0);
+      avatar = gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, g_hash_table_lookup (data->window->users, (gchar*) data->data)));
     else if (g_strcmp0 ((gchar*) data->data, "(ChatServer):") == 0)
-      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_stock (GTK_STOCK_DIALOG_INFO, GTK_ICON_SIZE_MENU), FALSE, FALSE, 0);
+      avatar = gtk_image_new_from_stock (GTK_STOCK_DIALOG_INFO, GTK_ICON_SIZE_MENU);
     else
-      gtk_box_pack_start (GTK_BOX (labelbox), gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, "default")), FALSE, FALSE, 0);
+      avatar = gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, "default"));
+
+    GtkWidget* avatar_event_box = gtk_event_box_new ();
+    gtk_container_add (GTK_CONTAINER (avatar_event_box), avatar);
+    gtk_box_pack_start (GTK_BOX (labelbox), avatar_event_box, FALSE, FALSE, 0);
+    g_signal_connect (avatar_event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), data);
 
     GtkWidget* label = gtk_label_new ((gchar*) data->data);
     GtkWidget* event_box = gtk_event_box_new ();
@@ -4286,7 +4318,7 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
 
     g_signal_connect (tab_close, "clicked", G_CALLBACK (devchat_window_close_tab), devchat_cb_data_new (data->window, conv->child));
     gtk_box_pack_end (GTK_BOX (labelbox), tab_close, FALSE, TRUE, 0);
-    g_signal_connect (event_box, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), data);
+    g_signal_connect (event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), data);
     gtk_widget_show_all (labelbox);
     gtk_widget_show_all (conv->child);
     gtk_notebook_append_page_menu (GTK_NOTEBOOK (data->window->notebook), conv->child, labelbox, label);
