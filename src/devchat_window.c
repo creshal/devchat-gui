@@ -122,6 +122,9 @@ void parse_message (gchar* message, DevchatCBData* self);
 void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data);
 gchar* current_time ();
 gboolean get_pos_size (DevchatWindow* window);
+void message_list_chunk (SoupMessage* m, SoupBuffer* chunk, DevchatCBData* data);
+gboolean message_list_timeout (DevchatCBData* data);
+gboolean user_list_timeout (DevchatCBData* data);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -213,6 +216,7 @@ devchat_window_init (DevchatWindow* self)
   self->search_start_set = FALSE;
   self->dnd = FALSE;
   self->settings.maximized = FALSE;
+  self->message_buffer = "";
 
   gint j;
 
@@ -1354,8 +1358,9 @@ user_list_poll (DevchatCBData* data)
       tmp = tmp->next;
     }
 
-    SoupMessage* listusers = soup_message_new ("GET", uri);
-    soup_session_queue_message (data->window->session, listusers, SOUP_SESSION_CALLBACK (user_list_get), data);
+    data->window->user_message = soup_message_new ("GET", uri);
+    soup_session_queue_message (data->window->session, data->window->user_message, SOUP_SESSION_CALLBACK (user_list_get), data);
+    data->window->user_timeout_id = g_timeout_add_seconds (10, (GSourceFunc) user_list_timeout, data);
     data->window->usr_list_parsed = FALSE;
   }
   return TRUE;
@@ -1369,11 +1374,57 @@ message_list_poll (DevchatCBData* data)
     if (debug)
       dbg ("Starting message list poll...");
 
-    SoupMessage* listmessages = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
-    soup_session_queue_message (data->window->session, listmessages, SOUP_SESSION_CALLBACK (message_list_get), data);
+    data->window->message_message = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
+    g_signal_connect (data->window->message_message, "got-chunk", G_CALLBACK (message_list_chunk), data);
+    soup_session_queue_message (data->window->session, data->window->message_message, SOUP_SESSION_CALLBACK (message_list_get), data);
+    data->window->message_timeout_id = g_timeout_add_seconds (1, (GSourceFunc) message_list_timeout, data);
     data->window->msg_list_parsed = FALSE;
   }
   return TRUE;
+}
+
+gboolean user_list_timeout (DevchatCBData* data)
+{
+  g_slist_free (data->window->users_online);
+  data->window->users_online = NULL;
+  data->window->usr_list_parsed = TRUE;
+  soup_session_cancel_message (data->window->session, data->window->user_message, SOUP_STATUS_CANCELLED);
+
+  return FALSE;
+}
+
+gboolean message_list_timeout (DevchatCBData* data)
+{
+  unsigned long last_ce_end;
+  gchar* useable_message_chunk;
+
+  if (!g_str_has_suffix (data->window->message_buffer, "/>") && !g_str_has_suffix (data->window->message_buffer, "</devchat>"))
+  {
+    gchar* endpointer = g_strrstr (data->window->message_buffer, "<ce");
+    last_ce_end = endpointer - data->window->message_buffer;
+
+    useable_message_chunk = g_strndup (data->window->message_buffer, last_ce_end);
+    useable_message_chunk = g_strconcat (useable_message_chunk, "</ces>\n</devchat>", NULL);
+  }
+  else
+    useable_message_chunk = g_strdup (data->window->message_buffer);
+
+  soup_session_cancel_message (data->window->session, data->window->message_message, SOUP_STATUS_CANCELLED);
+  g_free (data->window->message_buffer);
+  data->window->message_buffer = "";
+
+  ce_parse (useable_message_chunk, data, "");
+
+  data->window->msg_list_parsed = TRUE;
+
+  return FALSE;
+}
+
+void message_list_chunk (SoupMessage* m, SoupBuffer* chunk, DevchatCBData* data)
+{
+  gchar* real_chunk = g_strndup (chunk->data, chunk->length);
+  data->window->message_buffer = g_strconcat (data->window->message_buffer, real_chunk, NULL);
+  g_free (real_chunk);
 }
 
 void user_list_clear_cb (GtkWidget* child, DevchatCBData* data)
@@ -1399,6 +1450,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     }
 
     data->window->usr_list_parsed = TRUE;
+    g_source_remove (data->window->user_timeout_id);
 
     gchar* userlist = g_strdup (m->response_body->data);
     if (userlist)
@@ -1624,7 +1676,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       data->window->users_online = NULL;
     }
   }
-  else if (m->status_code == 4)
+  else
   {
     data->window->errorcount++;
     if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
@@ -1761,7 +1813,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
   if (debug) {
-    dbg_msg = g_strdup_printf ("(XX) Message list response:\n\nStatus code: %i -> Status Message: %s.\n\nResponse Body: %s.\n\n\n", m->status_code, m->reason_phrase, m->response_body->data);
+    dbg_msg = g_strdup_printf ("(XX) Message list response:\n\nStatus code: %i -> Status Message: %s.\n", m->status_code, m->reason_phrase);
     dbg (dbg_msg);
     g_free (dbg_msg);
   }
@@ -1775,8 +1827,14 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       ce_parse (msglist, data, "");
     }
     data->window->msg_list_parsed = TRUE;
+    if (data->window->message_timeout_id)
+      g_source_remove (data->window->message_timeout_id);
+    data->window->message_timeout_id = 0;
+    g_free (data->window->message_buffer);
+    data->window->message_buffer = "";
+    data->window->message_message = NULL;
   }
-  else if (m->status_code == 4)
+  else
   {
     data->window->errorcount++;
 
@@ -1814,6 +1872,13 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gchar** time_cmps = g_strsplit ((gchar*) xmlTextReaderGetAttribute (msgparser, (xmlChar*) "value"), " ", 2);
       currenttime = g_strdup (time_cmps[1]);
       g_strfreev (time_cmps);
+
+      if (g_strcmp0 (date, "") == 0)
+      {
+        gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
+        gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
+        g_free (labeltext);
+      }
     }
     else if (node && (g_strcmp0 (node,"ce") == 0))
     {
@@ -2137,14 +2202,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       scroll_tos = scroll_tos->next;
       g_slist_free_1 (tmp);
     }
-
-    if (g_strcmp0 (date, "") == 0)
-    {
-      gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
-      gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
-      g_free (labeltext);
-    }
-
   }
 
   gtk_text_buffer_delete_mark (self->window->output, scroll_to);
@@ -2240,6 +2297,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
   gchar* content = "";
   GSList* taglist = NULL;
   GSList* stack = g_slist_prepend (NULL, "Γ");
+  gchar* known_tags[] = {"font","i","u","b","br","span","img","a","!--","div","p",NULL};
 
   DevchatHTMLTag* current_tag = devchat_html_tag_new ();
   DevchatHTMLAttr* current_attr = devchat_html_attr_new ();
@@ -2276,7 +2334,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
-
 
         gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
         content = "";
@@ -2354,7 +2411,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
         state = STATE_CLOSETAG;
       }
-      else
+      else if (g_strcmp0 (current, " ") != 0)
       {
         if (real_debug)
           dbg ("Adding current to tag name and switching to state open tag.");
@@ -2363,6 +2420,14 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
         stack = g_slist_prepend (stack, g_strdup("O"));
         state = STATE_OPENTAG;
+      }
+      else
+      {
+        GtkTextIter end;
+        gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+
+        gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, "< ", -1);
+        state = STATE_DATA;
       }
     }
     else if (state == STATE_CLOSETAG)
@@ -2592,10 +2657,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
         }
-        else if (debug)
-        {
-          g_warning ("Tag %s not implemented.", top->name);
-        }
 
         if (tagname)
         {
@@ -2646,6 +2707,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           dbg (dbg_msg);
           g_free (dbg_msg);
         }
+
         /*Non-closing tags: HR, BR, area, img, param, input, option, col*/
         if (g_ascii_strcasecmp (current_tag->name, "BR") == 0 || g_strcmp0 (current_tag->name, "img") == 0 || g_strcmp0 (current_tag->name, "!--") == 0)
         {
@@ -2657,6 +2719,39 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         }
         else
         {
+
+          int i;
+          gboolean known = FALSE;
+
+          for (i=0; known_tags[i] && !known; i++)
+          {
+            known = g_strcmp0 (current_tag->name, known_tags[i]) == 0;
+          }
+
+          if (!known)
+          {
+            if (debug)
+            {
+              dbg_msg = g_strdup_printf ("Unknown tag »%s«!\n", current_tag->name);
+              dbg (dbg_msg);
+              g_free (dbg_msg);
+            }
+
+            GSList* tmp = stack;
+            stack = stack->next;
+            g_slist_free_1 (tmp);
+
+            content = g_strconcat ("<", current_tag->name, ">", NULL);
+
+            GtkTextIter end;
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
+
+            content = "";
+
+            current_tag = devchat_html_tag_new ();
+          }
+
           state = STATE_DATA;
         }
 
@@ -2672,7 +2767,40 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         if (real_debug)
           dbg ("Detecting end of tag name definition, switching to state attribute.");
 
-        state = STATE_ATTR;
+        int i;
+        gboolean known = FALSE;
+
+        for (i=0; known_tags[i] && !known; i++)
+        {
+          known = g_strcmp0 (current_tag->name, known_tags[i]) == 0;
+        }
+
+        if (!known)
+        {
+          if (debug)
+          {
+            dbg_msg = g_strdup_printf ("Unknown tag »%s«!\n", current_tag->name);
+            dbg (dbg_msg);
+            g_free (dbg_msg);
+          }
+          state = STATE_DATA;
+
+          GSList* tmp = stack;
+          stack = stack->next;
+          g_slist_free_1 (tmp);
+
+          content = g_strconcat ("<", current_tag->name, " ", NULL);
+
+          GtkTextIter end;
+          gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+          gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
+
+          content = "";
+
+          current_tag = devchat_html_tag_new ();
+        }
+        else
+          state = STATE_ATTR;
       }
       else
       {
@@ -2816,6 +2944,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
       }
     }
   }
+
   g_free (plus);
 
   if (debug)

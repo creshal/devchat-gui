@@ -196,6 +196,12 @@ struct _DevchatWindow
 
   gint errorcount;
 
+  gchar* message_buffer;
+  guint message_timeout_id;
+  SoupMessage* message_message;
+  SoupMessage* user_message;
+  guint user_timeout_id;
+
 #ifdef OTR
   OtrlUserState otr_state;
   OtrlMessageAppOps otr_funcs;
