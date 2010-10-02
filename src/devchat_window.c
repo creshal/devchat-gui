@@ -1360,7 +1360,7 @@ user_list_poll (DevchatCBData* data)
 
     data->window->user_message = soup_message_new ("GET", uri);
     soup_session_queue_message (data->window->session, data->window->user_message, SOUP_SESSION_CALLBACK (user_list_get), data);
-    data->window->user_timeout_id = g_timeout_add_seconds (10, (GSourceFunc) user_list_timeout, data);
+    data->window->user_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 40, (GSourceFunc) user_list_timeout, data);
     data->window->usr_list_parsed = FALSE;
   }
   return TRUE;
@@ -1377,7 +1377,7 @@ message_list_poll (DevchatCBData* data)
     data->window->message_message = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     g_signal_connect (data->window->message_message, "got-chunk", G_CALLBACK (message_list_chunk), data);
     soup_session_queue_message (data->window->session, data->window->message_message, SOUP_SESSION_CALLBACK (message_list_get), data);
-    data->window->message_timeout_id = g_timeout_add_seconds (1, (GSourceFunc) message_list_timeout, data);
+    data->window->message_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 20, (GSourceFunc) message_list_timeout, data);
     data->window->msg_list_parsed = FALSE;
   }
   return TRUE;
