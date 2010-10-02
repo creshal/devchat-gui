@@ -1396,24 +1396,30 @@ gboolean user_list_timeout (DevchatCBData* data)
 gboolean message_list_timeout (DevchatCBData* data)
 {
   unsigned long last_ce_end;
-  gchar* useable_message_chunk;
+  gchar* useable_message_chunk = NULL;
 
   if (!g_str_has_suffix (data->window->message_buffer, "/>") && !g_str_has_suffix (data->window->message_buffer, "</devchat>"))
   {
     gchar* endpointer = g_strrstr (data->window->message_buffer, "<ce");
-    last_ce_end = endpointer - data->window->message_buffer;
+    if (endpointer)
+    {
+      last_ce_end = endpointer - data->window->message_buffer;
 
-    useable_message_chunk = g_strndup (data->window->message_buffer, last_ce_end);
-    useable_message_chunk = g_strconcat (useable_message_chunk, "</ces>\n</devchat>", NULL);
+      useable_message_chunk = g_strndup (data->window->message_buffer, last_ce_end);
+      useable_message_chunk = g_strconcat (useable_message_chunk, "</ces>\n</devchat>", NULL);
+      ce_parse (useable_message_chunk, data, "");
+    }
   }
   else
+  {
     useable_message_chunk = g_strdup (data->window->message_buffer);
+    ce_parse (useable_message_chunk, data, "");
+  }
 
   soup_session_cancel_message (data->window->session, data->window->message_message, SOUP_STATUS_CANCELLED);
-  g_free (data->window->message_buffer);
+  if (g_strcmp0 (data->window->message_buffer, "") != 0)
+    g_free (data->window->message_buffer);
   data->window->message_buffer = "";
-
-  ce_parse (useable_message_chunk, data, "");
 
   data->window->msg_list_parsed = TRUE;
 
@@ -2580,10 +2586,20 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             GtkWidget* img = gtk_image_new_from_file (filename);
 
             GdkPixbuf* p;
+            GdkPixbufAnimation* a;
 
-            g_object_get (img, "pixbuf", &p, NULL);
+            switch (gtk_image_get_storage_type (GTK_IMAGE (img)))
+            {
+              case GTK_IMAGE_ANIMATION:
+                a = gtk_image_get_animation ( GTK_IMAGE (img));
+                p = gdk_pixbuf_animation_get_static_image (a);
+              break;
+              case GTK_IMAGE_PIXBUF: p = gtk_image_get_pixbuf (GTK_IMAGE (img)); break;
+              default: break;
+            }
 
-            if (gdk_pixbuf_get_width (p) > 320 || gdk_pixbuf_get_height (p) > 240)
+
+            if (p && (gdk_pixbuf_get_width (p) > 320 || gdk_pixbuf_get_height (p) > 240))
             {
               p = gdk_pixbuf_scale_simple (p, 320, 240, GDK_INTERP_BILINEAR);
               gtk_text_buffer_insert_pixbuf (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, p);
@@ -4075,21 +4091,23 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   text = g_strstrip (text);
 
-  GRegex* custom_smilies[5];
+  GRegex* custom_smilies[6];
 
   custom_smilies[0] = g_regex_new (":cube:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[1] = g_regex_new (":ugly:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[2] = g_regex_new (":fp:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[3] = g_regex_new (":wub:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[4] = g_regex_new (":keks:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[4] = g_regex_new (":eg:", G_REGEX_UNGREEDY, 0, NULL);
 
-  gchar* custom_smilie_replacements[5];
+  gchar* custom_smilie_replacements[6];
 
   custom_smilie_replacements[0] = "[img]http://dl.creshal.de/dc/cube.png[/img]";
   custom_smilie_replacements[1] = "[img]http://dl.creshal.de/dc/ugly.gif[/img]";
   custom_smilie_replacements[2] = "[img]http://dl.creshal.de/dc/fp1.gif[/img]";
   custom_smilie_replacements[3] = "[img]http://dl.creshal.de/dc/wub.gif[/img]";
   custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/atomkeks.png[/img]";
+  custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/icon_evillaugh.gif[/img]";
 
   int i;
   for (i=0; i < 5; i++)

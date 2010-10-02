@@ -222,6 +222,7 @@ main (int argc, char *argv[])
   g_hash_table_insert (self->smilies, ":--", g_build_filename (self->workingdir, "icon_thumb_down.gif", NULL));
   g_hash_table_insert (self->smilies, ":++", g_build_filename (self->workingdir, "icon_thumb_up.gif", NULL));
   g_hash_table_insert (self->smilies, ";-)", g_build_filename (self->workingdir, "icon_wink.gif", NULL));
+  g_hash_table_insert (self->smilies, ":eg:", g_build_filename (self->workingdir, "icon_evillaugh.gif", NULL));
   g_hash_table_insert (self->smilies, ":wtf:", g_build_filename (self->workingdir, "icon_wtf.gif", NULL));
   g_hash_table_insert (self->smilies, ":ugly:", g_build_filename (self->workingdir, "ugly.gif", NULL));
   g_hash_table_insert (self->smilies, ":wub:", g_build_filename (self->workingdir, "wub.gif", NULL));
