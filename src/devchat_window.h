@@ -166,6 +166,7 @@ struct _DevchatWindow
   GtkWidget* chk_raw;
   GtkWidget* btn_send;
   GtkStatusIcon* trayicon;
+  GtkWidget* color_box;
 
   GtkTextBuffer* output;
   GtkTextBuffer* input;
@@ -235,6 +236,7 @@ void devchat_window_on_mark_set_cb();
 gboolean devchat_window_on_motion_cb ();
 gboolean devchat_window_tab_changed_win ();
 void devchat_window_btn_format ();
+void devchat_window_color_changed ();
 void devchat_window_btn_send ();
 void devchat_window_close_tab ();
 void devchat_window_create_tags ();

@@ -480,7 +480,7 @@ devchat_window_init (DevchatWindow* self)
   self->level_box = gtk_combo_box_new_text ();
   gtk_widget_set_no_show_all (self->level_box,TRUE);
   g_signal_connect(self->level_box, "changed", G_CALLBACK (level_changed), self_data);
-  gtk_box_pack_start(GTK_BOX(self->inputbar),self->level_box,FALSE,FALSE,0);
+  gtk_box_pack_start(GTK_BOX(self->inputbar),self->level_box,FALSE,FALSE,1);
   GtkWidget* btn_bold = gtk_button_new ();
   gtk_button_set_image (GTK_BUTTON (btn_bold), gtk_image_new_from_stock(GTK_STOCK_BOLD,GTK_ICON_SIZE_SMALL_TOOLBAR));
   GtkWidget* btn_ital = gtk_button_new ();
@@ -505,6 +505,21 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_line,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_url,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX(self->inputbar),btn_img,FALSE,FALSE,0);
+
+  self->color_box = gtk_combo_box_new_text ();
+  g_signal_connect (self->color_box, "changed", G_CALLBACK (devchat_window_color_changed), self_data);
+
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "Text color");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "red");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "green");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "blue");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "cyan");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "magenta");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "yellow");
+
+  gtk_combo_box_set_active (GTK_COMBO_BOX (self->color_box), 0);
+
+  gtk_box_pack_start (GTK_BOX(self->inputbar),self->color_box,FALSE,FALSE,1);
 
   self->filter_ul = gtk_combo_box_new_text ();
   gtk_widget_set_no_show_all (self->filter_ul,TRUE);
@@ -1156,7 +1171,7 @@ void save_settings (DevchatWindow* w)
                                  presets_string, "\n",
                                  bools_string,
                                  NULL);
-  if (debug && !g_file_set_contents (settingsfile, settings, -1, NULL))
+  if (!g_file_set_contents (settingsfile, settings, -1, NULL) && debug)
     dbg ("Error writing settings file.");
 
   g_free (settings);
@@ -1293,6 +1308,9 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     /*gtk_widget_show (data->window->filter_ml);
     gtk_widget_show (data->window->filter_ul);*/
+
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->color_box), "chatname_green");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->color_box), "chatname_blue");
 
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->chk_raw);
@@ -2510,6 +2528,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "class") == 0
               && g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->value, "chatname_green") == 0)
             tagname = "greenie";
+          else if (g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->name, "class") == 0
+              && g_strcmp0 ( ((DevchatHTMLAttr*) top->attrs->data)->value, "chatname_blue") == 0)
+            tagname = "peasant";
         }
         else if (g_strcmp0 (top->name,"img")==0)
         {
@@ -4098,7 +4119,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilies[2] = g_regex_new (":fp:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[3] = g_regex_new (":wub:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[4] = g_regex_new (":keks:", G_REGEX_UNGREEDY, 0, NULL);
-  custom_smilies[4] = g_regex_new (":eg:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[5] = g_regex_new (":eg:", G_REGEX_UNGREEDY, 0, NULL);
 
   gchar* custom_smilie_replacements[6];
 
@@ -4107,10 +4128,10 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilie_replacements[2] = "[img]http://dl.creshal.de/dc/fp1.gif[/img]";
   custom_smilie_replacements[3] = "[img]http://dl.creshal.de/dc/wub.gif[/img]";
   custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/atomkeks.png[/img]";
-  custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/icon_evillaugh.gif[/img]";
+  custom_smilie_replacements[5] = "[img]http://dl.creshal.de/dc/icon_evillaugh.gif[/img]";
 
   int i;
-  for (i=0; i < 5; i++)
+  for (i=0; i < 6; i++)
   {
     gchar* tmp2 = text;
     text = g_regex_replace (custom_smilies[i], text, -1, 0, custom_smilie_replacements[i], 0, NULL);
@@ -4734,6 +4755,70 @@ gboolean get_pos_size (DevchatWindow* window)
   gtk_window_get_size (GTK_WINDOW (window->window), &window->settings.width, &window->settings.height);
 
   return TRUE;
+}
+
+void devchat_window_color_changed (GtkWidget* widget, DevchatCBData* data)
+{
+  gchar* tag;
+  gboolean html;
+  switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+  {
+    case -1:
+    case 0: return;
+    case 7:
+    case 8: html = TRUE; tag = gtk_combo_box_get_active_text (GTK_COMBO_BOX (widget)); break;
+    default: html = FALSE; tag = gtk_combo_box_get_active_text (GTK_COMBO_BOX (widget)); break;
+  }
+  gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+  GtkWidget* w;
+  GtkTextIter start;
+  GtkTextIter end;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+    w = data->window->inputwidget;
+  }
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
+    w = conv->in_widget;
+  }
+
+  if (gtk_text_buffer_get_selection_bounds (buf, &start, &end))
+  {
+    GtkTextMark* ed = gtk_text_buffer_create_mark (buf, "tmp", &end, TRUE);
+    gchar* tag_open = g_strconcat ((html? "<span class=\"":"["), tag, (html? "\">":"]"), NULL);
+    gtk_text_buffer_insert (buf, &start, tag_open, -1);
+    g_free (tag_open);
+    gtk_text_buffer_get_iter_at_mark (buf, &end, ed);
+    gchar* tag_close = (html? g_strdup ("</span>") : g_strconcat ("[/", tag, "]", NULL));
+    gtk_text_buffer_insert (buf, &end, tag_close, -1);
+    g_free (tag_close);
+    gtk_text_iter_backward_chars (&end, (html? 7 : strlen(tag)+3));
+    gtk_text_buffer_place_cursor (buf, &end);
+    gtk_text_buffer_delete_mark (buf, ed);
+  }
+  else
+  {
+    gchar* ctag = g_strconcat ((html? "<span class=\"":"["), tag, (html? "\"></span>":"][/"), (html? "" : tag), (html? "": "]"), NULL);
+    gtk_text_buffer_insert_at_cursor (buf, ctag, -1);
+    g_free (ctag);
+
+    GtkTextIter cursor;
+
+    gtk_text_buffer_get_iter_at_mark (buf, &cursor, gtk_text_buffer_get_insert (buf));
+    gtk_text_iter_backward_chars (&cursor, strlen (tag) + 3);
+    gtk_text_buffer_move_mark (buf, gtk_text_buffer_get_insert (buf), &cursor);
+    gtk_text_buffer_move_mark_by_name (buf, "selection_bound", &cursor);
+  }
+  gtk_widget_grab_focus (w);
+  g_free (tag);
 }
 
 #ifdef OTR

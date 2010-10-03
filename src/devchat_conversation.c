@@ -126,6 +126,27 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_box_pack_start (GTK_BOX(hbox),btn_url,FALSE,FALSE,0);
     gtk_box_pack_start (GTK_BOX(hbox),btn_img,FALSE,FALSE,0);
 
+    GtkWidget* color_box = gtk_combo_box_new_text ();
+    g_signal_connect (color_box, "changed", G_CALLBACK (devchat_window_color_changed), parent_data);
+
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "Text color");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "red");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "green");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "blue");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "cyan");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "magenta");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "yellow");
+
+    if (parent->userlevel > 5)
+    {
+      gtk_combo_box_append_text (GTK_COMBO_BOX(color_box), "chatname_green");
+      gtk_combo_box_append_text (GTK_COMBO_BOX(color_box), "chatname_blue");
+    }
+
+    gtk_combo_box_set_active (GTK_COMBO_BOX (color_box), 0);
+
+    gtk_box_pack_start (GTK_BOX(hbox),color_box,FALSE,FALSE,1);
+
     obj->btn_send = gtk_button_new_from_stock (GTK_STOCK_OK);
     g_signal_connect (obj->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send), parent_data);
     gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_Return, 0, 0);
