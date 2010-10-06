@@ -447,6 +447,7 @@ devchat_window_init (DevchatWindow* self)
   self->search_button = gtk_button_new_from_stock (GTK_STOCK_FIND);
   g_signal_connect (self->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (self, self->search_entry));
   gtk_widget_add_accelerator(self->search_button, "activate", self->accelgroup, GDK_Return, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(self->search_button, "activate", self->accelgroup, GDK_KP_Enter, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (self, self->searchbar));
   gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_entry, TRUE, TRUE, 1);
@@ -534,6 +535,7 @@ devchat_window_init (DevchatWindow* self)
   self->btn_send = gtk_button_new_from_stock(GTK_STOCK_OK);
   g_signal_connect (self->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
   gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_Return, 0, 0);
+  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_KP_Enter, 0, 0);
 
   GtkWidget* btn_quit = gtk_button_new_from_stock(GTK_STOCK_QUIT);
   g_signal_connect (btn_quit, "clicked", G_CALLBACK (destroy),self_data);
@@ -578,6 +580,7 @@ devchat_window_init (DevchatWindow* self)
   self->btn_connect = gtk_button_new_from_stock (GTK_STOCK_CONNECT);
   g_signal_connect (self->btn_connect, "clicked", G_CALLBACK (login), self_data);
   gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_Return, 0, 0);
+  gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_KP_Enter, 0, 0);
 
   gtk_box_pack_start (GTK_BOX(hbox2),self->user_entry,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX(hbox2),self->pass_entry,TRUE,TRUE,0);
@@ -2028,20 +2031,28 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
 
       gtk_text_buffer_get_end_iter (buf, &end);
+      gtk_text_buffer_insert (buf, &end, "\n", -1);
+      gtk_text_buffer_get_end_iter (buf, &end);
       gchar* time_tag;
       if (self->window->settings.showid)
       {
-        time_tag = g_strdup_printf ("\n%s %s", lid, time_attr);
+        time_tag = g_strdup_printf ("%s %s", lid+(strlen(lid)-3), time_attr);
       }
       else
       {
-        time_tag = g_strdup_printf ("\n%s", time_attr);
+        time_tag = g_strdup_printf ("%s", time_attr);
       }
+
+      gchar* id_tag = g_strconcat ("lid::", lid, NULL);
+
+      if (!gtk_text_tag_table_lookup (table, id_tag))
+        gtk_text_buffer_create_tag (buf, id_tag, NULL);
 
       gtk_text_buffer_get_end_iter (buf, &end);
 
-      gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), NULL);
+      gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), gtk_text_tag_table_lookup (table, id_tag), NULL);
       g_free (time_tag);
+      g_free (id_tag);
 
       gchar* message_t = g_strdup_printf ("<p>%s</p>", message);
 
@@ -2359,8 +2370,13 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         GtkTextIter end;
         gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
-        gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
-        content = "";
+        if (g_strcmp0 (content, "") != 0)
+        {
+          gchar* content_s = g_strchomp (content);
+          gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content_s, -1);
+          g_free (content_s);
+          content = "";
+        }
 
         state = STATE_TYPECHECK;
       }
@@ -2553,6 +2569,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
             GtkTextIter fnord;
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, " ", -1);
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
             GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
@@ -2602,6 +2620,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             }
 
             GtkTextIter fnord;
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, " ", -1);
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
             GtkWidget* img = gtk_image_new_from_file (filename);
@@ -3897,6 +3917,18 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
                           name+5
                          );
     }
+    else if (name && g_str_has_prefix (name, "lid::"))
+    {
+      gtk_widget_set_tooltip_text (widget, name+5);
+      found = TRUE;
+      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid")
+                        );
+      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid"),
+                          name+5
+                         );
+    }
 
     tag = tag->next;
   }
@@ -3906,6 +3938,9 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
     gtk_widget_set_has_tooltip (widget, FALSE);
     gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
                        gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link")
+                      );
+    gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                       gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid")
                       );
     if (data->window->hovertag)
     {

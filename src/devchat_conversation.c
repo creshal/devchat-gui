@@ -150,10 +150,11 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     obj->btn_send = gtk_button_new_from_stock (GTK_STOCK_OK);
     g_signal_connect (obj->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send), parent_data);
     gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_Return, 0, 0);
+    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_KP_Enter, 0, 0);
 
     GtkWidget* btn_quit = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
     g_signal_connect (btn_quit, "clicked", G_CALLBACK (devchat_window_close_tab), parent_data);
-    gtk_widget_add_accelerator(btn_quit, "clicked", parent->accelgroup, GDK_Q, GDK_CONTROL_MASK, 0);
+    gtk_widget_add_accelerator(btn_quit, "clicked", parent->accelgroup, GDK_W, GDK_CONTROL_MASK, 0);
 
     gtk_box_pack_end (GTK_BOX(hbox),btn_quit,FALSE,FALSE,0);
     gtk_box_pack_end (GTK_BOX(hbox),gtk_vseparator_new(),FALSE,FALSE,0);
