@@ -2710,6 +2710,8 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             GtkTextIter end;
 
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, " ", -1);
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
             gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
@@ -2727,6 +2729,16 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           GtkTextIter start;
           gtk_text_buffer_get_iter_at_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, top->start_mark);
           gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+
+          GtkTextIter start_pp = start;
+          gtk_text_iter_forward_char (&start_pp);
+          if (g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, &start_pp, FALSE), " ") != 0)
+          {
+            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, " ", -1);
+            gtk_text_buffer_get_iter_at_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, top->start_mark);
+            gtk_text_iter_forward_char (&start);
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+          }
 
           gtk_text_buffer_apply_tag_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), tagname, &start, &end);
         }
@@ -4786,9 +4798,11 @@ gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatC
 
 gboolean get_pos_size (DevchatWindow* window)
 {
-  gtk_window_get_position (GTK_WINDOW (window->window), &window->settings.x, &window->settings.y);
-  gtk_window_get_size (GTK_WINDOW (window->window), &window->settings.width, &window->settings.height);
-
+  if (gtk_widget_get_visible (window->window))
+  {
+    gtk_window_get_position (GTK_WINDOW (window->window), &window->settings.x, &window->settings.y);
+    gtk_window_get_size (GTK_WINDOW (window->window), &window->settings.width, &window->settings.height);
+  }
   return TRUE;
 }
 
