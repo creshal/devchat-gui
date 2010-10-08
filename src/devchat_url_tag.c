@@ -21,7 +21,7 @@
 static void devchat_url_tag_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
 static void devchat_url_tag_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
 
-G_DEFINE_TYPE (DevchatURLTag, devchat_url_tag, GTK_TYPE_TEXT_TAG);
+G_DEFINE_TYPE (DevchatURLTag, devchat_url_tag, GTK_TYPE_TEXT_TAG)
 
 DevchatURLTag* devchat_url_tag_new (gchar* name, gchar* color)
 {

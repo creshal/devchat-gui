@@ -18,7 +18,7 @@
 
 #include "devchat_html_tag.h"
 
-G_DEFINE_TYPE (DevchatHTMLTag, devchat_html_tag, G_TYPE_OBJECT);
+G_DEFINE_TYPE (DevchatHTMLTag, devchat_html_tag, G_TYPE_OBJECT)
 
 DevchatHTMLTag* devchat_html_tag_new ()
 {

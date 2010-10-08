@@ -18,7 +18,7 @@
 
 #include "devchat_conversation.h"
 
-G_DEFINE_TYPE (DevchatConversation, devchat_conversation, G_TYPE_OBJECT);
+G_DEFINE_TYPE (DevchatConversation, devchat_conversation, G_TYPE_OBJECT)
 
 DevchatConversation*
 devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
@@ -65,6 +65,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   g_signal_connect (obj->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (parent, obj->search_entry));
   GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (parent, obj->searchbar));
+  gtk_widget_add_accelerator (btn_bar_close, "clicked", parent->accelgroup, GDK_Escape, 0, 0);
   gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_entry, TRUE, TRUE, 1);
   gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_button, FALSE, FALSE, 0);
   gtk_box_pack_end (GTK_BOX (obj->searchbar), btn_bar_close, FALSE, FALSE, 1);

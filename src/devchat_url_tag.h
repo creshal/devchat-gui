@@ -51,6 +51,6 @@ DevchatURLTag* devchat_url_tag_new (gchar* name, gchar* color);
 
 GType devchat_url_tag_get_type (void) G_GNUC_CONST;
 
-G_END_DECLS;
+G_END_DECLS
 
 #endif /* __DEVCHAT_URL_TAG_H__ */

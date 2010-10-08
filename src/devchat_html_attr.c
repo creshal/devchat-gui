@@ -18,7 +18,7 @@
 
 #include "devchat_html_attr.h"
 
-G_DEFINE_TYPE (DevchatHTMLAttr, devchat_html_attr, G_TYPE_OBJECT);
+G_DEFINE_TYPE (DevchatHTMLAttr, devchat_html_attr, G_TYPE_OBJECT)
 
 DevchatHTMLAttr* devchat_html_attr_new ()
 {

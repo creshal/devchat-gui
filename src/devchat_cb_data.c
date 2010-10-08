@@ -18,7 +18,7 @@
 
 #include "devchat_cb_data.h"
 
-G_DEFINE_TYPE (DevchatCBData, devchat_cb_data, G_TYPE_OBJECT);
+G_DEFINE_TYPE (DevchatCBData, devchat_cb_data, G_TYPE_OBJECT)
 
 DevchatCBData*
 devchat_cb_data_new (DevchatWindow* window, gpointer data)

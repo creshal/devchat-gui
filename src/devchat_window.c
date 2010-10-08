@@ -145,7 +145,7 @@ int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt);
 const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol);
 #endif
 
-G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT);
+G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT)
 
 DevchatWindow*
 devchat_window_new (void)
@@ -446,10 +446,9 @@ devchat_window_init (DevchatWindow* self)
   self->search_entry = gtk_entry_new ();
   self->search_button = gtk_button_new_from_stock (GTK_STOCK_FIND);
   g_signal_connect (self->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (self, self->search_entry));
-  gtk_widget_add_accelerator(self->search_button, "activate", self->accelgroup, GDK_Return, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-  gtk_widget_add_accelerator(self->search_button, "activate", self->accelgroup, GDK_KP_Enter, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (self, self->searchbar));
+  gtk_widget_add_accelerator (btn_bar_close, "clicked", self->accelgroup, GDK_Escape, 0, 0);
   gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_entry, TRUE, TRUE, 1);
   gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_button, FALSE, FALSE, 0);
   gtk_box_pack_end (GTK_BOX (self->searchbar), btn_bar_close, FALSE, FALSE, 1);
@@ -3689,6 +3688,7 @@ void find (GtkWidget* widget, DevchatCBData* data)
   GtkWidget* bar;
   GtkWidget* entry;
   GtkWidget* button;
+  GtkWidget* orig_button;
   gboolean start_set;
 
   if (pagenum == 0)
@@ -3696,6 +3696,7 @@ void find (GtkWidget* widget, DevchatCBData* data)
     bar = data->window->searchbar;
     entry = data->window->search_entry;
     button = data->window->search_button;
+    orig_button = data->window->btn_send;
     start_set = data->window->search_start_set;
   }
   else
@@ -3705,6 +3706,7 @@ void find (GtkWidget* widget, DevchatCBData* data)
     bar = conv->searchbar;
     button = conv->search_button;
     entry = conv->search_entry;
+    orig_button = conv->btn_send;
     start_set = conv->search_start_set;
   }
 
@@ -3719,11 +3721,25 @@ void find (GtkWidget* widget, DevchatCBData* data)
     gtk_widget_grab_focus (entry);
     gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
 
+    /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
+    gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
+    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_Return, 0);
+    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KP_Enter, 0);
+    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
+    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
+
     start_set = FALSE;
   }
   else
   {
+    /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
+    gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
+    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
+    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
+    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
+    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
     gtk_widget_hide_all (bar);
+    gtk_widget_set_no_show_all (bar, TRUE);
     start_set = FALSE;
   }
 }
@@ -3766,10 +3782,7 @@ void devchat_window_find (GtkWidget* widget, DevchatCBData* data)
   if (!start_set)
   {
     gtk_text_buffer_get_start_iter (buf, &start);
-    if (pagenum == 0)
-      data->window->search_start_set = TRUE;
-    else
-      conv->search_start_set = TRUE;
+    start_set = TRUE;
   }
 
   if (gtk_text_iter_forward_search (&start, searchtext, GTK_TEXT_SEARCH_VISIBLE_ONLY | GTK_TEXT_SEARCH_TEXT_ONLY, &start, &end, NULL))
@@ -3781,30 +3794,53 @@ void devchat_window_find (GtkWidget* widget, DevchatCBData* data)
   else
   {
     gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_STOP);
+    start_set = FALSE;
   }
 
   gtk_text_iter_forward_chars (&start, strlen (searchtext));
 
   if (pagenum == 0)
+  {
     data->window->search_start = start;
+    data->window->search_start_set = start_set;
+  }
   else
+  {
+    conv->search_start_set = start_set;
     conv->search_start = start;
+  }
 }
 
 void devchat_window_close_search (GtkWidget* widget, DevchatCBData* data)
 {
-  gtk_widget_hide_all (data->data);
-
   gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkWidget* orig_button;
+  GtkWidget* button;
 
   if (pagenum == 0)
+  {
     data->window->search_start_set = FALSE;
+    orig_button = data->window->btn_send;
+    button = data->window->search_button;
+  }
   else
   {
     const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
     DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
     conv->search_start_set = FALSE;
+    orig_button = conv->btn_send;
+    button = conv->search_button;
   }
+
+  /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
+  gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
+  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
+  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
+  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
+  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
+
+  gtk_widget_hide_all (data->data);
+  gtk_widget_set_no_show_all (data->data, TRUE);
 }
 
 void go_forum(GtkWidget* widget, DevchatCBData* data)
