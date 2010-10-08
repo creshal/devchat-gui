@@ -1,7 +1,7 @@
 CC = clang
 LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
-DESTDIR = /usr
-CCARGS = -O2 -Wall -pedantic -march=native
+DESTDIR = /usr/local
+CCARGS = -O2 -Wall -march=native
 
 all:
 	mkdir -p _build/bin
