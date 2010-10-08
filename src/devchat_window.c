@@ -2732,7 +2732,10 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
           GtkTextIter start_pp = start;
           gtk_text_iter_forward_char (&start_pp);
-          if (g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, &start_pp, FALSE), " ") != 0)
+          GtkTextIter start_prev = start;
+          gtk_text_iter_backward_char (&start_prev);
+          if (g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, &start_pp, FALSE), " ") != 0
+              && g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start_prev, &start, FALSE), " ") != 0)
           {
             gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, " ", -1);
             gtk_text_buffer_get_iter_at_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, top->start_mark);
