@@ -2047,9 +2047,15 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       if (!gtk_text_tag_table_lookup (table, id_tag))
         gtk_text_buffer_create_tag (buf, id_tag, NULL);
 
+      gchar* tt_name;
       gtk_text_buffer_get_end_iter (buf, &end);
 
-      gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, "time"), gtk_text_tag_table_lookup (table, id_tag), NULL);
+      if (g_strcmp0 ("(ChatServer)", name) == 0)
+        tt_name = "greenie";
+      else
+        tt_name = "time";
+
+      gtk_text_buffer_insert_with_tags (buf, &end, time_tag, -1, gtk_text_tag_table_lookup (table, tt_name), gtk_text_tag_table_lookup (table, id_tag), NULL);
       g_free (time_tag);
       g_free (id_tag);
 
@@ -3721,8 +3727,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
     gtk_widget_grab_focus (entry);
     gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
 
-    /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
-    gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
     gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_Return, 0);
     gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KP_Enter, 0);
     gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
@@ -3732,8 +3736,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
   }
   else
   {
-    /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
-    gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
     gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
     gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
     gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
@@ -3832,8 +3834,6 @@ void devchat_window_close_search (GtkWidget* widget, DevchatCBData* data)
     button = conv->search_button;
   }
 
-  /*gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_Return, 0);
-  gtk_accel_group_disconnect_key (data->window->accelgroup, GDK_KP_Enter, 0);*/
   gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
   gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
   gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
