@@ -1,5 +1,5 @@
 CC = clang
-LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4
+LIBS = gtk+-2.0 libxml-2.0 libsoup-2.4 gtkspell-2.0
 DESTDIR = /usr/local
 CCARGS = -O2 -Wall -march=native
 

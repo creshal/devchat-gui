@@ -564,6 +564,11 @@ devchat_window_init (DevchatWindow* self)
   gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->inputwidget), 2);
   gtk_container_add(GTK_CONTAINER(scroller3),self->inputwidget);
 
+#ifdef SPELLCHECK
+  if (!gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), "en_EN", NULL))
+    err ("Error initialising spell checker!");
+#endif
+
   gtk_box_pack_start (GTK_BOX(vbox2),scroller3,TRUE,TRUE,0);
 
   devchat_window_create_tags (self->output, self_data);
@@ -4245,7 +4250,11 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       data->window->buffer[0] = "";
     }
     else
-      gtk_text_buffer_set_text (buf, "", 0);
+    {
+      GtkTextIter s, e;
+      gtk_text_buffer_get_bounds (buf, &s, &e);
+      gtk_text_buffer_delete (buf, &s, &e); /*_set_text (,"",) causes visual artefacts when SPELLCHECK is enabled*/
+    }
     data->window->buf_current = 0;
 
   #ifdef OTR

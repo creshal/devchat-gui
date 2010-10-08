@@ -34,6 +34,10 @@
 
 #include <libsoup-2.4/libsoup/soup.h>
 
+#ifdef SPELLCHECK
+#include <gtkspell/gtkspell.h>
+#endif
+
 #ifdef G_OS_WIN32
 #include <windows.h>
 #include <Shellapi.h>

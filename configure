@@ -51,6 +51,7 @@ parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="de
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support. NOTE: UNFINISHED. WILL BREAK COMPILING AND KILL KITTEN. You have been warned.")
 parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations (not implemented).")
+parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=False,help="Enable spell checking support.")
 
 (options,args) = parser.parse_args()
 
@@ -68,6 +69,9 @@ if options.otr:
   f.write('#define OTR\n')
 if options.l10n:
   f.write('#define NLS\n')
+if options.spell:
+	libs += " gtkspell-2.0"
+	f.write('#define SPELLCHECK\n')
 
 f.close()
 print "Checking whether build environment is sane..."
