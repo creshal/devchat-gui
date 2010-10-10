@@ -125,6 +125,8 @@ gboolean get_pos_size (DevchatWindow* window);
 void message_list_chunk (SoupMessage* m, SoupBuffer* chunk, DevchatCBData* data);
 gboolean message_list_timeout (DevchatCBData* data);
 gboolean user_list_timeout (DevchatCBData* data);
+void popup_open_link (GtkWidget* w, DevchatCBData* data);
+void popup_copy_stuff (GtkWidget* w, DevchatCBData* data);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -431,6 +433,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_widget_set_size_request(self->outputwidget, 300,100);
   gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->outputwidget), 2);
   g_signal_connect (self->output, "mark-set", G_CALLBACK(devchat_window_on_mark_set_cb),self_data);
+  g_signal_connect (self->outputwidget, "popup-menu", G_CALLBACK(devchat_window_on_popup_menu),self_data);
   g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(devchat_window_on_motion_cb),self_data);
 
   GtkWidget* scroller1 = gtk_scrolled_window_new (NULL, NULL);
@@ -4916,6 +4919,69 @@ void devchat_window_color_changed (GtkWidget* widget, DevchatCBData* data)
   }
   gtk_widget_grab_focus (w);
   g_free (tag);
+}
+
+gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
+{
+  /*XXX: Not called at all. Need to catch even before.*/
+  GdkWindow* p = gtk_widget_get_parent_window (data->window->window);
+  gint x,y;
+  if (gdk_window_get_pointer (p, &x, &y, NULL))
+  {
+    gint buf_x, buf_y;
+    GtkTextIter iter;
+    GtkWidget* menu;
+
+    gtk_text_view_window_to_buffer_coords (GTK_TEXT_VIEW (view), GTK_TEXT_WINDOW_TEXT, x, y, &buf_x, &buf_y);
+    gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW (view), &iter, buf_x, buf_y);
+
+    gboolean found = FALSE;
+
+    GSList* tag = gtk_text_iter_get_tags (&iter);
+
+    menu = gtk_menu_new ();
+
+    while (tag && !(found))
+    {
+      gchar* name;
+      g_object_get (tag->data, "name", &name, NULL);
+
+      if (name && g_str_has_prefix (name, "url::"))
+      {
+        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open link in browser");
+        gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_open_link), gtk_image_new_from_stock (GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU));
+        g_signal_connect (item_open_link, "activate", G_CALLBACK (popup_open_link), devchat_cb_data_new (data->window, g_strdup (name+5)));
+
+        GtkWidget* item_copy_link = gtk_image_menu_item_new_from_stock (GTK_STOCK_COPY, NULL);
+        g_signal_connect (item_copy_link, "activate", G_CALLBACK (popup_copy_stuff), devchat_cb_data_new (data->window, g_strdup (name+5)));
+
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_open_link);
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_copy_link);
+      }
+      tag = tag->next;
+    }
+
+    if (found)
+    {
+      gtk_widget_show_all (menu);
+      gtk_menu_popup (GTK_MENU (menu), NULL, NULL, NULL, NULL, 3, gtk_get_current_event_time());
+    }
+
+    return found;
+  }
+  return FALSE;
+}
+
+void popup_open_link (GtkWidget* w, DevchatCBData* data)
+{
+  launch_browser (w, (gchar*) data->data, data);
+}
+
+void popup_copy_stuff (GtkWidget* w, DevchatCBData* data)
+{
+  GtkClipboard* c = gtk_clipboard_get (GDK_NONE);
+
+  gtk_clipboard_set_text (c, (gchar*) data->data, -1);
 }
 
 #ifdef OTR

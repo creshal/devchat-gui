@@ -246,6 +246,7 @@ void devchat_window_close_tab ();
 void devchat_window_create_tags ();
 void devchat_window_find ();
 void devchat_window_close_search ();
+gboolean devchat_window_on_popup_menu ();
 G_END_DECLS
 
 #endif /* __DEVCHAT_WINDOW_H__ */

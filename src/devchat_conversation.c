@@ -54,6 +54,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   g_signal_connect (obj->out_buffer, "mark-set", G_CALLBACK (devchat_window_on_mark_set_cb), parent_data);
   g_signal_connect (obj->out_widget, "motion-notify-event", G_CALLBACK (devchat_window_on_motion_cb), parent_data);
   g_signal_connect (obj->out_widget, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), parent_data);
+  g_signal_connect (obj->out_widget, "popup-menu", G_CALLBACK(devchat_window_on_popup_menu),parent_data);
   gtk_container_add (GTK_CONTAINER (scroll_out), obj->out_widget);
 
   GtkWidget* search_box = gtk_vbox_new (FALSE, 0);
