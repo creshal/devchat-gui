@@ -127,6 +127,7 @@ gboolean message_list_timeout (DevchatCBData* data);
 gboolean user_list_timeout (DevchatCBData* data);
 void popup_open_link (GtkWidget* w, DevchatCBData* data);
 void popup_copy_stuff (GtkWidget* w, DevchatCBData* data);
+void popup_insert_text (GtkWidget* w, DevchatCBData* data);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -210,8 +211,8 @@ devchat_window_init (DevchatWindow* self)
   self->settings.x = 0;
   self->settings.y = 0;
   self->settings.avatar_size = 12;
-  self->settings.update_time = 1000; /*Time between update requests in ms.*/
-  self->settings.keywords = NULL; /*GSList*/
+  self->settings.update_time = 1000;
+  self->settings.keywords = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
   self->buf_current = 0;
@@ -219,6 +220,7 @@ devchat_window_init (DevchatWindow* self)
   self->dnd = FALSE;
   self->settings.maximized = FALSE;
   self->message_buffer = "";
+  self->moderators = g_hash_table_new (g_str_hash, g_str_equal);
 
   gint j;
 
@@ -433,8 +435,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_widget_set_size_request(self->outputwidget, 300,100);
   gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->outputwidget), 2);
   g_signal_connect (self->output, "mark-set", G_CALLBACK(devchat_window_on_mark_set_cb),self_data);
-  g_signal_connect (self->outputwidget, "popup-menu", G_CALLBACK(devchat_window_on_popup_menu),self_data);
   g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(devchat_window_on_motion_cb),self_data);
+  g_signal_connect (self->outputwidget, "button-press-event", G_CALLBACK(devchat_window_button_press_cb),self_data);
 
   GtkWidget* scroller1 = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
@@ -665,6 +667,7 @@ devchat_window_init (DevchatWindow* self)
 
   self->session = soup_session_async_new ();
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
+  g_object_set (self->session, "user-agent", "Mozilla 5.0 (compatible)", NULL);
 
   g_timeout_add_seconds (5, (GSourceFunc) get_pos_size, self);
 }
@@ -1691,7 +1694,11 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
       /*If the server failed to submit an incremental update, request complete list.*/
       if (usercount == 0)
+      {
+        if (data->window->users_online)
+          g_slist_free (data->window->users_online);
         data->window->users_online = NULL;
+      }
       else
       {
         dbg_msg = g_strdup_printf("Last Update: %s",current_time());
@@ -1707,6 +1714,8 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     else
     {
       /*If the server failed to submit an incremental update, request complete list.*/
+      if (data->window->users_online)
+        g_slist_free (data->window->users_online);
       data->window->users_online = NULL;
     }
   }
@@ -1725,7 +1734,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         g_slist_free (data->window->users_online);
         data->window->users_online = NULL;
       }
-
       data->window->usr_list_parsed = TRUE;
     }
   }
@@ -1749,6 +1757,13 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       dbg (dbg_msg);
       g_free (dbg_msg);
     }
+
+    if (g_regex_match_simple ("<span class=\"postdetails\">(Moderator|Site Admin|EGOSOFT)</span>", profile, G_REGEX_CASELESS, 0))
+    {
+      g_hash_table_insert (data->window->moderators, g_strdup ((gchar*) data->data), g_strdup ("y"));
+    }
+    else
+      g_hash_table_insert (data->window->moderators, g_strdup ((gchar*) data->data), g_strdup ("n"));
 
     GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
@@ -1834,13 +1849,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         g_remove (filename);
     }
     else
-    {
-      if (data->window->users_online)
-      {
-        g_slist_free (data->window->users_online);
-        data->window->users_online = NULL;
-      }
-    }
+      user_list_timeout (data);
   }
 }
 
@@ -2055,6 +2064,14 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       if (!gtk_text_tag_table_lookup (table, id_tag))
         gtk_text_buffer_create_tag (buf, id_tag, NULL);
 
+      gchar* a_tag = "";
+      if (!show_name)
+      {
+        a_tag = g_strconcat ("tma::", name, NULL);
+        if (!gtk_text_tag_table_lookup (table, a_tag))
+          gtk_text_buffer_create_tag (buf, a_tag, NULL);
+      }
+
       gchar* tt_name;
       gtk_text_buffer_get_end_iter (buf, &end);
 
@@ -2209,6 +2226,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
       gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
 
+      if (!show_name)
+        gtk_text_buffer_apply_tag_by_name (buf, a_tag, &start, &end);
+
       g_free (taglevel);
       g_free (tagulevel);
       gtk_text_buffer_delete_mark (buf, old_start);
@@ -2301,20 +2321,31 @@ gboolean badass (gchar* name, DevchatCBData* data)
 
   if (uid)
   {
-    SoupMessage* pro_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
-    guint status = soup_session_send_message (data->window->session, pro_get);
-
-    if (status == 200)
+    gchar* known_permission = (gchar*) g_hash_table_lookup (data->window->moderators, uid);
+    if (!known_permission)
     {
-      const gchar* message = pro_get->response_body->data;
+      SoupMessage* pro_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+      guint status = soup_session_send_message (data->window->session, pro_get);
 
-      if (message)
+      if (status == 200)
       {
-        /*Quote Belisarius: »Nein, die Säcke von Deep Silver und Koch Media bekommen keine Kickrechte.« Yessir.*/
-        if (g_regex_match_simple ("<span class=\"postdetails\">(Moderator|Site Admin|EGOSOFT)</span>", message, G_REGEX_CASELESS, 0))
-          return TRUE;
+        const gchar* message = pro_get->response_body->data;
+
+        if (message)
+        {
+          /*Quote Belisarius: »Nein, die Säcke von Deep Silver und Koch Media bekommen keine Kickrechte.« Yessir.*/
+          if (g_regex_match_simple ("<span class=\"postdetails\">(Moderator|Site Admin|EGOSOFT)</span>", message, G_REGEX_CASELESS, 0))
+          {
+            g_hash_table_insert (data->window->moderators, g_strdup (uid), g_strdup ("y"));
+            return TRUE;
+          }
+          else
+            g_hash_table_insert (data->window->moderators, g_strdup (uid), g_strdup ("n"));
+        }
       }
     }
+    else
+      return g_strcmp0 (known_permission, "y") == 0;
   }
 
   return FALSE;
@@ -2626,10 +2657,12 @@ void parse_message (gchar* message_d, DevchatCBData* data)
                 GError* error = NULL;
                 if (!g_file_set_contents (filename, i_m->response_body->data, i_m->response_body->length, &error))
                 {
-                  err (g_strdup_printf ("Error while saving image: %s.", error->message));
+                  err (g_strdup_printf ("Error while saving image: %s.\n", error->message));
                   g_error_free (error);
                 }
               }
+              else
+                err (g_strdup_printf ("Error downloading image %s: %i %s.\n", uri, i_m->status_code, i_m->reason_phrase));
             }
 
             GtkTextIter fnord;
@@ -2645,13 +2678,19 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             switch (gtk_image_get_storage_type (GTK_IMAGE (img)))
             {
               case GTK_IMAGE_ANIMATION:
-                a = gtk_image_get_animation ( GTK_IMAGE (img));
+                a = gtk_image_get_animation (GTK_IMAGE (img));
                 p = gdk_pixbuf_animation_get_static_image (a);
               break;
-              case GTK_IMAGE_PIXBUF: p = gtk_image_get_pixbuf (GTK_IMAGE (img)); break;
-              default: break;
+              case GTK_IMAGE_PIXBUF:
+                p = gtk_image_get_pixbuf (GTK_IMAGE (img));
+                a = NULL;
+              break;
+              default:
+                err ("Unknown image type!");
+                p = NULL;
+                a = NULL;
+              break;
             }
-
 
             if (p && (gdk_pixbuf_get_width (p) > 320 || gdk_pixbuf_get_height (p) > 240))
             {
@@ -3976,6 +4015,18 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
                           name+5
                          );
     }
+    else if (name && g_str_has_prefix (name, "tma::"))
+    {
+      gtk_widget_set_tooltip_text (widget, name+5);
+      found = TRUE;
+      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma")
+                        );
+      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma"),
+                          name+5
+                         );
+    }
     else if (name && g_str_has_prefix (name, "lid::"))
     {
       gtk_widget_set_tooltip_text (widget, name+5);
@@ -4000,6 +4051,9 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
                       );
     gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
                        gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid")
+                      );
+    gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                       gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma")
                       );
     if (data->window->hovertag)
     {
@@ -4698,16 +4752,14 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
     }
     else if (g_strcmp0(data->window->settings.vnotify,"<none>") != 0)
     {
-      gchar** vcmdline;
-      vcmdline[0] = g_strdup(data->window->settings.vnotify);
-      vcmdline[1] = 0;
-      if (!g_spawn_async (NULL, vcmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
+      gchar* vcmdline = g_strdup(data->window->settings.vnotify);
+      if (!g_spawn_command_line_async (vcmdline, NULL))
       {
         err("Failed to launch visual notification process.");
         g_free (data->window->settings.vnotify);
         data->window->settings.vnotify = g_strdup("<none>");
       }
-      g_strfreev (vcmdline);
+      g_free (vcmdline);
     }
 
     if (g_strcmp0(data->window->settings.notify,"<native>") == 0)
@@ -4739,16 +4791,14 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
     }
     else if (g_strcmp0(data->window->settings.notify,"<none>") != 0)
     {
-      gchar** cmdline;
-      cmdline[0] = g_strdup(data->window->settings.notify);
-      cmdline[1] = 0;
-      if (!g_spawn_async (NULL, cmdline, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL))
+      gchar* cmdline = g_strdup(data->window->settings.notify);
+      if (!g_spawn_command_line_async (cmdline, NULL))
       {
         err("Failed to launch audio notification process.");
         g_free (data->window->settings.notify);
         data->window->settings.notify = g_strdup("<none>");
       }
-      g_strfreev (cmdline);
+      g_free (cmdline);
     }
   }
 }
@@ -4921,12 +4971,21 @@ void devchat_window_color_changed (GtkWidget* widget, DevchatCBData* data)
   g_free (tag);
 }
 
+gboolean devchat_window_button_press_cb (GtkWidget* w, GdkEventButton* event, DevchatCBData* data)
+{
+  if (event->button == 3 && event->type == GDK_BUTTON_PRESS)
+  {
+    return devchat_window_on_popup_menu (w, data);
+  }
+  return FALSE;
+}
+
 gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
 {
-  /*XXX: Not called at all. Need to catch even before.*/
-  GdkWindow* p = gtk_widget_get_parent_window (data->window->window);
-  gint x,y;
-  if (gdk_window_get_pointer (p, &x, &y, NULL))
+  gint x = 0;
+  gint y = 0;
+  gtk_widget_get_pointer (view, &x, &y);
+  if (x && y)
   {
     gint buf_x, buf_y;
     GtkTextIter iter;
@@ -4941,6 +5000,9 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
 
     menu = gtk_menu_new ();
 
+    gchar* username = NULL;
+    GRegex* r = g_regex_new (" ", 0, 0, NULL);
+
     while (tag && !(found))
     {
       gchar* name;
@@ -4948,6 +5010,7 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
 
       if (name && g_str_has_prefix (name, "url::"))
       {
+        found = TRUE;
         GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open link in browser");
         gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_open_link), gtk_image_new_from_stock (GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU));
         g_signal_connect (item_open_link, "activate", G_CALLBACK (popup_open_link), devchat_cb_data_new (data->window, g_strdup (name+5)));
@@ -4958,16 +5021,56 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
         gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_open_link);
         gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_copy_link);
       }
+      else if (name && g_str_has_prefix (name, "user-"))
+      {
+        username = g_regex_replace (r, name+5, -1, 0, "&nbsp;", 0, NULL);
+      }
+      else if (name && g_str_has_prefix (name, "lid::"))
+      {
+        found = TRUE;
+        GtkWidget* item_copy_id = gtk_image_menu_item_new_with_label ("Copy ID");
+        gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_copy_id), gtk_image_new_from_stock (GTK_STOCK_COPY, GTK_ICON_SIZE_MENU));
+        g_signal_connect (item_copy_id, "activate", G_CALLBACK (popup_copy_stuff), devchat_cb_data_new (data->window, g_strdup (name+5)));
+        GtkWidget* item_cite_id = gtk_image_menu_item_new_with_label ("Cite Post");
+        gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_cite_id), gtk_image_new_from_stock (GTK_STOCK_GO_FORWARD, GTK_ICON_SIZE_MENU));
+
+        if (!username)
+        {
+          GSList* tag2 = tag;
+
+          while (tag2 && !username)
+          {
+            gchar* name2;
+            g_object_get (tag->data, "name", &name2, NULL);
+
+            if (name && g_str_has_prefix (name, "user-"))
+              username = g_regex_replace (r, name+5, -1, 0, "&nbsp;", 0, NULL);
+            tag2 = tag2->next;
+          }
+        }
+
+        gchar* text = g_strconcat ("@", username, "/", (name+5), NULL);
+
+        g_signal_connect (item_cite_id, "activate", G_CALLBACK (popup_insert_text), devchat_cb_data_new (data->window, text));
+
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_copy_id);
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_cite_id);
+      }
       tag = tag->next;
     }
 
     if (found)
     {
       gtk_widget_show_all (menu);
+      gtk_menu_attach_to_widget (GTK_MENU (menu), view, NULL);
       gtk_menu_popup (GTK_MENU (menu), NULL, NULL, NULL, NULL, 3, gtk_get_current_event_time());
     }
 
     return found;
+
+    if (username)
+      g_free (username);
+    g_free (r);
   }
   return FALSE;
 }
@@ -4980,8 +5083,30 @@ void popup_open_link (GtkWidget* w, DevchatCBData* data)
 void popup_copy_stuff (GtkWidget* w, DevchatCBData* data)
 {
   GtkClipboard* c = gtk_clipboard_get (GDK_NONE);
-
   gtk_clipboard_set_text (c, (gchar*) data->data, -1);
+}
+
+void popup_insert_text (GtkWidget* w, DevchatCBData* data)
+{
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+  GtkWidget* in_view;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+    in_view = data->window->inputwidget;
+  }
+  else
+  {
+    const gchar* target = gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
+    in_view = conv->in_widget;
+  }
+
+  gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
+  gtk_widget_grab_focus (in_view);
 }
 
 #ifdef OTR
