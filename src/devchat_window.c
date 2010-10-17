@@ -4199,32 +4199,20 @@ void filter_ul_changed (GtkWidget* widget, DevchatCBData* data)
   GtkTextTag* tag;
 
   tag = gtk_text_tag_table_lookup (t, "ul1");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "ul3");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "ul5");
-  g_object_set (tag, "invisible", FALSE, NULL);
-  g_object_set (tag, "invisible-set", FALSE, NULL);
-  tag = gtk_text_tag_table_lookup (t, "ul6");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
 
   switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
   {
     case 3: tag = gtk_text_tag_table_lookup (t, "ul5");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "l5");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
     case 2: tag = gtk_text_tag_table_lookup (t, "ul3");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "l3");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
     case 1: tag = gtk_text_tag_table_lookup (t, "ul1");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "l1");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
     default: break;
   }
 }
@@ -4235,32 +4223,26 @@ void filter_ml_changed (GtkWidget* widget, DevchatCBData* data)
   GtkTextTag* tag;
 
   tag = gtk_text_tag_table_lookup (t, "l1");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
+  g_object_set (tag, "paragraph-background-set", TRUE, NULL);
   tag = gtk_text_tag_table_lookup (t, "l3");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
+  g_object_set (tag, "paragraph-background-set", TRUE, NULL);
   tag = gtk_text_tag_table_lookup (t, "l5");
-  g_object_set (tag, "invisible", FALSE, NULL);
   g_object_set (tag, "invisible-set", FALSE, NULL);
-  tag = gtk_text_tag_table_lookup (t, "l6");
-  g_object_set (tag, "invisible", FALSE, NULL);
-  g_object_set (tag, "invisible-set", FALSE, NULL);
+  g_object_set (tag, "paragraph-background-set", TRUE, NULL);
 
   switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
   {
     case 3: tag = gtk_text_tag_table_lookup (t, "l5");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "ul5");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
+            g_object_set (tag, "paragraph-background-set", FALSE, NULL);
     case 2: tag = gtk_text_tag_table_lookup (t, "l3");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "ul3");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
+            g_object_set (tag, "paragraph-background-set", FALSE, NULL);
     case 1: tag = gtk_text_tag_table_lookup (t, "l1");
             g_object_set (tag, "invisible", TRUE, NULL);
-            tag = gtk_text_tag_table_lookup (t, "ul1");
-            g_object_set (tag, "invisible-set", FALSE, NULL);
+            g_object_set (tag, "paragraph-background-set", FALSE, NULL);
     default: break;
   }
 }
