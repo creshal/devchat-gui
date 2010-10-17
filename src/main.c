@@ -26,6 +26,9 @@ main (int argc, char *argv[])
     { "verbose", 'v', 0, G_OPTION_ARG_NONE, &debug, "Show verbose information", NULL },
     { "really-verbose", 'd', 0, G_OPTION_ARG_NONE, &real_debug, "Show even more information, mainly from HTML parser. Do not use unless explicitly stated, since it's chattier than Clippy. You have been warned.", NULL },
     { "builtin-config", 'c', 0, G_OPTION_ARG_NONE, &no_config, "Neither load config from nor save config to disk.", NULL },
+  #ifdef SPELLCHECK
+    { "no-spellcheck", 's', 0, G_OPTION_ARG_NONE, &no_spellcheck, "Disable spellchecker.", NULL },
+  #endif
     { NULL }
   };
 

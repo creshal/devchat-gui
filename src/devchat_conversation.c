@@ -94,7 +94,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_container_add (GTK_CONTAINER (scroll_in), obj->in_widget);
 
   #ifdef SPELLCHECK
-    if (!gtkspell_new_attach (GTK_TEXT_VIEW (obj->in_widget), "en_EN", NULL))
+    if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (obj->in_widget), "en_EN", NULL))
       err ("Error initialising spell checker!");
   #endif
 

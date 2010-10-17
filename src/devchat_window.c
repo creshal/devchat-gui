@@ -221,6 +221,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.maximized = FALSE;
   self->message_buffer = "";
   self->moderators = g_hash_table_new (g_str_hash, g_str_equal);
+  self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
 
   gint j;
 
@@ -318,6 +319,18 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* item_about = gtk_image_menu_item_new_from_stock (GTK_STOCK_ABOUT,self->accelgroup);
   g_signal_connect (item_about, "activate", G_CALLBACK (about_cb), self_data);
 
+  DevchatCBData* report_data = devchat_cb_data_new (self, "http://dev.yaki-syndicate.de/bugs/");
+  GtkWidget* item_report = gtk_menu_item_new_with_label ("Report a bug...");
+  g_signal_connect (item_report, "activate", G_CALLBACK (popup_open_link), report_data);
+
+#ifdef G_OS_WIN32
+  DevchatCBData* update_data = devchat_cb_data_new (self, g_strconcat ("http://dev.yaki-syndicate.de/update-check/update.py/check?OS=Windows&ver=", VERSION, NULL));
+#else
+  DevchatCBData* update_data = devchat_cb_data_new (self, g_strconcat ("http://dev.yaki-syndicate.de/update-check/update.py/check?OS=Unix&ver=", VERSION, NULL));
+#endif
+  GtkWidget* item_update = gtk_menu_item_new_with_label ("Check for update...");
+  g_signal_connect (item_update, "activate", G_CALLBACK (popup_open_link), update_data);
+
   DevchatCBData* format_b = devchat_cb_data_new (self, "b");
 
   GtkWidget* item_bold = gtk_image_menu_item_new_from_stock (GTK_STOCK_BOLD,self->accelgroup);
@@ -393,6 +406,9 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_item_set_submenu(menu_view,GTK_WIDGET(view_sub));
 
   GtkMenuShell* about_sub = GTK_MENU_SHELL(gtk_menu_new());
+  gtk_menu_shell_append(about_sub, item_report);
+  gtk_menu_shell_append(about_sub, item_update);
+  gtk_menu_shell_append(about_sub, gtk_menu_item_new());
   gtk_menu_shell_append(about_sub, item_about);
   gtk_menu_item_set_submenu(menu_about,GTK_WIDGET(about_sub));
 
@@ -570,7 +586,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_container_add(GTK_CONTAINER(scroller3),self->inputwidget);
 
 #ifdef SPELLCHECK
-  if (!gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), "en_EN", NULL))
+  if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), "en_EN", NULL))
     err ("Error initialising spell checker!");
 #endif
 
@@ -666,8 +682,46 @@ devchat_window_init (DevchatWindow* self)
     dbg("Initalising libsoup...");
 
   self->session = soup_session_async_new ();
-  soup_session_add_feature (self->session, SOUP_SESSION_FEATURE(soup_cookie_jar_new()));
-  g_object_set (self->session, "user-agent", "Mozilla 5.0 (compatible)", NULL);
+  self->jar = soup_cookie_jar_text_new (self->jarfile, FALSE);
+  soup_session_add_feature (self->session, SOUP_SESSION_FEATURE (self->jar));
+  g_object_set (self->session, "user-agent", "Mozilla/5.0 (compatible)", NULL);
+
+  gchar* cookies = soup_cookie_jar_get_cookies (self->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
+  if (cookies)
+  {
+    /*Check whether we're really logged in.*/
+    if (!g_strstr_len (cookies, -1, "s%3A6%3A%22userid%22%3Bi%3A-1"))
+    {
+      /*Still logged in. */
+      gtk_widget_set_sensitive(self->btn_connect,FALSE);
+      gtk_widget_set_sensitive(self->user_entry,FALSE);
+      gtk_widget_set_sensitive(self->pass_entry,FALSE);
+
+      if (debug)
+        dbg ("Found cookies still edible.");
+
+      gtk_label_set_text (GTK_LABEL (self->statuslabel), "Determining user level...");
+      SoupMessage* step2 = soup_message_new ("GET", "http://www.egosoft.com");
+
+      if (debug)
+        dbg ("Trying to determine userlevel...");
+
+      soup_session_queue_message (self->session, step2, SOUP_SESSION_CALLBACK(remote_level), self_data);
+    }
+    else
+    {
+      /*Thank you very much for spamming every user with useless cookies, phpBB.*/
+      GSList* cookie_list = soup_cookie_jar_all_cookies (self->jar);
+      while (cookie_list)
+      {
+        soup_cookie_jar_delete_cookie (self->jar, (SoupCookie*) cookie_list->data);
+        GSList* tmp = cookie_list;
+        cookie_list = cookie_list->next;
+        g_slist_free_1 (tmp);
+      }
+    }
+    g_free (cookies);
+  }
 
   g_timeout_add_seconds (5, (GSourceFunc) get_pos_size, self);
 }
@@ -935,7 +989,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
     case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
     case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value);
-                            if (window->firstrun && window->settings.autojoin)
+                            if (window->firstrun && window->settings.autojoin && !soup_cookie_jar_get_cookies (window->jar, soup_uri_new ("http://www.egosoft.com"), FALSE))
                               login (window->btn_connect, devchat_cb_data_new (window, NULL));
                             break;
     case SETTINGS_SHOWHIDDEN: window->settings.showhidden = g_value_get_boolean (value); break;
@@ -1217,6 +1271,8 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   {
     err ("Login failed.");
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login failed.");
+    gtk_widget_hide_all (data->window->inputbar);
+    gtk_widget_show_all (data->window->loginbar);
     gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
     gtk_widget_set_sensitive(data->window->user_entry,TRUE);
     gtk_widget_set_sensitive(data->window->pass_entry,TRUE);
@@ -1224,6 +1280,8 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   else if (g_strrstr(msg->response_body->data,"Visual Confirmation"))
   {
     err ("Login failed, limit reached.");
+    gtk_widget_hide_all (data->window->inputbar);
+    gtk_widget_hide_all (data->window->loginbar);
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login failed, account locked. Please visit the forum and re-activate manually.");
     gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
     gtk_widget_set_sensitive(data->window->user_entry,TRUE);
@@ -1246,6 +1304,7 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
 
 void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 3);
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 2);
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 1);
@@ -1269,8 +1328,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <5");
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
-    /*gtk_widget_show (data->window->filter_ml);
-    gtk_widget_show (data->window->filter_ul);*/
+    gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);
 
     gtk_widget_show (data->window->level_box);
     gtk_widget_show (data->window->item_l3);
@@ -1291,8 +1350,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
-    /*gtk_widget_show (data->window->filter_ml);
-    gtk_widget_show (data->window->filter_ul);*/
+    gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);
 
 
     gtk_widget_show (data->window->level_box);
@@ -1319,8 +1378,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <6");
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
-    /*gtk_widget_show (data->window->filter_ml);
-    gtk_widget_show (data->window->filter_ul);*/
+    gtk_widget_show (data->window->filter_ml);
+    gtk_widget_show (data->window->filter_ul);
 
     gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->color_box), "chatname_green");
     gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->color_box), "chatname_blue");
@@ -1419,7 +1478,11 @@ gboolean user_list_timeout (DevchatCBData* data)
   g_slist_free (data->window->users_online);
   data->window->users_online = NULL;
   data->window->usr_list_parsed = TRUE;
-  soup_session_cancel_message (data->window->session, data->window->user_message, SOUP_STATUS_CANCELLED);
+  if (data->window->user_message)
+  {
+    soup_session_cancel_message (data->window->session, data->window->user_message, SOUP_STATUS_CANCELLED);
+    data->window->user_message = NULL;
+  }
 
   return FALSE;
 }
@@ -1487,6 +1550,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     }
 
     data->window->usr_list_parsed = TRUE;
+    data->window->user_message = NULL;
     g_source_remove (data->window->user_timeout_id);
 
     gchar* userlist = g_strdup (m->response_body->data);
@@ -4136,12 +4200,16 @@ void filter_ul_changed (GtkWidget* widget, DevchatCBData* data)
 
   tag = gtk_text_tag_table_lookup (t, "ul1");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "ul3");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "ul5");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "ul6");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
 
   switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
   {
@@ -4168,12 +4236,16 @@ void filter_ml_changed (GtkWidget* widget, DevchatCBData* data)
 
   tag = gtk_text_tag_table_lookup (t, "l1");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "l3");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "l5");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
   tag = gtk_text_tag_table_lookup (t, "l6");
   g_object_set (tag, "invisible", FALSE, NULL);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
 
   switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
   {
@@ -4560,14 +4632,31 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
 
   gchar* license_text;
-#ifndef G_OS_WIN32
-  if (g_file_test ("/usr/share/licenses/common/GPL2/license.txt", G_FILE_TEST_EXISTS))
-    g_file_get_contents ("/usr/share/licenses/common/GPL2/license.txt", &license_text, NULL, NULL);
-  else if (g_file_test ("/usr/share/common-licenses/GPL-2", G_FILE_TEST_EXISTS))
-    g_file_get_contents ("/usr/share/common-licenses/GPL-2", &license_text, NULL, NULL);
-  else
-#endif
-    license_text = "This program is free software; you can redistribute it and/or modify\n\
+
+  const gchar* const* dirs = g_get_system_data_dirs ();
+
+  int i;
+  gchar* license_filename;
+
+  for (i=0; dirs[i]; i++)
+  {
+    license_filename = g_build_filename (dirs[i], "licenses", "common", "GPL2", "license.txt", NULL);
+    if (g_file_test (license_filename, G_FILE_TEST_EXISTS))
+    {
+      g_file_get_contents (license_filename, &license_text, NULL, NULL);
+      break;
+    }
+    else
+    {
+      license_filename = g_build_filename (dirs[i], "common-licenses", "GPL-2", NULL);
+      if (g_file_test (license_filename, G_FILE_TEST_EXISTS))
+      {
+        g_file_get_contents (license_filename, &license_text, NULL, NULL);
+        break;
+      }
+      else
+      {
+        license_text = "This program is free software; you can redistribute it and/or modify\n\
 it under the terms of the GNU General Public License as published by\n\
 the Free Software Foundation; either version 2 of the License, or\n\
 (at your option) any later version.\n\
@@ -4576,6 +4665,11 @@ This program is distributed in the hope that it will be useful,\n\
 but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the\n\
 GNU General Public License for more details.";
+      }
+    }
+  }
+  g_free (license_filename);
+
   gtk_about_dialog_set_license (GTK_ABOUT_DIALOG (dialog), license_text);
   gtk_dialog_run (GTK_DIALOG (dialog));
   gtk_widget_destroy (dialog);

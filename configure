@@ -3,8 +3,8 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.6.0"\n')
-f.write('int debug;\nint real_debug;\nint no_config;\n')
+f.write('#define VERSION "0.6.1"\n')
+f.write('int debug;\nint real_debug;\nint no_config;\nint no_spellcheck;\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
 
@@ -48,10 +48,10 @@ parser = optparse.OptionParser()
 parser.add_option("-p","--prefix",action="store",type="string",dest="prefix",default="/usr/local",help="Installation prefix.")
 parser.add_option("-d","--enable-debug",action="store_true",dest="debugS",default=False,help="Only kept for compatibility reasons. Equal to --enable-debugging-symbols")
 parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Useful for automated debugging.")
-parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=False,help="Enable libnotify visual notifications.")
+parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications.")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support. NOTE: UNFINISHED. WILL BREAK COMPILING AND KILL KITTEN. You have been warned.")
 parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations (not implemented).")
-parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=False,help="Enable spell checking support.")
+parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=True,help="Enable spell checking support.")
 
 (options,args) = parser.parse_args()
 

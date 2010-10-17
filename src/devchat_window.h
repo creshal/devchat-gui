@@ -132,6 +132,7 @@ struct _DevchatWindow
   dc_settings settings_backup;
 
   SoupSession* session;
+  SoupCookieJar* jar;
   guint msg_list_getter;
   guint usr_list_getter;
   gboolean msg_list_parsed;
@@ -194,6 +195,7 @@ struct _DevchatWindow
 
   gchar* workingdir;
   gchar* avadir;
+  gchar* jarfile;
   gchar* buffer[MAX_BUF+1];
   gint buf_current;
 
