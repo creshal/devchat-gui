@@ -4314,7 +4314,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   text = g_strstrip (text);
 
-  GRegex* custom_smilies[6];
+  const int smilie_count = 7;
+
+  GRegex* custom_smilies[smilie_count];
 
   custom_smilies[0] = g_regex_new (":cube:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[1] = g_regex_new (":ugly:", G_REGEX_UNGREEDY, 0, NULL);
@@ -4322,8 +4324,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilies[3] = g_regex_new (":wub:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[4] = g_regex_new (":keks:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[5] = g_regex_new (":eg:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[6] = g_regex_new (":giggle:", G_REGEX_UNGREEDY, 0, NULL);
 
-  gchar* custom_smilie_replacements[6];
+  gchar* custom_smilie_replacements[smilie_count];
 
   custom_smilie_replacements[0] = "[img]http://dl.creshal.de/dc/cube.png[/img]";
   custom_smilie_replacements[1] = "[img]http://dl.creshal.de/dc/ugly.gif[/img]";
@@ -4331,9 +4334,10 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilie_replacements[3] = "[img]http://dl.creshal.de/dc/wub.gif[/img]";
   custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/atomkeks.png[/img]";
   custom_smilie_replacements[5] = "[img]http://dl.creshal.de/dc/icon_evillaugh.gif[/img]";
+  custom_smilie_replacements[6] = "[img]http://dl.creshal.de/dc/giggle.gif[/img]";
 
   int i;
-  for (i=0; i < 6; i++)
+  for (i=0; i < smilie_count; i++)
   {
     gchar* tmp2 = text;
     text = g_regex_replace (custom_smilies[i], text, -1, 0, custom_smilie_replacements[i], 0, NULL);

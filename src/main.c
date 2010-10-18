@@ -229,6 +229,7 @@ main (int argc, char *argv[])
   g_hash_table_insert (self->smilies, ":wtf:", g_build_filename (self->workingdir, "icon_wtf.gif", NULL));
   g_hash_table_insert (self->smilies, ":ugly:", g_build_filename (self->workingdir, "ugly.gif", NULL));
   g_hash_table_insert (self->smilies, ":wub:", g_build_filename (self->workingdir, "wub.gif", NULL));
+  g_hash_table_insert (self->smilies, ":giggle:", g_build_filename (self->workingdir, "giggle.gif", NULL));
   g_hash_table_insert (self->avatars, "default", gdk_pixbuf_new_from_file_at_size (g_build_filename (self->workingdir, "default", NULL), self->settings.avatar_size, self->settings.avatar_size, NULL));
 
   devchat_window_refresh_smilies (self);
