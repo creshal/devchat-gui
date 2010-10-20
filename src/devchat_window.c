@@ -2685,7 +2685,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
             gtk_widget_show (img);
           }
-          else if (uri)
+          else if (uri && g_regex_match_simple ("http://.*?\\.([a-z][a-z]+)/.*?\\.(gif|jpg|png|tga|tif|tiff|webp)", uri, 0, 0)) /*Only attempt downloading if it's really an image. I will refrain from insulting Alex this time.*/
           {
             if (real_debug) {
               dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
