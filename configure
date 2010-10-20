@@ -57,7 +57,7 @@ parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",de
 
 ccargs = "-O2 -Wall -march=native"
 
-print "Writing options to config.h ..."
+print ("Writing options to config.h ...")
 
 if options.debugS:
   ccargs = "-g -O0 -Wall"
@@ -74,31 +74,31 @@ if options.spell:
 	f.write('#define SPELLCHECK\n')
 
 f.close()
-print "Checking whether build environment is sane..."
+print ("Checking whether build environment is sane...")
 m = open("Makefile","w")
 
 if os.name == "posix":
   if os.path.exists("/usr/bin/clang") or os.path.exists("/usr/local/bin/clang"):
-    print "Detected CLang compiler, OK."
+    print ("Detected CLang compiler, OK.")
     m.write ("CC = clang\n")
   elif os.path.exists("/usr/bin/gcc") or os.path.exists("/usr/local/bin/gcc"):
-    print "Detected GCC compiler, OK."
+    print ("Detected GCC compiler, OK.")
     m.write("CC = gcc\n")
   else:
-    print "Build environment is grinning and holding a spatula. Guess not."
+    print ("Build environment is grinning and holding a spatula. Guess not.")
     sys.exit(-1)
 elif os.name == "nt":
-  print "Please contact your next exorcist for help with compiling on Windows."
+  print ("Please contact your next exorcist for help with compiling on Windows.")
   sys.exit(-42)
 
-print "Checking for libraries..."
+print ("Checking for libraries...")
 
 for lib in libs.split(" "):
-  print "Checking ", lib
+  print ("Checking " + lib)
   if os.path.exists ("/usr/lib/pkgconfig/"+lib+".pc"):
-    print "OK."
+    print ("OK.")
   else:
-    print "ERR: Lib ", lib, " not found."
+    print ("ERR: Lib " + lib + " not found.")
     sys.exit(-2)
 
 m.write("LIBS = %s\n"%libs)
@@ -108,4 +108,4 @@ m.write("CCARGS = %s\n"%ccargs)
 m.write(makefile)
 m.close()
 
-print "This was a triumph.\nI'm making a note here, huge success!\n*wanders off singing*"
+print ("This was a triumph.\nI'm making a note here, huge success!\n*wanders off singing*")
