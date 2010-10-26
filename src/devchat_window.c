@@ -2316,6 +2316,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gtk_text_buffer_apply_tag_by_name (buf, tagulevel, &start, &end);
       gtk_text_buffer_apply_tag_by_name (buf, tagname, &start, &end);
 
+      gtk_text_iter_forward_chars (&start, 6);
+
       if (!show_name)
         gtk_text_buffer_apply_tag_by_name (buf, a_tag, &start, &end);
 
