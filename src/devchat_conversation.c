@@ -57,6 +57,8 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   g_signal_connect (obj->out_widget, "button-press-event", G_CALLBACK(devchat_window_button_press_cb),parent_data);
   gtk_container_add (GTK_CONTAINER (scroll_out), obj->out_widget);
 
+  devchat_window_create_tags (obj->out_buffer, parent_data);
+
   GtkWidget* search_box = gtk_vbox_new (FALSE, 0);
   gtk_box_pack_start (GTK_BOX (search_box), scroll_out, TRUE, TRUE, 0);
 
@@ -183,9 +185,40 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
 
   }
   else
-    obj->child = search_box;
+  {
+    if (parent->userlevel > 1)
+    {
+      GtkWidget* hbox_filter = gtk_hbox_new (FALSE, 1);
+      GtkWidget* filter_ml = gtk_combo_box_new_text ();
+      GtkWidget* filter_ul = gtk_combo_box_new_text ();
+      g_signal_connect (filter_ul, "changed", G_CALLBACK (devchat_window_filter_ul_changed), obj->out_buffer);
+      gtk_box_pack_start (GTK_BOX (hbox_filter), filter_ul, FALSE,FALSE,0);
+      g_signal_connect (filter_ml, "changed", G_CALLBACK (devchat_window_filter_ml_changed), obj->out_buffer);
+      gtk_box_pack_start (GTK_BOX (hbox_filter), filter_ml, FALSE,FALSE,0);
 
-  devchat_window_create_tags (obj->out_buffer, parent_data);
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Filter Users");
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <3");
+      gtk_combo_box_set_active (GTK_COMBO_BOX (filter_ul), 0);
+
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Filter Messages");
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <3");
+      gtk_combo_box_set_active (GTK_COMBO_BOX (filter_ml), 0);
+
+      if (parent->userlevel > 3)
+      {
+        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <5");
+        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <5");
+
+        if (parent->userlevel > 5)
+        {
+          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <6");
+          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <6");
+        }
+      }
+      gtk_box_pack_start (GTK_BOX (search_box), hbox_filter, FALSE, FALSE, 0);
+    }
+    obj->child = search_box;
+  }
 
   return obj;
 }

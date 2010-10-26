@@ -96,8 +96,6 @@ void reconnect (GtkWidget* widget, DevchatCBData* data);
 void tab_changed (GtkWidget* widget, GtkNotebook* nb, guint pagenum, DevchatCBData* data);
 gboolean scroll_mark_onscreen (DevchatConversation* c);
 void level_changed (GtkWidget* widget, DevchatCBData* data);
-void filter_ul_changed (GtkWidget* widget, DevchatCBData* data);
-void filter_ml_changed (GtkWidget* widget, DevchatCBData* data);
 void next_tab (GtkWidget* widget, DevchatCBData* data);
 void prev_tab (GtkWidget* widget, DevchatCBData* data);
 void show_his (GtkWidget* widget, DevchatCBData* data);
@@ -545,12 +543,12 @@ devchat_window_init (DevchatWindow* self)
 
   self->filter_ul = gtk_combo_box_new_text ();
   gtk_widget_set_no_show_all (self->filter_ul,TRUE);
-  g_signal_connect(self->filter_ul, "changed", G_CALLBACK (filter_ul_changed), self_data);
+  g_signal_connect(self->filter_ul, "changed", G_CALLBACK (devchat_window_filter_ul_changed), self->output);
   gtk_box_pack_start(GTK_BOX(self->inputbar),self->filter_ul,FALSE,FALSE,0);
 
   self->filter_ml = gtk_combo_box_new_text ();
   gtk_widget_set_no_show_all (self->filter_ml,TRUE);
-  g_signal_connect(self->filter_ml, "changed", G_CALLBACK (filter_ml_changed), self_data);
+  g_signal_connect(self->filter_ml, "changed", G_CALLBACK (devchat_window_filter_ml_changed), self->output);
   gtk_box_pack_start(GTK_BOX(self->inputbar),self->filter_ml,FALSE,FALSE,0);
 
   self->btn_send = gtk_button_new_from_stock(GTK_STOCK_OK);
@@ -1673,7 +1671,11 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             GtkWidget* container = gtk_hbox_new(FALSE,0);
             GtkWidget* at_btn = gtk_button_new();
             GtkWidget* profile_btn = gtk_button_new();
-            GtkWidget* pm_btn = gtk_button_new_with_label("PM");
+            GtkWidget* pm_btn = gtk_button_new ();
+            GtkWidget* pm_label = gtk_label_new (NULL);
+
+            gtk_label_set_markup (GTK_LABEL (pm_label), "<span font_size='x-small'>PM</span>");
+            gtk_container_add (GTK_CONTAINER (pm_btn), pm_label);
 
             gulong real_level = strtoll(g_strndup(level,1),NULL,10);
             gchar* color;
@@ -2111,9 +2113,19 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         view = conv->out_widget;
       }
 
-      GtkTextIter end;
+      GtkTextIter end, e2;
       GtkTextTagTable* table = gtk_text_buffer_get_tag_table (buf);
       gtk_text_buffer_get_end_iter (buf, &end);
+
+      e2 = end;
+      gtk_text_iter_backward_char (&e2);
+
+      gchar* last_char = gtk_text_buffer_get_text (buf, &end, &e2, TRUE);
+      if (g_strcmp0 (last_char, "\xe2\x80\x8b") == 0) /*Last char mark, to prevent display corruption on filtering*/
+      {
+        gtk_text_buffer_delete (buf, &end, &e2);
+        gtk_text_buffer_get_end_iter (buf, &end);
+      }
 
       GtkTextMark* old_start = gtk_text_mark_new (NULL, TRUE);
       gtk_text_buffer_add_mark (buf, old_start, &end);
@@ -2316,6 +2328,10 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       g_free (time_attr);
       g_free (lid);
       g_free (message);
+
+      GtkTextIter e;
+      gtk_text_buffer_get_end_iter (buf, &e);
+      gtk_text_buffer_insert (buf, &e, "\xe2\x80\x8b", -1);
     }
 
     g_free (node);
@@ -4093,18 +4109,6 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
                           name+5
                          );
     }
-    else if (name && g_str_has_prefix (name, "tma::"))
-    {
-      gtk_widget_set_tooltip_text (widget, name+5);
-      found = TRUE;
-      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
-                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma")
-                        );
-      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
-                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma"),
-                          name+5
-                         );
-    }
     else if (name && g_str_has_prefix (name, "lid::"))
     {
       gtk_widget_set_tooltip_text (widget, name+5);
@@ -4114,6 +4118,18 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
                         );
       gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
                           gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid"),
+                          name+5
+                         );
+    }
+    else if (name && g_str_has_prefix (name, "tma::"))
+    {
+      gtk_widget_set_tooltip_text (widget, name+5);
+      found = TRUE;
+      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma")
+                        );
+      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "tma"),
                           name+5
                          );
     }
@@ -4207,9 +4223,9 @@ void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data)
   }
 }
 
-void filter_ul_changed (GtkWidget* widget, DevchatCBData* data)
+void devchat_window_filter_ul_changed (GtkWidget* widget, GtkTextBuffer* data)
 {
-  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data->window->output);
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data);
   GtkTextTag* tag;
 
   tag = gtk_text_tag_table_lookup (t, "ul1");
@@ -4231,9 +4247,9 @@ void filter_ul_changed (GtkWidget* widget, DevchatCBData* data)
   }
 }
 
-void filter_ml_changed (GtkWidget* widget, DevchatCBData* data)
+void devchat_window_filter_ml_changed (GtkWidget* widget, GtkTextBuffer* data)
 {
-  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data->window->output);
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (data);
   GtkTextTag* tag;
 
   tag = gtk_text_tag_table_lookup (t, "l1");

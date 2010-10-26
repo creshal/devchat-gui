@@ -251,6 +251,9 @@ void devchat_window_find ();
 void devchat_window_close_search ();
 gboolean devchat_window_on_popup_menu ();
 gboolean devchat_window_button_press_cb ();
+void devchat_window_filter_ul_changed (GtkWidget* widget, GtkTextBuffer* data);
+void devchat_window_filter_ml_changed (GtkWidget* widget, GtkTextBuffer* data);
+
 G_END_DECLS
 
 #endif /* __DEVCHAT_WINDOW_H__ */
