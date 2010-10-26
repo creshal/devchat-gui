@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.6.1"\n')
+f.write('#define VERSION "0.6.2"\n')
 f.write('int debug;\nint real_debug;\nint no_config;\nint no_spellcheck;\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"

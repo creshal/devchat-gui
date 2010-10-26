@@ -44,11 +44,10 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroll_out), GTK_SHADOW_ETCHED_IN);
   obj->out_buffer = gtk_text_buffer_new (NULL);
   obj->out_widget = gtk_text_view_new_with_buffer (obj->out_buffer);
-  g_object_set (obj->out_widget, "left-margin", 2, "right-margin", 2, NULL);
+  g_object_set (obj->out_widget, "left-margin", 2, "right-margin", 2, "pixels-below-lines", 1, "pixels-above-lines", 1, NULL);
   gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (obj->out_widget), GTK_WRAP_WORD_CHAR);
   gtk_text_view_set_editable (GTK_TEXT_VIEW (obj->out_widget), FALSE);
   gtk_text_view_set_cursor_visible (GTK_TEXT_VIEW (obj->out_widget), FALSE);
-  gtk_text_view_set_pixels_above_lines (GTK_TEXT_VIEW (obj->out_widget), 2);
   gtk_widget_modify_base (obj->out_widget, GTK_STATE_NORMAL, &l1);
   gtk_widget_modify_text (obj->out_widget, GTK_STATE_NORMAL, &font);
   g_signal_connect (obj->out_buffer, "mark-set", G_CALLBACK (devchat_window_on_mark_set_cb), parent_data);
@@ -86,7 +85,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     obj->in_buffer = gtk_text_buffer_new (NULL);
     obj->in_widget = gtk_text_view_new_with_buffer (obj->in_buffer);
     gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (obj->in_widget), GTK_WRAP_WORD_CHAR);
-    gtk_text_view_set_pixels_above_lines (GTK_TEXT_VIEW (obj->in_widget), 2);
+    g_object_set (obj->in_widget, "left-margin", 2, "right-margin", 2, "pixels-below-lines", 1, "pixels-above-lines", 1, NULL);
     gtk_widget_modify_base (obj->in_widget, GTK_STATE_NORMAL, &l1);
     gtk_widget_modify_text (obj->in_widget, GTK_STATE_NORMAL, &font);
     g_signal_connect (obj->in_widget, "button-press-event", G_CALLBACK (devchat_window_tab_changed_win), parent_data);

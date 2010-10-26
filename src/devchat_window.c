@@ -128,6 +128,8 @@ gboolean user_list_timeout (DevchatCBData* data);
 void popup_open_link (GtkWidget* w, DevchatCBData* data);
 void popup_copy_stuff (GtkWidget* w, DevchatCBData* data);
 void popup_insert_text (GtkWidget* w, DevchatCBData* data);
+gboolean quit_timeout_cb (DevchatCBData* data);
+void quit_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -449,7 +451,6 @@ devchat_window_init (DevchatWindow* self)
   gtk_text_view_set_editable(GTK_TEXT_VIEW(self->outputwidget), FALSE);
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->outputwidget), GTK_WRAP_WORD_CHAR);
   gtk_widget_set_size_request(self->outputwidget, 300,100);
-  gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->outputwidget), 2);
   g_signal_connect (self->output, "mark-set", G_CALLBACK(devchat_window_on_mark_set_cb),self_data);
   g_signal_connect (self->outputwidget, "motion-notify-event", G_CALLBACK(devchat_window_on_motion_cb),self_data);
   g_signal_connect (self->outputwidget, "button-press-event", G_CALLBACK(devchat_window_button_press_cb),self_data);
@@ -457,7 +458,7 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* scroller1 = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller1),GTK_SHADOW_ETCHED_IN);
-  g_object_set (self->outputwidget, "left-margin", 2, "right-margin", 2, NULL);
+  g_object_set (self->outputwidget, "left-margin", 2, "right-margin", 2, "pixels-below-lines", 1, "pixels-above-lines", 1, NULL);
   gtk_container_add (GTK_CONTAINER(scroller1), self->outputwidget);
 
   GtkWidget* search_box = gtk_vbox_new (FALSE, 0);
@@ -582,7 +583,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_widget_modify_base (self->inputwidget, GTK_STATE_NORMAL, &l1);
   gtk_widget_modify_text (self->inputwidget, GTK_STATE_NORMAL, &font);
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->inputwidget), GTK_WRAP_WORD_CHAR);
-  gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(self->inputwidget), 2);
+  g_object_set (self->inputwidget, "left-margin", 2, "right-margin", 2, "pixels-below-lines", 1, "pixels-above-lines", 1, NULL);
   gtk_container_add(GTK_CONTAINER(scroller3),self->inputwidget);
 
 #ifdef SPELLCHECK
@@ -1142,11 +1143,26 @@ void destroy (GtkObject* widget, DevchatCBData* data)
   if (!(data->window->firstrun))
   {
     SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
-    soup_session_send_message (data->window->session, msg);
-    soup_session_abort (data->window->session);
+    soup_session_queue_message (data->window->session, msg, SOUP_SESSION_CALLBACK (quit_cb), data);
+    g_timeout_add_seconds (2, (GSourceFunc) quit_timeout_cb, data);
   }
+  else
+    gtk_main_quit ();
+}
+
+void quit_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
+{
+  soup_session_abort (s);
   gtk_main_quit ();
 }
+
+gboolean quit_timeout_cb (DevchatCBData* data)
+{
+  soup_session_abort (data->window->session);
+  gtk_main_quit ();
+  return FALSE;
+}
+
 
 void save_settings (DevchatWindow* w)
 {
@@ -2312,7 +2328,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
   if (message_found)
   {
     GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
-    if ((a->upper - (a->value + a->page_size)) < 30)
+    if ((a->upper - (a->value + a->page_size)) < 90)
       gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
 
     while (scroll_tos)
@@ -2320,7 +2336,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       GtkAdjustment* adj = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (((DevchatConversation*) scroll_tos->data)->out_widget)));
       GtkTextIter ed;
       gtk_text_buffer_get_end_iter (GTK_TEXT_BUFFER (((DevchatConversation*) scroll_tos->data)->out_buffer), &ed);
-      if (((adj->upper - (adj->value + adj->page_size)) < 30) || (self->window->firstrun == TRUE))
+      if (((adj->upper - (adj->value + adj->page_size)) < 90) || (self->window->firstrun == TRUE))
       {
         g_timeout_add (50, (GSourceFunc) scroll_mark_onscreen, (DevchatConversation*) scroll_tos->data);
       }
