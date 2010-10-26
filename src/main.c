@@ -230,6 +230,18 @@ main (int argc, char *argv[])
   g_hash_table_insert (self->smilies, ":ugly:", g_build_filename (self->workingdir, "ugly.gif", NULL));
   g_hash_table_insert (self->smilies, ":wub:", g_build_filename (self->workingdir, "wub.gif", NULL));
   g_hash_table_insert (self->smilies, ":giggle:", g_build_filename (self->workingdir, "giggle.gif", NULL));
+  g_hash_table_insert (self->smilies, ":shocked:", g_build_filename (self->workingdir, "icon_eek.gif", NULL));
+  g_hash_table_insert (self->smilies, ":confused:", g_build_filename (self->workingdir, "icon_confused.gif", NULL));
+  g_hash_table_insert (self->smilies, ":mad:", g_build_filename (self->workingdir, "icon_mad.gif", NULL));
+  g_hash_table_insert (self->smilies, ":cry:", g_build_filename (self->workingdir, "icon_cry.gif", NULL));
+  g_hash_table_insert (self->smilies, ":evil:", g_build_filename (self->workingdir, "icon_evil.gif", NULL));
+  g_hash_table_insert (self->smilies, ":twisted:", g_build_filename (self->workingdir, "icon_twisted.gif", NULL));
+  g_hash_table_insert (self->smilies, ":idea:", g_build_filename (self->workingdir, "icon_idea.gif", NULL));
+  g_hash_table_insert (self->smilies, ":arrow:", g_build_filename (self->workingdir, "icon_arrow.gif", NULL));
+  g_hash_table_insert (self->smilies, ":think:", g_build_filename (self->workingdir, "icon_think.gif", NULL));
+  g_hash_table_insert (self->smilies, ":doh:", g_build_filename (self->workingdir, "icon_doh.gif", NULL));
+  g_hash_table_insert (self->smilies, ":rant:", g_build_filename (self->workingdir, "icon_rant.gif", NULL));
+  g_hash_table_insert (self->smilies, ":star:", g_build_filename (self->workingdir, "icon_star.gif", NULL));
   g_hash_table_insert (self->avatars, "default", gdk_pixbuf_new_from_file_at_size (g_build_filename (self->workingdir, "default", NULL), self->settings.avatar_size, self->settings.avatar_size, NULL));
 
   devchat_window_refresh_smilies (self);

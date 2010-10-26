@@ -587,7 +587,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_container_add(GTK_CONTAINER(scroller3),self->inputwidget);
 
 #ifdef SPELLCHECK
-  if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), "en_EN", NULL))
+  const gchar* const* langs = g_get_language_names ();
+  if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), langs[0], NULL))
     err ("Error initialising spell checker!");
 #endif
 
@@ -724,7 +725,7 @@ devchat_window_init (DevchatWindow* self)
     g_free (cookies);
   }
 
-  g_timeout_add_seconds (5, (GSourceFunc) get_pos_size, self);
+  g_timeout_add_seconds (4, (GSourceFunc) get_pos_size, self);
 }
 
 static void
@@ -1200,9 +1201,6 @@ void save_settings (DevchatWindow* w)
   {
     presets_string = g_strconcat (presets_string, w->settings.presets[i], "|", NULL);
   }
-
-  GtkPaned* hpaned1 = GTK_PANED (gtk_widget_get_parent (gtk_widget_get_parent (w->userlist_port)));
-  w->settings.handle_width = gtk_paned_get_position (hpaned1);
 
   gchar* bools_string = g_strdup_printf ("SHOWID=%s\nSTEALTHJOIN=%s\nAUTOJOIN=%s\nSHOWHIDDEN=%s\nCOLORUSER=%s\nSTORE_PASS=%s\nSHOW_TRAY=%s\nJUMP_TAB=%s\nMAXIMIZED=%s\n", w->settings.showid? "TRUE":"FALSE",
                                          w->settings.stealthjoin? "TRUE" : "FALSE",
@@ -4330,7 +4328,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   }
   text = g_strstrip (text);
 
-  const int smilie_count = 7;
+  const int smilie_count = 19;
 
   GRegex* custom_smilies[smilie_count];
 
@@ -4341,6 +4339,18 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilies[4] = g_regex_new (":keks:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[5] = g_regex_new (":eg:", G_REGEX_UNGREEDY, 0, NULL);
   custom_smilies[6] = g_regex_new (":giggle:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[7] = g_regex_new (":shocked:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[8] = g_regex_new (":confused:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[9] = g_regex_new (":mad:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[10] = g_regex_new (":cry:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[11] = g_regex_new (":evil:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[12] = g_regex_new (":twisted:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[13] = g_regex_new (":idea:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[14] = g_regex_new (":arrow:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[15] = g_regex_new (":think:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[16] = g_regex_new (":doh:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[17] = g_regex_new (":rant:", G_REGEX_UNGREEDY, 0, NULL);
+  custom_smilies[18] = g_regex_new (":star:", G_REGEX_UNGREEDY, 0, NULL);
 
   gchar* custom_smilie_replacements[smilie_count];
 
@@ -4351,6 +4361,18 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   custom_smilie_replacements[4] = "[img]http://dl.creshal.de/dc/atomkeks.png[/img]";
   custom_smilie_replacements[5] = "[img]http://dl.creshal.de/dc/icon_evillaugh.gif[/img]";
   custom_smilie_replacements[6] = "[img]http://dl.creshal.de/dc/giggle.gif[/img]";
+  custom_smilie_replacements[7] = "[img]http://forum.egosoft.com/images/smiles/icon_eek.gif[/img]";
+  custom_smilie_replacements[8] = "[img]http://forum.egosoft.com/images/smiles/icon_confused.gif[/img]";
+  custom_smilie_replacements[9] = "[img]http://forum.egosoft.com/images/smiles/icon_mad.gif[/img]";
+  custom_smilie_replacements[10] = "[img]http://forum.egosoft.com/images/smiles/icon_cry.gif[/img]";
+  custom_smilie_replacements[11] = "[img]http://forum.egosoft.com/images/smiles/icon_evil.gif[/img]";
+  custom_smilie_replacements[12] = "[img]http://forum.egosoft.com/images/smiles/icon_twisted.gif[/img]";
+  custom_smilie_replacements[13] = "[img]http://forum.egosoft.com/images/smiles/icon_idea.gif[/img]";
+  custom_smilie_replacements[14] = "[img]http://forum.egosoft.com/images/smiles/icon_arrow.gif[/img]";
+  custom_smilie_replacements[15] = "[img]http://forum.egosoft.com/images/smiles/icon_think.gif[/img]";
+  custom_smilie_replacements[16] = "[img]http://forum.egosoft.com/images/smiles/icon_doh.gif[/img]";
+  custom_smilie_replacements[17] = "[img]http://forum.egosoft.com/images/smiles/icon_rant.gif[/img]";
+  custom_smilie_replacements[18] = "[img]http://forum.egosoft.com/images/smiles/icon_star.gif[/img]";
 
   int i;
   for (i=0; i < smilie_count; i++)
@@ -4999,6 +5021,9 @@ gboolean get_pos_size (DevchatWindow* window)
   {
     gtk_window_get_position (GTK_WINDOW (window->window), &window->settings.x, &window->settings.y);
     gtk_window_get_size (GTK_WINDOW (window->window), &window->settings.width, &window->settings.height);
+
+    GtkPaned* hpaned1 = GTK_PANED (gtk_widget_get_parent (gtk_widget_get_parent (window->userlist_port)));
+    window->settings.handle_width = gtk_paned_get_position (hpaned1);
   }
   return TRUE;
 }
