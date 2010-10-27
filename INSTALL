@@ -1,10 +1,10 @@
 #Compiling the Source code
 ##Linux
-You'll need a compiler (I recommend clang, gcc works too), pkg-config and the header files of gtk2, libsoup and libxml2. Decent distributions have them included anyway, Debian/Ubuntu/Mint-users have to install »libgtk2.0-dev libxml2-dev libsoup2.4-dev« for that. Oh, and you need python for the configuration script.
+You'll need a compiler (I recommend clang, gcc works too), pkg-config and the header files of gtk2, libsoup, gtkspell, libnotify and libxml2. Decent distributions have them included anyway, Debian/Ubuntu/Mint-users have to install »libgtk2.0-dev libxml2-dev libsoup2.4-dev libnotify-dev libgtkspell-dev« for that. Oh, and you need python for the configuration script (works both with python 2 and 3 in recent releases).
 After that, it's just plain ol' ./configure && make && make install
 
 ##Windows
-You're fscked. Compiling GTK apps under Windows involves black magic, human sacrifices and mingw. Basically, you'll need the -dev packages for GTK (plus all dependencies, they're listed on the GTK homepage), libsoup (note that you'll need 2.30, which is not yet available precompiled, so you have to compile that for yourself aswell – Godspeed) and libxml2, latest stable release of each. Set up your (mingw-based) compiler and linker to use the respective directories and compile. Install to %PROGRAMFILES%\Devchat\ and done™. Or not. It's the best to contact me and ask for detailed instructions. Bring coffee and pizza. And vodka. And some virgins (...for the human sacrifice of course).
+You're fscked. Compiling GTK apps under Windows involves black magic, human sacrifices and mingw. Basically, you'll need the -dev packages for GTK (plus all dependencies, they're listed on the GTK homepage), gtkspell (plus enchant and whatver other dependencies that has, and actual dictionaries), libsoup (note that you'll need 2.30, which is not yet available precompiled, so you have to compile that for yourself aswell – Godspeed) and libxml2, latest stable release of each. Set up your (mingw-based) compiler and linker to use the respective directories and compile. Install to %PROGRAMFILES%\Devchat\ and done™. Or not. It's the best to contact me and ask for detailed instructions. Bring coffee and pizza. And vodka. And some virgins (...for the human sacrifice of course).
 
 #Installing compiled stuff
 ##Linux
@@ -14,20 +14,23 @@ make install
 Create directories and fill as listed:
 %PROGRAMFILES%-Devchat─┬─bin: dcgui.exe and all .dlls
                        │
-                       ├─etc─gtk-2.0: gtkrc, if wanted (e.g. for better looking themes) 
+                       ├─etc: All stuff from the \etc\-dirs from downloaded binary packages.
                        │
-                       ├─lib─..: GTK stuff (e.g. theme engines)
+                       ├─lib─..: same
                        │
-                       ├─pixmaps: All files from the source archive's folder share\pixmaps\devchat 
-                       │
-                       └─share: GTK theme stuff.
+                       └─share: same, additionally all stuff from dcgui's share\ folder (except applications\ since it's unused in Windows)
 
 #Special files
 ##Settings
 ###Linux
 ~/.config/devchat
+~/.config/devchat_cookies.csv
 ###Windows
 %APPDATA%\devchat
+%APPDATA%\devchat_cookies.csv
 
 ##Logfile (Windows build with debug mode enabled)
 %TMP%\dcgui_debug.log
+
+##Error file (Windows build)
+%TMP%\dcgui_error.log
