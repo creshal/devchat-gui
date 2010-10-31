@@ -1,0 +1,4 @@
+See gettext manual on how to create new and edit existing .po files.
+The .pot will be updated automatically on reconfiguring with --enable-nls.
+
+Notes: All error messages are preceded by "Error ?: ", please do not translate this part, so that if someone uploads an error log I can recognize the error message without having to look up the translation. The rest of the message can and should be translated.

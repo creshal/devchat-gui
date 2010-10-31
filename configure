@@ -71,6 +71,7 @@ if options.otr:
   f.write('#define OTR\n')
 if options.l10n:
   f.write('#define NLS\n')
+  os.system('xgettext -o po/dcgui.pot -C -k_ --from-code=utf-8 src/*')
 if options.spell:
 	libs += " gtkspell-2.0"
 	f.write('#define SPELLCHECK\n')
@@ -109,5 +110,9 @@ m.write("CCARGS = %s\n"%ccargs)
 
 m.write(makefile)
 m.close()
+
+print ("Creating translation binaries...")
+for f in os.listdir ("po/"):
+  os.system ("msgfmt -o share/locale/"+f.split(".")[0]+"/LC_MESSAGES/dcgui.mo "+f);
 
 print ("This was a triumph.\nI'm making a note here, huge success!\n*wanders off singing*")

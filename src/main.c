@@ -21,6 +21,12 @@
 int
 main (int argc, char *argv[])
 {
+#ifdef NLS
+  setlocale (LC_ALL, "");
+  bindtextdomain ("dcgui2", NULL);
+  textdomain ("dcgui2");
+#endif
+
   GOptionEntry entries[] =
   {
     { "verbose", 'v', 0, G_OPTION_ARG_NONE, &debug, _("Show verbose information"), NULL },
