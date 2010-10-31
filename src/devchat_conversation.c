@@ -97,7 +97,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   #ifdef SPELLCHECK
   const gchar* const* langs = g_get_language_names ();
     if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (obj->in_widget), langs[0], NULL))
-      err ("Error initialising spell checker!");
+      err (_("Error S: Error initialising spell checker!"));
   #endif
 
     GtkWidget* vbox = gtk_vbox_new (FALSE, 0);
@@ -112,10 +112,10 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_button_set_image (GTK_BUTTON (btn_line), gtk_image_new_from_stock(GTK_STOCK_UNDERLINE,GTK_ICON_SIZE_SMALL_TOOLBAR));
     GtkWidget* btn_url = gtk_button_new ();
     gtk_button_set_image (GTK_BUTTON (btn_url), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_SMALL_TOOLBAR));
-    gtk_widget_set_tooltip_text (btn_url, "Insert URL");
+    gtk_widget_set_tooltip_text (btn_url, _("Insert URL"));
     GtkWidget* btn_img = gtk_button_new ();
     gtk_button_set_image (GTK_BUTTON (btn_img), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_SMALL_TOOLBAR));
-    gtk_widget_set_tooltip_text (btn_img, "Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned.");
+    gtk_widget_set_tooltip_text (btn_img, _("Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned."));
 
     DevchatCBData* format_b = devchat_cb_data_new (parent, "b");
     DevchatCBData* format_i = devchat_cb_data_new (parent, "i");
@@ -138,7 +138,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     GtkWidget* color_box = gtk_combo_box_new_text ();
     g_signal_connect (color_box, "changed", G_CALLBACK (devchat_window_color_changed), parent_data);
 
-    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "Text color");
+    gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), _("Text color"));
     gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "red");
     gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "green");
     gtk_combo_box_append_text (GTK_COMBO_BOX (color_box), "blue");
@@ -169,8 +169,8 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
     gtk_box_pack_end (GTK_BOX(hbox),gtk_vseparator_new(),FALSE,FALSE,0);
     gtk_box_pack_end (GTK_BOX(hbox),obj->btn_send,FALSE,FALSE,0);
 
-    obj->chk_raw = gtk_check_button_new_with_label ("Raw mode");
-    gtk_widget_set_tooltip_text (obj->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
+    obj->chk_raw = gtk_check_button_new_with_label (_("Raw mode"));
+    gtk_widget_set_tooltip_text (obj->chk_raw, _("Send raw HTML text. Needed e.g. for browser-kicks and <!-- comments -->. Not recommended for daily use."));
     gtk_box_pack_end (GTK_BOX(hbox),obj->chk_raw,FALSE,FALSE,0);
     if (parent->userlevel < 6)
     {
@@ -196,23 +196,23 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
       g_signal_connect (filter_ml, "changed", G_CALLBACK (devchat_window_filter_ml_changed), obj->out_buffer);
       gtk_box_pack_start (GTK_BOX (hbox_filter), filter_ml, FALSE,FALSE,0);
 
-      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Filter Users");
-      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <3");
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), _("Filter Users"));
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), _("Userlevel <3"));
       gtk_combo_box_set_active (GTK_COMBO_BOX (filter_ul), 0);
 
-      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Filter Messages");
-      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <3");
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), _("Filter Messages"));
+      gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), _("Messagelevel <3"));
       gtk_combo_box_set_active (GTK_COMBO_BOX (filter_ml), 0);
 
       if (parent->userlevel > 3)
       {
-        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <5");
-        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <5");
+        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), _("Userlevel <5"));
+        gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), _("Messagelevel <5"));
 
         if (parent->userlevel > 5)
         {
-          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), "Userlevel <6");
-          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), "Messagelevel <6");
+          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ul), _("Userlevel <6"));
+          gtk_combo_box_append_text (GTK_COMBO_BOX (filter_ml), _("Messagelevel <6"));
         }
       }
       gtk_box_pack_start (GTK_BOX (search_box), hbox_filter, FALSE, FALSE, 0);

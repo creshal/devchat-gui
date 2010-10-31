@@ -23,11 +23,11 @@ main (int argc, char *argv[])
 {
   GOptionEntry entries[] =
   {
-    { "verbose", 'v', 0, G_OPTION_ARG_NONE, &debug, "Show verbose information", NULL },
-    { "really-verbose", 'd', 0, G_OPTION_ARG_NONE, &real_debug, "Show even more information, mainly from HTML parser. Do not use unless explicitly stated, since it's chattier than Clippy. You have been warned.", NULL },
-    { "builtin-config", 'c', 0, G_OPTION_ARG_NONE, &no_config, "Neither load config from nor save config to disk.", NULL },
+    { "verbose", 'v', 0, G_OPTION_ARG_NONE, &debug, _("Show verbose information"), NULL },
+    { "really-verbose", 'd', 0, G_OPTION_ARG_NONE, &real_debug, _("Show even more information, mainly from HTML parser. Do not use unless explicitly stated, since it's chattier than Clippy. You have been warned."), NULL },
+    { "builtin-config", 'c', 0, G_OPTION_ARG_NONE, &no_config, _("Neither load config from nor save config to disk."), NULL },
   #ifdef SPELLCHECK
-    { "no-spellcheck", 's', 0, G_OPTION_ARG_NONE, &no_spellcheck, "Disable spellchecker.", NULL },
+    { "no-spellcheck", 's', 0, G_OPTION_ARG_NONE, &no_spellcheck, _("Disable spellchecker."), NULL },
   #endif
     { NULL }
   };
@@ -35,11 +35,11 @@ main (int argc, char *argv[])
   if (!g_thread_supported ()) g_thread_init (NULL); /*Fix libsoup-related crash with GLib < 2.24*/
   gtk_init (&argc, &argv);
 
-  GOptionContext* opt_ctxt = g_option_context_new (" - Gtk+ client for X-Devchat.");
+  GOptionContext* opt_ctxt = g_option_context_new (_(" - Gtk+ client for X-Devchat."));
   g_option_context_add_main_entries (opt_ctxt, entries, NULL);
   if (!g_option_context_parse (opt_ctxt, &argc, &argv, NULL))
   {
-    err ("Option parsing failed!");
+    err (_("Error -2: Option parsing failed!"));
     return -2;
   }
 
@@ -71,7 +71,7 @@ main (int argc, char *argv[])
         dbg("Loading settings...\n");
       }
       if (!g_key_file_load_from_file (keyfile, settingsfile, G_KEY_FILE_NONE, NULL))
-        err("Error loading settings file. Possibly insufficient rights or corrupted content.\n");
+        err(_("Error loading settings file. Possibly insufficient rights or corrupted content.\n"));
       else
       {
         gchar* g = "Devchat";
@@ -157,11 +157,9 @@ main (int argc, char *argv[])
         g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0, NULL);
 
         if (e)
-          g_error ("Errors occured while loading settings: %s.", e->message);
+          err (g_strdup_printf (_("Errors occured while loading settings: %s."), e->message));
         else if (debug)
-        {
-          g_print ("Settings loaded successfully.\n");
-        }
+          dbg ("Settings loaded successfully.\n");
       }
       g_key_file_free (keyfile);
     }
@@ -199,7 +197,7 @@ main (int argc, char *argv[])
     }
     else
     {
-      err ("Could not find working dir!");
+      err (_("Error -1: Could not find working dir!"));
       return -1;
     }
   }
@@ -274,7 +272,7 @@ main (int argc, char *argv[])
   {
     if (g_mkdir (self->avadir,750) != 0)
     {
-      err (g_strdup_printf ("Error creating avatar directory %s.",self->avadir));
+      err (g_strdup_printf (_("Error creating avatar directory %s."),self->avadir));
     }
   }
 

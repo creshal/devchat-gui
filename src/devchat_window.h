@@ -38,6 +38,10 @@
 #include <gtkspell/gtkspell.h>
 #endif
 
+#ifdef NLS
+#include <glib/gi18n.h>
+#endif
+
 #ifdef G_OS_WIN32
 #include <windows.h>
 #include <Shellapi.h>

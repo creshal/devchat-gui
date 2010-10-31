@@ -247,11 +247,11 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect(self->window, "destroy", G_CALLBACK(destroy), self_data);
   g_signal_connect (self->window, "window-state-event", G_CALLBACK (track_window_state), self_data);
 
-  GtkMenuItem* menu_main = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Main"));
-  GtkMenuItem* menu_edit = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Edit"));
-  GtkMenuItem* menu_insert = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Insert"));
-  GtkMenuItem* menu_view = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Go"));
-  GtkMenuItem* menu_about = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic("_Help"));
+  GtkMenuItem* menu_main = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Main")));
+  GtkMenuItem* menu_edit = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Edit")));
+  GtkMenuItem* menu_insert = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Insert")));
+  GtkMenuItem* menu_view = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Go")));
+  GtkMenuItem* menu_about = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Help")));
 
   self->item_connect = gtk_image_menu_item_new_from_stock(GTK_STOCK_CONNECT,self->accelgroup);
   g_signal_connect (self->item_connect, "activate", G_CALLBACK (login),self_data);
@@ -262,7 +262,7 @@ devchat_window_init (DevchatWindow* self)
 
   DevchatCBData* edit_profile = devchat_cb_data_new (self, GINT_TO_POINTER (URL_PROFILE_EDIT));
 
-  GtkWidget* item_profile = gtk_image_menu_item_new_with_label ("Edit profile...");
+  GtkWidget* item_profile = gtk_image_menu_item_new_with_label (_("Edit profile..."));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_profile), gtk_image_new_from_icon_name("system-users",GTK_ICON_SIZE_MENU));
   g_signal_connect (item_profile, "activate", G_CALLBACK (go_forum), edit_profile);
 
@@ -271,27 +271,27 @@ devchat_window_init (DevchatWindow* self)
 
   DevchatCBData* view_devnet = devchat_cb_data_new (self, GINT_TO_POINTER (URL_VISIT_L3));
 
-  self->item_l3 = gtk_menu_item_new_with_label ("Open DevNet fora...");
+  self->item_l3 = gtk_menu_item_new_with_label (_("Open DevNet fora..."));
   g_signal_connect (self->item_l3, "activate", G_CALLBACK (go_forum), view_devnet);
   gtk_widget_set_no_show_all(self->item_l3,TRUE);
 
   DevchatCBData* view_beta = devchat_cb_data_new (self, GINT_TO_POINTER (URL_VISIT_L5));
 
-  self->item_l5 = gtk_menu_item_new_with_label ("Open betatest fora...");
+  self->item_l5 = gtk_menu_item_new_with_label (_("Open betatest fora..."));
   g_signal_connect (self->item_l5, "activate", G_CALLBACK (go_forum), view_beta);
   gtk_widget_set_no_show_all(self->item_l5,TRUE);
 
   DevchatCBData* view_forum = devchat_cb_data_new (self, GINT_TO_POINTER (URL_VISIT_L1));
 
-  GtkWidget* item_forum = gtk_menu_item_new_with_label ("Open forum...");
+  GtkWidget* item_forum = gtk_menu_item_new_with_label (_("Open forum..."));
   g_signal_connect (item_forum, "activate", G_CALLBACK (go_forum), view_forum);
 
-  GtkWidget* item_tabclose = gtk_image_menu_item_new_with_label ("Close tab");
+  GtkWidget* item_tabclose = gtk_image_menu_item_new_with_label (_("Close tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tabclose), gtk_image_new_from_stock(GTK_STOCK_CLOSE,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tabclose, "activate", G_CALLBACK (devchat_window_close_tab), self_data);
   gtk_widget_add_accelerator(item_tabclose, "activate", self->accelgroup, GDK_W, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  self->item_reconnect = gtk_image_menu_item_new_with_label ("Reconnect");
+  self->item_reconnect = gtk_image_menu_item_new_with_label (_("Reconnect"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (self->item_reconnect), gtk_image_new_from_stock(GTK_STOCK_REFRESH,GTK_ICON_SIZE_MENU));
   g_signal_connect (self->item_reconnect, "activate", G_CALLBACK (reconnect), self_data);
   gtk_widget_set_no_show_all(self->item_reconnect,TRUE);
@@ -301,18 +301,18 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect (item_disconnect, "activate", G_CALLBACK (destroy), self_data);
   gtk_widget_add_accelerator(item_disconnect, "activate", self->accelgroup, GDK_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  GtkWidget* item_tab_next = gtk_image_menu_item_new_with_label ("Next Tab");
+  GtkWidget* item_tab_next = gtk_image_menu_item_new_with_label (_("Next Tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tab_next), gtk_image_new_from_stock(GTK_STOCK_GO_FORWARD,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tab_next, "activate", G_CALLBACK (next_tab), self_data);
   gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_Page_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_Tab, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  GtkWidget* item_tab_prev = gtk_image_menu_item_new_with_label ("Previous Tab");
+  GtkWidget* item_tab_prev = gtk_image_menu_item_new_with_label (_("Previous Tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tab_prev), gtk_image_new_from_stock(GTK_STOCK_GO_BACK,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tab_prev, "activate", G_CALLBACK (prev_tab), self_data);
   gtk_widget_add_accelerator(item_tab_prev, "activate", self->accelgroup, GDK_Page_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  GtkWidget* item_his = gtk_image_menu_item_new_with_label ("Show History...");
+  GtkWidget* item_his = gtk_image_menu_item_new_with_label (_("Show History..."));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_his), gtk_image_new_from_icon_name("appointment-new",GTK_ICON_SIZE_MENU));
   g_signal_connect (item_his, "activate", G_CALLBACK (show_his), self_data);
 
@@ -320,7 +320,7 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect (item_about, "activate", G_CALLBACK (about_cb), self_data);
 
   DevchatCBData* report_data = devchat_cb_data_new (self, "http://dev.yaki-syndicate.de/bugs/");
-  GtkWidget* item_report = gtk_menu_item_new_with_label ("Report a bug...");
+  GtkWidget* item_report = gtk_menu_item_new_with_label (_("Report a bug..."));
   g_signal_connect (item_report, "activate", G_CALLBACK (popup_open_link), report_data);
 
 #ifdef G_OS_WIN32
@@ -328,7 +328,7 @@ devchat_window_init (DevchatWindow* self)
 #else
   DevchatCBData* update_data = devchat_cb_data_new (self, g_strconcat ("http://dev.yaki-syndicate.de/update-check/update.py/check?OS=Unix&ver=", VERSION, NULL));
 #endif
-  GtkWidget* item_update = gtk_menu_item_new_with_label ("Check for update...");
+  GtkWidget* item_update = gtk_menu_item_new_with_label (_("Check for update..."));
   g_signal_connect (item_update, "activate", G_CALLBACK (popup_open_link), update_data);
 
   DevchatCBData* format_b = devchat_cb_data_new (self, "b");
@@ -351,20 +351,20 @@ devchat_window_init (DevchatWindow* self)
 
   DevchatCBData* format_img = devchat_cb_data_new (self, "img");
 
-  GtkWidget* item_pict = gtk_image_menu_item_new_with_mnemonic ("I_mage");
+  GtkWidget* item_pict = gtk_image_menu_item_new_with_mnemonic (_("I_mage"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_pict), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_MENU));
   g_signal_connect (item_pict, "activate", G_CALLBACK (devchat_window_btn_format), format_img);
   gtk_widget_add_accelerator(item_pict, "activate", self->accelgroup, GDK_M, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_url = devchat_cb_data_new (self, "url");
 
-  GtkWidget* item_link = gtk_image_menu_item_new_with_mnemonic ("_Link");
+  GtkWidget* item_link = gtk_image_menu_item_new_with_mnemonic (_("_Link"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_link), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_link, "activate", G_CALLBACK (devchat_window_btn_format), format_url);
   gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-  self->item_smilies = gtk_menu_item_new_with_mnemonic ("_Smilies...");
-  self->item_presets = gtk_menu_item_new_with_mnemonic ("_Preset texts...");
+  self->item_smilies = gtk_menu_item_new_with_mnemonic (_("_Smilies..."));
+  self->item_presets = gtk_menu_item_new_with_mnemonic (_("_Preset texts..."));
 
 
 
@@ -429,7 +429,7 @@ devchat_window_init (DevchatWindow* self)
 
   self->statusbar = gtk_statusbar_new();
   gtk_statusbar_set_has_resize_grip (GTK_STATUSBAR(self->statusbar),TRUE);
-  self->statuslabel = gtk_label_new ("Not connected.");
+  self->statuslabel = gtk_label_new (_("Not connected."));
   self->userlabel = gtk_label_new ("");
   gtk_box_pack_end ( GTK_BOX(self->statusbar), self->userlabel,FALSE,FALSE,0);
   gtk_box_pack_end ( GTK_BOX(self->statusbar), gtk_vseparator_new(),FALSE,FALSE,1);
@@ -512,7 +512,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_widget_set_tooltip_text (btn_url, "Insert URL");
   GtkWidget* btn_img = gtk_button_new ();
   gtk_button_set_image (GTK_BUTTON (btn_img), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_SMALL_TOOLBAR));
-  gtk_widget_set_tooltip_text (btn_img, "Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned.");
+  gtk_widget_set_tooltip_text (btn_img, _("Insert Image\nNote that you will be killed if you insert images larger than 32*32px. You have been warned."));
 
   g_signal_connect (btn_bold, "clicked", G_CALLBACK (devchat_window_btn_format), format_b);
   g_signal_connect (btn_ital, "clicked", G_CALLBACK (devchat_window_btn_format), format_i);
@@ -529,7 +529,7 @@ devchat_window_init (DevchatWindow* self)
   self->color_box = gtk_combo_box_new_text ();
   g_signal_connect (self->color_box, "changed", G_CALLBACK (devchat_window_color_changed), self_data);
 
-  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "Text color");
+  gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), _("Text color"));
   gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "red");
   gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "green");
   gtk_combo_box_append_text (GTK_COMBO_BOX (self->color_box), "blue");
@@ -564,8 +564,8 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_end (GTK_BOX(self->inputbar),gtk_vseparator_new(),FALSE,FALSE,0);
   gtk_box_pack_end (GTK_BOX(self->inputbar),self->btn_send,FALSE,FALSE,0);
 
-  self->chk_raw = gtk_check_button_new_with_label ("Raw mode");
-  gtk_widget_set_tooltip_text (self->chk_raw, "Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use.");
+  self->chk_raw = gtk_check_button_new_with_label (_("Raw mode"));
+  gtk_widget_set_tooltip_text (self->chk_raw, _("Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use."));
   gtk_box_pack_end (GTK_BOX(self->inputbar),self->chk_raw,FALSE,FALSE,0);
   gtk_widget_set_no_show_all (self->chk_raw,TRUE);
 
@@ -587,7 +587,7 @@ devchat_window_init (DevchatWindow* self)
 #ifdef SPELLCHECK
   const gchar* const* langs = g_get_language_names ();
   if (!no_spellcheck && !gtkspell_new_attach (GTK_TEXT_VIEW (self->inputwidget), langs[0], NULL))
-    err ("Error initialising spell checker!");
+    err (_("Error S: Error initialising spell checker!"));
 #endif
 
   gtk_box_pack_start (GTK_BOX(vbox2),scroller3,TRUE,TRUE,0);
@@ -617,14 +617,14 @@ devchat_window_init (DevchatWindow* self)
   gtk_paned_pack1 (GTK_PANED(vpaned),hpaned1,TRUE,TRUE);
   gtk_paned_pack2 (GTK_PANED(vpaned),vbox2,FALSE,FALSE);
 
-  GtkWidget* main_label = gtk_label_new ("X-DEVCHAT");
+  GtkWidget* main_label = gtk_label_new (_("X-DEVCHAT"));
   GtkWidget* event_box = gtk_event_box_new ();
   gtk_container_add (GTK_CONTAINER (event_box), main_label);
   g_signal_connect (event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), self_data);
 
   gtk_widget_show_all (event_box);
 
-  gtk_notebook_append_page_menu (GTK_NOTEBOOK (self->notebook), vpaned, event_box, gtk_label_new("X-DEVCHAT"));
+  gtk_notebook_append_page_menu (GTK_NOTEBOOK (self->notebook), vpaned, event_box, gtk_label_new (_("X-DEVCHAT")));
 
   gtk_notebook_set_tab_reorderable (GTK_NOTEBOOK(self->notebook), vpaned, FALSE);
 
@@ -700,7 +700,7 @@ devchat_window_init (DevchatWindow* self)
       if (debug)
         dbg ("Found cookies still edible.");
 
-      gtk_label_set_text (GTK_LABEL (self->statuslabel), "Determining user level...");
+      gtk_label_set_text (GTK_LABEL (self->statuslabel), _("Determining user level..."));
       SoupMessage* step2 = soup_message_new ("GET", "http://www.egosoft.com");
 
       if (debug)
@@ -1210,10 +1210,10 @@ void save_settings (DevchatWindow* w)
                                          w->settings.jumptab? "TRUE" : "FALSE",
                                          w->settings.maximized? "TRUE":"FALSE");
 
-  gchar* settings = g_strconcat ("#Settings file for DevchatGUI. Please do not alter the key names.\n \
+  gchar* settings = g_strconcat (_("#Settings file for DevchatGUI. Please do not alter the key names.\n \
 #Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
 #Keywords and boilerplates are separated by | (u007C, vertical line).\n \
-#Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must equal true for true, everything else will be regarded as false.\n[Devchat]\n",
+#Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must equal true for true, everything else will be regarded as false.\n"), "[Devchat]\n",
                                  "BROWSER=",w->settings.browser, "\n",
                                  "COLOR_FONT=",w->settings.color_font, "\n",
                                  "COLOR_TIME=",w->settings.color_time, "\n",
@@ -1267,7 +1267,7 @@ void login (GtkWidget* widget, DevchatCBData* data)
   if (debug)
     dbg ("Logging in...");
 
-  gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Logging in...");
+  gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Logging in..."));
   data->window->settings.user = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->user_entry)));
   data->window->settings.pass = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->pass_entry)));
   SoupMessage* loginparams = soup_form_request_new("POST", "http://forum.egosoft.com/login.php","username",data->window->settings.user,"password",data->window->settings.pass,"autologin","on","redirect","","webroot","0","login","Log in",NULL);
@@ -1281,8 +1281,8 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
 
   if (g_strrstr(msg->response_body->data,"invalid password"))
   {
-    err ("Login failed.");
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login failed.");
+    err (_("Error L: Login failed."));
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Login failed."));
     gtk_widget_hide_all (data->window->inputbar);
     gtk_widget_show_all (data->window->loginbar);
     gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
@@ -1291,10 +1291,10 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   }
   else if (g_strrstr(msg->response_body->data,"Visual Confirmation"))
   {
-    err ("Login failed, limit reached.");
+    err (_("Error C: Login failed, limit reached."));
     gtk_widget_hide_all (data->window->inputbar);
     gtk_widget_hide_all (data->window->loginbar);
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login failed, account locked. Please visit the forum and re-activate manually.");
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Login failed, account locked. Please visit the forum and re-activate manually."));
     gtk_widget_set_sensitive(data->window->btn_connect,TRUE);
     gtk_widget_set_sensitive(data->window->user_entry,TRUE);
     gtk_widget_set_sensitive(data->window->pass_entry,TRUE);
@@ -1304,7 +1304,7 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
     if (debug)
       dbg ("Login successful.");
 
-    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Login successful! Determining user level...");
+    gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Login successful! Determining user level..."));
     SoupMessage* step2 = soup_message_new("GET","http://www.egosoft.com");
 
     if (debug)
@@ -1333,19 +1333,19 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (g_strrstr (m->response_body->data,"User-Level: 5"))
   {
     data->window->userlevel = 5;
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 5");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 1"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 3"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 5"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <5");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Filter Users"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <3"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <5"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <5");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Filter Messages"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <3"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <5"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
     gtk_widget_show (data->window->filter_ml);
@@ -1358,16 +1358,16 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else if (g_strrstr (m->response_body->data,"User-Level: 3"))
   {
     data->window->userlevel = 3;
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 1"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 3"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Filter Users"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <3"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Filter Messages"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <3"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
     gtk_widget_show (data->window->filter_ml);
@@ -1380,22 +1380,22 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else if (g_strrstr (m->response_body->data,"User-Level: "))
   {
     data->window->userlevel = 6;
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 1");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 3");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 5");
-    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), "Level 6");
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 1"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 3"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 5"));
+    gtk_combo_box_append_text (GTK_COMBO_BOX(data->window->level_box), _("Level 6"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->level_box), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Filter Users");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <5");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), "Userlevel <6");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Filter Users"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <3"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <5"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ul), _("Userlevel <6"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ul), 0);
 
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Filter Messages");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <3");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <5");
-    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), "Messagelevel <6");
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Filter Messages"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <3"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <5"));
+    gtk_combo_box_append_text ( GTK_COMBO_BOX(data->window->filter_ml), _("Messagelevel <6"));
     gtk_combo_box_set_active (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
     gtk_widget_show (data->window->filter_ml);
@@ -1442,7 +1442,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   if (debug)
     dbg ("Starting requests...");
 
-  gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Waiting for messages...");
+  gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Waiting for messages..."));
   data->window->msg_list_parsed = TRUE;
   data->window->usr_list_parsed = TRUE;
   data->window->usr_list_getter = g_timeout_add ((data->window->settings.update_time * 2), (GSourceFunc) user_list_poll, data);
@@ -1658,7 +1658,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                 }
                 else
                 {
-                  err ("Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory.");
+                  err (_("Error D: Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory."));
 
                   SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                   soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
@@ -1693,7 +1693,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
             gtk_button_set_relief (GTK_BUTTON (profile_btn), GTK_RELIEF_NONE);
 
-            gchar* at_text = g_strdup_printf ("View the forum profile of %s.",name);
+            gchar* at_text = g_strdup_printf (_("View the forum profile of %s."),name);
             gtk_widget_set_tooltip_text (profile_btn, at_text);
             g_free (at_text);
 
@@ -1722,7 +1722,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
               if (g_strcmp0 ("DND",status) == 0)
               {
                 strike = "true";
-                status_d = g_strdup ("Do NOT disturb.");
+                status_d = g_strdup (_("Do NOT disturb."));
               }
               else
               {
@@ -1738,7 +1738,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             {
               style = "normal";
               strike = "false";
-              gchar* at_text = g_strdup_printf ("Poke %s",name);
+              gchar* at_text = g_strdup_printf (_("Poke %s"),name);
               gtk_widget_set_tooltip_text(at_btn, at_text);
               g_free (at_text);
             }
@@ -1752,7 +1752,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
             g_signal_connect (pm_btn, "clicked", G_CALLBACK (pm_cb), devchat_cb_data_new (data->window,g_strdup(name)));
 
-            gchar* pm_text = g_strdup_printf ("Open a conversation with %s.",name);
+            gchar* pm_text = g_strdup_printf (_("Open a conversation with %s."),name);
             gtk_widget_set_tooltip_text (pm_btn, pm_text);
             g_free (pm_text);
 
@@ -1776,7 +1776,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         }
       }
 
-      gchar* ul_text = g_strdup_printf ("%i user%s online", usercount, usercount==1?"":"s");
+      gchar* ul_text = g_strdup_printf (usercount==1? _("%i user online"):_("%i users online"), usercount);
       gtk_label_set_text (GTK_LABEL (data->window->userlabel), ul_text);
       g_free (ul_text);
 
@@ -1789,7 +1789,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       }
       else
       {
-        dbg_msg = g_strdup_printf("Last Update: %s",current_time());
+        dbg_msg = g_strdup_printf(_("Last Update: %s"), current_time ());
         gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
         g_free (dbg_msg);
       }
@@ -1812,7 +1812,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     data->window->errorcount++;
     if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
     {
-      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
     }
     else
@@ -1903,7 +1903,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           GError* error = NULL;
           if (!g_file_set_contents (filename, a_m->response_body->data, a_m->response_body->length, &error))
           {
-            err (g_strdup_printf ("Error while saving avatar: %s.", error->message));
+            err (g_strdup_printf (_("Error D: Error while saving avatar: %s."), error->message));
             g_error_free (error);
             found = FALSE;
           }
@@ -1971,7 +1971,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
     if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
     {
-      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), "Connection Lost!");
+      gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
     }
     else
@@ -2006,7 +2006,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
       if (g_strcmp0 (date, "") == 0)
       {
-        gchar* labeltext = g_strdup_printf("Last Update: %s",current_time());
+        gchar* labeltext = g_strdup_printf(_("Last Update: %s"), current_time());
         gtk_label_set_text (GTK_LABEL (self->window->statuslabel), labeltext);
         g_free (labeltext);
       }
@@ -2200,7 +2200,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
                 icon = (GdkPixbuf*) g_hash_table_lookup (self->window->avatars, g_hash_table_lookup (self->window->users, name));
               if (!icon)
                 icon = gtk_widget_render_icon (self->window->window, GTK_STOCK_INFO, GTK_ICON_SIZE_DIALOG, NULL);
-              notify ((gchar*) tmp_kw->data, g_strdup_printf ("...was mentioned by %s.", name), icon, self);
+              notify ((gchar*) tmp_kw->data, g_strdup_printf (_("...was mentioned by %s."), name), icon, self);
               kw_found = TRUE;
             }
             tmp_kw = tmp_kw->next;
@@ -2762,12 +2762,12 @@ void parse_message (gchar* message_d, DevchatCBData* data)
                 GError* error = NULL;
                 if (!g_file_set_contents (filename, i_m->response_body->data, i_m->response_body->length, &error))
                 {
-                  err (g_strdup_printf ("Error while saving image: %s.\n", error->message));
+                  err (g_strdup_printf (_("Error D: Error while saving image: %s.\n"), error->message));
                   g_error_free (error);
                 }
               }
               else
-                err (g_strdup_printf ("Error downloading image %s: %i %s.\n", uri, i_m->status_code, i_m->reason_phrase));
+                err (g_strdup_printf (_("Error D: Error downloading image %s: %i %s.\n"), uri, i_m->status_code, i_m->reason_phrase));
             }
 
             GtkTextIter fnord;
@@ -2791,7 +2791,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
                 a = NULL;
               break;
               default:
-                err ("Unknown image type!");
+                err (_("Error U: Unknown image type!"));
                 p = NULL;
                 a = NULL;
               break;
@@ -3323,16 +3323,16 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 {
   GtkWidget* dialog = gtk_dialog_new ();
 
-  GtkWidget* note_label = gtk_label_new ("Note: Some settings will apply on restart.");
+  GtkWidget* note_label = gtk_label_new (_("Note: Some settings will apply on restart."));
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area( GTK_DIALOG (dialog))), note_label, FALSE, FALSE, 0);
 
-  gtk_window_set_title (GTK_WINDOW (dialog), "Devchat settings");
+  gtk_window_set_title (GTK_WINDOW (dialog), _("Devchat settings"));
   gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (data->window->window));
   gtk_window_set_destroy_with_parent (GTK_WINDOW (dialog), TRUE);
 
-  GtkWidget* chk_reset_1 = gtk_check_button_new_with_label ("Reset color");
-  GtkWidget* chk_reset_2 = gtk_check_button_new_with_label ("Reset Misc");
-  GtkWidget* chk_reset_3 = gtk_check_button_new_with_label ("Reset preset texts");
+  GtkWidget* chk_reset_1 = gtk_check_button_new_with_label (_("Reset color"));
+  GtkWidget* chk_reset_2 = gtk_check_button_new_with_label (_("Reset Misc"));
+  GtkWidget* chk_reset_3 = gtk_check_button_new_with_label (_("Reset preset texts"));
 
   GtkWidget* vboxBB = gtk_vbox_new (TRUE, 0);
   GtkWidget* hboxBB = gtk_hbox_new (TRUE, 0);
@@ -3343,7 +3343,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_action_area (GTK_DIALOG (dialog))), vboxBB, FALSE, FALSE, 0);
 
-  gtk_dialog_add_buttons (GTK_DIALOG (dialog), "Reset settings", GTK_RESPONSE_REJECT,
+  gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("Reset settings"), GTK_RESPONSE_REJECT,
                                              #ifndef G_OS_WIN32
                                                GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
                                              #endif
@@ -3358,10 +3358,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GdkColor c;
 
   GtkWidget* hbox1 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_time = gtk_label_new ("Timestamp color:");
+  GtkWidget* label_col_time = gtk_label_new (_("Timestamp color:"));
   gdk_color_parse (data->window->settings.color_time, &c);
   GtkWidget* btn_col_time = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_font = gtk_label_new ("Normal font color:");
+  GtkWidget* label_col_font = gtk_label_new (_("Normal font color:"));
   gdk_color_parse (data->window->settings.color_font, &c);
   GtkWidget* btn_col_font = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox1), label_col_time,FALSE,FALSE,0);
@@ -3370,10 +3370,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox1), btn_col_font,FALSE,FALSE,0);
 
   GtkWidget* hbox2 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_green = gtk_label_new ("Greenie color:");
+  GtkWidget* label_col_green = gtk_label_new (_("Greenie color:"));
   gdk_color_parse (data->window->settings.color_greens, &c);
   GtkWidget* btn_col_green = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_blue = gtk_label_new ("Normal user color:");
+  GtkWidget* label_col_blue = gtk_label_new (_("Normal user color:"));
   gdk_color_parse (data->window->settings.color_blues, &c);
   GtkWidget* btn_col_blue = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox2), label_col_green,FALSE,FALSE,0);
@@ -3382,10 +3382,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox2), btn_col_blue,FALSE,FALSE,0);
 
   GtkWidget* hbox3 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_l1 = gtk_label_new ("L1 background color:");
+  GtkWidget* label_col_l1 = gtk_label_new (_("L1 background color:"));
   gdk_color_parse (data->window->settings.color_l1, &c);
   GtkWidget* btn_col_l1 = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_l3 = gtk_label_new ("L3 background color:");
+  GtkWidget* label_col_l3 = gtk_label_new (_("L3 background color:"));
   gdk_color_parse (data->window->settings.color_l3, &c);
   GtkWidget* btn_col_l3 = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox3), label_col_l1,FALSE,FALSE,0);
@@ -3394,10 +3394,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox3), btn_col_l3,FALSE,FALSE,0);
 
   GtkWidget* hbox4 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_l5 = gtk_label_new ("L5 background color:");
+  GtkWidget* label_col_l5 = gtk_label_new (_("L5 background color:"));
   gdk_color_parse (data->window->settings.color_l5, &c);
   GtkWidget* btn_col_l5 = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_l6 = gtk_label_new ("L6 background color:");
+  GtkWidget* label_col_l6 = gtk_label_new (_("L6 background color:"));
   gdk_color_parse (data->window->settings.color_l6, &c);
   GtkWidget* btn_col_l6 = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox4), label_col_l5,FALSE,FALSE,0);
@@ -3406,10 +3406,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox4), btn_col_l6,FALSE,FALSE,0);
 
   GtkWidget* hbox5 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_url = gtk_label_new ("Unvisited url color:");
+  GtkWidget* label_col_url = gtk_label_new (_("Unvisited url color:"));
   gdk_color_parse (data->window->settings.color_url, &c);
   GtkWidget* btn_col_url = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_vurl = gtk_label_new ("Visited url color:");
+  GtkWidget* label_col_vurl = gtk_label_new (_("Visited url color:"));
   gdk_color_parse (data->window->settings.color_url_visited, &c);
   GtkWidget* btn_col_vurl = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox5), label_col_url,FALSE,FALSE,0);
@@ -3418,10 +3418,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox5), btn_col_vurl,FALSE,FALSE,0);
 
   GtkWidget* hbox7 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_hurl = gtk_label_new ("Hover url color:");
+  GtkWidget* label_col_hurl = gtk_label_new (_("Hover url color:"));
   gdk_color_parse (data->window->settings.color_url_hover, &c);
   GtkWidget* btn_col_hurl = gtk_color_button_new_with_color (&c);
-  GtkWidget* label_col_high = gtk_label_new ("Highlighted tab color:");
+  GtkWidget* label_col_high = gtk_label_new (_("Highlighted tab color:"));
   gdk_color_parse (data->window->settings.color_highlight, &c);
   GtkWidget* btn_col_high = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox7), label_col_hurl,FALSE,FALSE,0);
@@ -3430,7 +3430,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX(hbox7), btn_col_high,FALSE,FALSE,0);
 
   GtkWidget* hbox12 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* label_col_gold = gtk_label_new ("Goldie color:");
+  GtkWidget* label_col_gold = gtk_label_new (_("Goldie color:"));
   gdk_color_parse (data->window->settings.color_goldies, &c);
   GtkWidget* btn_col_gold = gtk_color_button_new_with_color (&c);
   gtk_box_pack_start (GTK_BOX(hbox12), label_col_gold,FALSE,FALSE,0);
@@ -3483,48 +3483,48 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox1), hbox12,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (vbox1), hbox17,FALSE,FALSE,0);
 
-  gtk_notebook_append_page ( GTK_NOTEBOOK (nb), vbox1, gtk_label_new ("Color settings"));
+  gtk_notebook_append_page ( GTK_NOTEBOOK (nb), vbox1, gtk_label_new (_("Color settings")));
 
 
   GtkWidget* hbox6 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* chk_id = gtk_check_button_new_with_label ("Show message ID");
+  GtkWidget* chk_id = gtk_check_button_new_with_label (_("Show message ID"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_id), data->window->settings.showid);
-  gtk_widget_set_tooltip_text (chk_id, "Shows the internal ID of messages.\nMakes pointing at a certain post easier (and allows you to see whether people are talking in private messages and/or on higher levels).\nNote that this setting only applies on newly received messages.");
-  GtkWidget* chk_hd = gtk_check_button_new_with_label ("Show hidden usernames");
+  gtk_widget_set_tooltip_text (chk_id, _("Shows the internal ID of messages.\nMakes pointing at a certain post easier (and allows you to see whether people are talking in private messages and/or on higher levels).\nNote that this setting only applies on newly received messages."));
+  GtkWidget* chk_hd = gtk_check_button_new_with_label (_("Show hidden usernames"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_hd), data->window->settings.showhidden);
-  gtk_widget_set_tooltip_text (chk_hd, "Shows usernames e.g. for /me actions, stealthing greenies and HTML comments <!-- --> (read: Greenie stealth posts).\nChanging this setting will apply on new tabs and newly received messages.");
-  GtkWidget* chk_sj = gtk_check_button_new_with_label ("Stealth join");
+  gtk_widget_set_tooltip_text (chk_hd, _("Shows usernames e.g. for /me actions, stealthing greenies and HTML comments <!-- --> (read: Greenie stealth posts).\nChanging this setting will apply on new tabs and newly received messages."));
+  GtkWidget* chk_sj = gtk_check_button_new_with_label (_("Stealth join"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sj), data->window->settings.stealthjoin);
-  gtk_widget_set_tooltip_text (chk_sj, "Suppress own join/quit messages.");
+  gtk_widget_set_tooltip_text (chk_sj, _("Suppress own join/quit messages."));
   gtk_box_pack_start (GTK_BOX (hbox6), chk_id,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox6), chk_hd,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox6), chk_sj,TRUE,TRUE,0);
 
   GtkWidget* hbox10 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* chk_aj = gtk_check_button_new_with_label ("Automatic join");
+  GtkWidget* chk_aj = gtk_check_button_new_with_label (_("Automatic join"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_aj), data->window->settings.autojoin);
-  GtkWidget* chk_cu = gtk_check_button_new_with_label ("Tint user list");
+  GtkWidget* chk_cu = gtk_check_button_new_with_label (_("Tint user list"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_cu), data->window->settings.coloruser);
-  gtk_widget_set_tooltip_text (chk_cu, "Whether the userlist should be colored in the same color as the TextViews. Recommended if the font contrast would be too low else (read: bright themes like Aero/Classic for Windows®).");
-  GtkWidget* chk_sp = gtk_check_button_new_with_label ("Remember password");
+  gtk_widget_set_tooltip_text (chk_cu, _("Whether the userlist should be colored in the same color as the TextViews. Recommended if the font contrast would be too low else (read: bright themes like Aero/Classic for Windows®)."));
+  GtkWidget* chk_sp = gtk_check_button_new_with_label (_("Remember password"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sp), data->window->settings.store_pass);
-  gtk_widget_set_tooltip_text (chk_sp, "Whether the password shall be saved to disk.");
+  gtk_widget_set_tooltip_text (chk_sp, _("Whether the password shall be saved to disk."));
   gtk_box_pack_start (GTK_BOX (hbox10), chk_aj,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox10), chk_cu,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox10), chk_sp,TRUE,TRUE,0);
 
   GtkWidget* hbox14 = gtk_hbox_new (TRUE, 1);
-  GtkWidget* chk_tray = gtk_check_button_new_with_label ("Show tray icon");
+  GtkWidget* chk_tray = gtk_check_button_new_with_label (_("Show tray icon"));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_tray), data->window->settings.showtray);
-  GtkWidget* chk_jmp = gtk_check_button_new_with_label ("Jump to unread PMs");
-  gtk_widget_set_tooltip_text (chk_jmp, "Whether the focus should jump to tabs with unread PMs or not.");
+  GtkWidget* chk_jmp = gtk_check_button_new_with_label (_("Jump to unread PMs"));
+  gtk_widget_set_tooltip_text (chk_jmp, _("Whether the focus should jump to tabs with unread PMs or not."));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_jmp), data->window->settings.jumptab);
   gtk_box_pack_start (GTK_BOX (hbox14), chk_tray,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox14), chk_jmp,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox14), gtk_vbox_new (FALSE,0),TRUE,TRUE,0);
 
   GtkWidget* hbox8 = gtk_hbox_new (FALSE, 1);
-  GtkWidget* label_notify = gtk_label_new ("Notifications 1:");
+  GtkWidget* label_notify = gtk_label_new (_("Audio notifications:"));
   GtkWidget* entry_notify = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_notify), 0, "<native>");
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_notify), 1, "<none>");
@@ -3537,9 +3537,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_notify), 2, data->window->settings.notify);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_notify), 2);
   }
-  gtk_widget_set_tooltip_text (entry_notify, "This notification will be played on keyword match or PNs. <native> is a built-in audio notification.\nYou can also specify custom commands to execute.");
+  gtk_widget_set_tooltip_text (entry_notify, _("This notification will be played on keyword match or PNs. <native> is a built-in audio notification.\nYou can also specify custom commands to execute."));
 
-  GtkWidget* label_vnotify = gtk_label_new ("Notifications 2:");
+  GtkWidget* label_vnotify = gtk_label_new (_("Visual Notifications:"));
   GtkWidget* entry_vnotify = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_vnotify), 0, "<native>");
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_vnotify), 1, "<none>");
@@ -3552,7 +3552,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_vnotify), 2, data->window->settings.vnotify);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_vnotify), 2);
   }
-  gtk_widget_set_tooltip_text (entry_vnotify, "This notification will be played on keyword match or PNs. <native> is a built-in visual notification.\nYou can also specify custom commands to execute.");
+  gtk_widget_set_tooltip_text (entry_vnotify, _("This notification will be played on keyword match or PNs. <native> is a built-in visual notification.\nYou can also specify custom commands to execute."));
 
 
   gtk_box_pack_start (GTK_BOX (hbox8), label_notify,FALSE,FALSE,0);
@@ -3561,9 +3561,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox8), entry_vnotify,TRUE,TRUE,0);
 
   GtkWidget* hbox9 = gtk_hbox_new (FALSE, 1);
-  GtkWidget* label_keywords = gtk_label_new ("Beep on keywords:");
+  GtkWidget* label_keywords = gtk_label_new (_("Beep on keywords:"));
   GtkWidget* entry_keywords = gtk_entry_new ();
-  gtk_widget_set_tooltip_text (entry_keywords, "List of words which will trigger a notification, separated by | (u007C, vertical line)");
+  gtk_widget_set_tooltip_text (entry_keywords, _("List of words which will trigger a notification, separated by | (u007C, vertical line)"));
 
   GSList* tmp_kw = data->window->settings.keywords;
   gchar* keywords_string = "";
@@ -3583,10 +3583,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   if (g_strcmp0 (keywords_string, "") != 0)
     g_free (keywords_string);
 
-  GtkWidget* label_browser = gtk_label_new ("Browser:");
+  GtkWidget* label_browser = gtk_label_new (_("Browser:"));
   GtkWidget* entry_browser = gtk_entry_new ();
   gtk_entry_set_text (GTK_ENTRY (entry_browser), data->window->settings.browser);
-  gtk_widget_set_tooltip_text (entry_browser, "Please enter only the browser executable name (and neccessary command line options like --new-tab), no %fu or other crazy stuff.");
+  gtk_widget_set_tooltip_text (entry_browser, _("Please enter only the browser executable name (and neccessary command line options like --new-tab), no %fu or other crazy stuff."));
 
   gtk_box_pack_start (GTK_BOX (hbox9), label_keywords,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), entry_keywords,TRUE,TRUE,0);
@@ -3594,10 +3594,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox9), entry_browser,TRUE,TRUE,0);
 
   GtkWidget* hbox11 = gtk_hbox_new (FALSE, 1);
-  GtkWidget* label_update = gtk_label_new ("Time between updates (in ms):");
+  GtkWidget* label_update = gtk_label_new (_("Time between updates (in ms):"));
   GtkWidget* scale_update = gtk_spin_button_new_with_range (200.0, 2000.0, 50.0);
   gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_update), data->window->settings.update_time);
-  GtkWidget* label_avas = gtk_label_new ("Avatar size:");
+  GtkWidget* label_avas = gtk_label_new (_("Avatar size:"));
   GtkWidget* scale_avas = gtk_spin_button_new_with_range (8.0, 80.0, 4.0);
   gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_avas), data->window->settings.avatar_size);
 
@@ -3618,49 +3618,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
 
   GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
-#ifdef G_OS_WIN32
-  GtkWidget* label_theme = gtk_label_new ("GTK Theme: ");
-  GtkWidget* combo_theme = gtk_combo_box_entry_new_text ();
-  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 0, "Aero");
-  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 1, "Classic");
-  gtk_combo_box_insert_text (GTK_COMBO_BOX (combo_theme), 2, "Devchat");
-  gtk_box_pack_start (GTK_BOX (hbox13), label_theme, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (hbox13), combo_theme, FALSE, FALSE, 0);
-
-  gchar* gtkrc;
-  gchar** rc_lines;
-  int i;
-
-  if (!g_file_get_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), &gtkrc, NULL, NULL))
-  {
-    if (!g_file_get_contents (g_build_filename (g_getenv("PROGRAMFILES"), "Devchat", "etc", "gtk-2.0", "gtkrc", NULL), &gtkrc, NULL, NULL))
-    {
-      err ("\n\nYour installation is f'ed up. Please reinstall.\n\n");
-      return;
-    }
-  }
-
-  rc_lines = g_strsplit (gtkrc, "\n", -1);
-
-  for (i=0; rc_lines[i] != NULL && i < 255; i++)
-  {
-    gchar* stripped_line = g_strstrip (rc_lines[i]);
-    if (g_strstr_len (stripped_line, -1, "gtk-theme-name=\""))
-    {
-      if (g_strstr_len (stripped_line, -1, "Classic"))
-        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 1);
-      else if (g_strstr_len (stripped_line, -1, "Aero"))
-        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 0);
-      else
-        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_theme), 2);
-      break;
-    }
-  }
-
-  g_free (gtkrc);
-  g_strfreev (rc_lines);
-#endif
-  GtkWidget* label_msg = gtk_label_new ("Chatserver string: ");
+  GtkWidget* label_msg = gtk_label_new (_("Chatserver string: "));
   GtkWidget* entry_msg = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "SovietServer");
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 1, "ChatServer");
@@ -3679,7 +3637,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox2), hbox13,FALSE,FALSE,0);
 
 
-  gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new ("Misc"));
+  gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new (_("Misc")));
 
   GtkWidget* entry_preset[10];
   GtkWidget* label_preset[10];
@@ -3691,10 +3649,10 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   for (i_p = 0; i_p < 5; i_p++)
   {
-    label_preset[i_p] = gtk_label_new (g_strdup_printf ("Preset text %i:", i_p+1));
+    label_preset[i_p] = gtk_label_new (g_strdup_printf (_("Preset text %i:"), i_p+1));
     entry_preset[i_p] = gtk_entry_new ();
     gtk_entry_set_text (GTK_ENTRY (entry_preset[i_p]), data->window->settings.presets[i_p]);
-    label_preset[i_p+5] = gtk_label_new (g_strdup_printf ("Preset text %i:", i_p+6));
+    label_preset[i_p+5] = gtk_label_new (g_strdup_printf (_("Preset text %i:"), i_p+6));
     entry_preset[i_p+5] = gtk_entry_new ();
     gtk_entry_set_text (GTK_ENTRY (entry_preset[i_p+5]), data->window->settings.presets[i_p+5]);
     hbox_preset[i_p] = gtk_hbox_new (FALSE, 1);
@@ -3705,7 +3663,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_box_pack_start (GTK_BOX (vbox_preset), hbox_preset[i_p], FALSE, FALSE, 0);
   }
 
-  gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox_preset, gtk_label_new ("Preset texts"));
+  gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox_preset, gtk_label_new (_("Preset texts")));
 
 
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), nb, TRUE, TRUE, 1);
@@ -3825,9 +3783,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   NULL);
 
     #ifdef G_OS_WIN32
-      gchar* rc_line = g_strdup_printf ("gtk-theme-name=\"%s\"\r\n", gtk_combo_box_get_active_text (GTK_COMBO_BOX (combo_theme)));
+      gchar* rc_line = "gtk-theme-name=\"MS-Windows\"\r\n";
       g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, -1, NULL);
-      g_free (rc_line);
     #endif
 
       gchar** keywords = g_strsplit (gtk_entry_get_text(GTK_ENTRY(entry_keywords)), "|", 0);
@@ -4244,7 +4201,7 @@ void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data)
   #else
     if (!g_file_test ("/usr/bin/x-www-browser", G_FILE_TEST_EXISTS))
     {
-      err ("Your system doesn't have a native browser!");
+      err (_("Error B: Your system doesn't have a native browser!"));
       data->window->settings.browser = "<none>";
     }
     else
@@ -4472,7 +4429,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       gchar* new_text = NULL;
       if (otrl_message_sending (data->window->otr_state, &(data->window->otr_funcs), data->window, data->window->settings.username, "x-devchat", target, text, NULL, &new_text, NULL, NULL) != 0)
       {
-        err ("OTR encryption failed!");
+        err (_("Error O: OTR encryption failed!"));
         return;
       }
       if (new_text)
@@ -4657,7 +4614,7 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
   gchar* uri;
 
   GtkWidget* cal = gtk_calendar_new ();
-  GtkWidget* dialog = gtk_dialog_new_with_buttons ("Choose a date", GTK_WINDOW (data->window->window), GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
+  GtkWidget* dialog = gtk_dialog_new_with_buttons (_("Choose a date"), GTK_WINDOW (data->window->window), GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
                                                    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
                                                    GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
                                                    NULL);
@@ -4680,7 +4637,7 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
         soup_session_queue_message (data->window->session, get, SOUP_SESSION_CALLBACK (his_cb), devchat_cb_data_new(data->window, g_strdup_printf("%02i/%02i/%04i",month,day,year)));
         gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
                             gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "his"),
-                            "History loading..."
+                            _("History loading...")
                            );
       }
     break;
@@ -4708,7 +4665,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
   GtkWidget* dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986\nSounds © Belisarius 2010");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986\nSounds and icons © Belisarius 2010");
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
 
   gchar* license_text;
@@ -4929,7 +4886,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
       gchar* vcmdline = g_strdup(data->window->settings.vnotify);
       if (!g_spawn_command_line_async (vcmdline, NULL))
       {
-        err("Failed to launch visual notification process.");
+        err (_("Error N: Failed to launch visual notification process."));
         g_free (data->window->settings.vnotify);
         data->window->settings.vnotify = g_strdup("<none>");
       }
@@ -4949,7 +4906,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
         cmdline = g_strdup_printf ("ossplay -q %s/jingle.wav", workingdir);
         if (!g_spawn_command_line_async (cmdline, NULL))
         {
-          err("Failed to launch audio notification process.");
+          err (_("Error N: Failed to launch audio notification process."));
           data->window->settings.notify = g_strdup("<none>");
         }
       }
@@ -4968,7 +4925,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
       gchar* cmdline = g_strdup(data->window->settings.notify);
       if (!g_spawn_command_line_async (cmdline, NULL))
       {
-        err("Failed to launch audio notification process.");
+        err (_("Error N: Failed to launch audio notification process."));
         g_free (data->window->settings.notify);
         data->window->settings.notify = g_strdup("<none>");
       }
@@ -5013,13 +4970,13 @@ void show_tray_menu (GtkStatusIcon* icon, guint button, guint activate_time, Dev
 {
   GtkWidget* menu = gtk_menu_new ();
 
-  GtkWidget* item_status = gtk_menu_item_new_with_label ("Change Status...");
+  GtkWidget* item_status = gtk_menu_item_new_with_label (_("Change Status..."));
 
-  GtkWidget* item_status_online = gtk_menu_item_new_with_label ("Online");
+  GtkWidget* item_status_online = gtk_menu_item_new_with_label (_("Online"));
   g_signal_connect (item_status_online, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (0)));
-  GtkWidget* item_status_away = gtk_menu_item_new_with_label ("Away");
+  GtkWidget* item_status_away = gtk_menu_item_new_with_label (_("Away"));
   g_signal_connect (item_status_away, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (1)));
-  GtkWidget* item_status_dnd = gtk_menu_item_new_with_label ("DND");
+  GtkWidget* item_status_dnd = gtk_menu_item_new_with_label (_("DND"));
   g_signal_connect (item_status_dnd, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (data->window, GINT_TO_POINTER (2)));
 
   GtkMenuShell* sub_status = GTK_MENU_SHELL(gtk_menu_new());
@@ -5188,7 +5145,7 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
       if (name && g_str_has_prefix (name, "img::"))
       {
         found = TRUE;
-        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open image in browser");
+        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label (_("Open image in browser"));
         gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_open_link), gtk_image_new_from_stock (GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU));
         g_signal_connect (item_open_link, "activate", G_CALLBACK (popup_open_link), devchat_cb_data_new (data->window, g_strdup (name+5)));
 
@@ -5201,7 +5158,7 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
       else if (name && g_str_has_prefix (name, "url::"))
       {
         found = TRUE;
-        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open link in browser");
+        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label (_("Open link in browser"));
         gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_open_link), gtk_image_new_from_stock (GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU));
         g_signal_connect (item_open_link, "activate", G_CALLBACK (popup_open_link), devchat_cb_data_new (data->window, g_strdup (name+5)));
 
@@ -5218,10 +5175,10 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
       else if (name && g_str_has_prefix (name, "lid::"))
       {
         found = TRUE;
-        GtkWidget* item_copy_id = gtk_image_menu_item_new_with_label ("Copy ID");
+        GtkWidget* item_copy_id = gtk_image_menu_item_new_with_label (_("Copy ID"));
         gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_copy_id), gtk_image_new_from_stock (GTK_STOCK_COPY, GTK_ICON_SIZE_MENU));
         g_signal_connect (item_copy_id, "activate", G_CALLBACK (popup_copy_stuff), devchat_cb_data_new (data->window, g_strdup (name+5)));
-        GtkWidget* item_cite_id = gtk_image_menu_item_new_with_label ("Cite Post");
+        GtkWidget* item_cite_id = gtk_image_menu_item_new_with_label (_("Cite Post"));
         gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_cite_id), gtk_image_new_from_stock (GTK_STOCK_GO_FORWARD, GTK_ICON_SIZE_MENU));
 
         if (!username)
