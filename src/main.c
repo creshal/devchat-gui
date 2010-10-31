@@ -45,6 +45,11 @@ main (int argc, char *argv[])
 
   DevchatWindow* self = devchat_window_new ();
 
+  /*Basic transparency support for murrine.*/
+  GdkColormap* m = gdk_screen_get_rgba_colormap (gdk_display_get_screen (gdk_display_get_default (), 0));
+  if (m && gdk_screen_is_composited (gdk_display_get_screen (gdk_display_get_default (), 0)))
+    gtk_widget_set_default_colormap (m);
+
   gchar* dbg_msg;
 
   if (!no_config)
@@ -246,9 +251,20 @@ main (int argc, char *argv[])
 
   devchat_window_refresh_smilies (self);
 
-  /*FIXME: gtk_window_set_icon_list */
+  gchar* icon_sizes[] = {"dcgui.png","dcgui_32.png","dcgui_48.png","dcgui_256.png"};
+
+  GList* icons = NULL;
+
+  int icon_cnt = 0;
+
+  for (icon_cnt = 0;icon_cnt < 4; icon_cnt++)
+  {
+    icons = g_list_append (icons, gdk_pixbuf_new_from_file (g_build_filename (self->workingdir, icon_sizes[icon_cnt], NULL), NULL));
+  }
+
+  gtk_window_set_icon_list (GTK_WINDOW (self->window), icons);
+
   gchar* iconname = g_build_filename(self->workingdir, "dcgui.png",NULL);
-  gtk_window_set_icon_from_file (GTK_WINDOW(self->window), iconname, NULL);
   gtk_status_icon_set_from_file (GTK_STATUS_ICON (self->trayicon), iconname);
   g_free (iconname);
 

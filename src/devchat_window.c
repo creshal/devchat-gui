@@ -997,7 +997,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_NOTIFY: window->settings.notify = g_value_dup_string (value); break;
     case SETTINGS_VNOTIFY: window->settings.vnotify = g_value_dup_string (value); break;
     case SETTINGS_HANDLE_WIDTH: window->settings.handle_width = g_value_get_int (value);
-                         g_timeout_add (125, (GSourceFunc) paned_update, devchat_cb_data_new (window, NULL)); break;
+                         g_timeout_add (500, (GSourceFunc) paned_update, devchat_cb_data_new (window, NULL)); break;
     case SETTINGS_WIDTH: window->settings.width = g_value_get_int (value);
                          gtk_window_resize (GTK_WINDOW (window->window), window->settings.width, window->settings.height); break;
     case SETTINGS_HEIGHT: window->settings.height = g_value_get_int (value);
@@ -1321,6 +1321,14 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 2);
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 1);
   gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->level_box), 0);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ul), 3);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ul), 2);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ul), 1);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ul), 0);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ml), 3);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ml), 2);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ml), 1);
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(data->window->filter_ml), 0);
 
   if (g_strrstr (m->response_body->data,"User-Level: 5"))
   {
@@ -2706,6 +2714,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               dbg ("Found smilie in database.");
 
             GtkWidget* img = gtk_image_new_from_file (smilie);
+            gtk_widget_set_tooltip_text (img, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
 
             GtkTextIter fnord;
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
@@ -2800,6 +2809,20 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
               gtk_widget_show (img);
             }
+
+            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
+            GtkTextIter fnord2 = fnord;
+            gtk_text_iter_backward_char (&fnord2);
+            tagname = g_strconcat ("img::", uri, NULL);
+
+            if (!gtk_text_tag_table_lookup (table, tagname))
+            {
+              GtkTextTag* tag = gtk_text_tag_new (tagname);
+
+              gtk_text_tag_table_add (table, GTK_TEXT_TAG (tag));
+            }
+
+            gtk_text_buffer_apply_tag_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), tagname, &fnord, &fnord2);
 
             g_free (filename);
           }
@@ -4097,12 +4120,24 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
     gchar* name;
     g_object_get (tag->data, "name", &name, NULL);
 
-    if (name && g_str_has_prefix (name, "url::"))
+    if (name && g_str_has_prefix (name, "img::"))
+    {
+      gtk_widget_set_tooltip_text (widget, name+5);
+      found = TRUE;
+      gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                         gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "img")
+                        );
+      gtk_statusbar_push (GTK_STATUSBAR (data->window->statusbar),
+                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "img"),
+                          name+5
+                         );
+    }
+    else if (name && g_str_has_prefix (name, "url::"))
     {
       gtk_widget_set_tooltip_text (widget, name+5);
       g_object_set (tag->data, "foreground", data->window->settings.color_url_hover, NULL);
-      found = TRUE;
       data->window->hovertag = tag->data;
+      found = TRUE;
       gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
                          gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link")
                         );
@@ -4144,6 +4179,9 @@ gboolean devchat_window_on_motion_cb (GtkWidget* widget, GdkEventMotion* m, Devc
     gtk_widget_set_has_tooltip (widget, FALSE);
     gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
                        gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "link")
+                      );
+    gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
+                       gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "img")
                       );
     gtk_statusbar_pop (GTK_STATUSBAR (data->window->statusbar),
                        gtk_statusbar_get_context_id (GTK_STATUSBAR (data->window->statusbar), "lid")
@@ -5147,7 +5185,20 @@ gboolean devchat_window_on_popup_menu (GtkWidget* view, DevchatCBData* data)
       gchar* name;
       g_object_get (tag->data, "name", &name, NULL);
 
-      if (name && g_str_has_prefix (name, "url::"))
+      if (name && g_str_has_prefix (name, "img::"))
+      {
+        found = TRUE;
+        GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open image in browser");
+        gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item_open_link), gtk_image_new_from_stock (GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU));
+        g_signal_connect (item_open_link, "activate", G_CALLBACK (popup_open_link), devchat_cb_data_new (data->window, g_strdup (name+5)));
+
+        GtkWidget* item_copy_link = gtk_image_menu_item_new_from_stock (GTK_STOCK_COPY, NULL);
+        g_signal_connect (item_copy_link, "activate", G_CALLBACK (popup_copy_stuff), devchat_cb_data_new (data->window, g_strdup (name+5)));
+
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_open_link);
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), item_copy_link);
+      }
+      else if (name && g_str_has_prefix (name, "url::"))
       {
         found = TRUE;
         GtkWidget* item_open_link = gtk_image_menu_item_new_with_label ("Open link in browser");
