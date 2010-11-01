@@ -565,7 +565,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_box_pack_end (GTK_BOX(self->inputbar),self->btn_send,FALSE,FALSE,0);
 
   self->chk_raw = gtk_check_button_new_with_label (_("Raw mode"));
-  gtk_widget_set_tooltip_text (self->chk_raw, _("Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not recommended for daily use."));
+  gtk_widget_set_tooltip_text (self->chk_raw, _("Send raw HTML text. Needed e.g. for browser-kicks and <!-- comments -->. Not recommended for daily use."));
   gtk_box_pack_end (GTK_BOX(self->inputbar),self->chk_raw,FALSE,FALSE,0);
   gtk_widget_set_no_show_all (self->chk_raw,TRUE);
 
@@ -1211,9 +1211,9 @@ void save_settings (DevchatWindow* w)
                                          w->settings.maximized? "TRUE":"FALSE");
 
   gchar* settings = g_strconcat (_("#Settings file for DevchatGUI. Please do not alter the key names.\n \
-#Note: This behaviour is different from python version 0.x, where the order of the values was the only thing important.\n \
+#Note: This behaviour is different from python version 0.x, in which the order of the values was the only thing important.\n \
 #Keywords and boilerplates are separated by | (u007C, vertical line).\n \
-#Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must equal true for true, everything else will be regarded as false.\n"), "[Devchat]\n",
+#Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must be written as \"true\" for true, everything else (1/yes/...) will be regarded as false.\n"), "[Devchat]\n",
                                  "BROWSER=",w->settings.browser, "\n",
                                  "COLOR_FONT=",w->settings.color_font, "\n",
                                  "COLOR_TIME=",w->settings.color_time, "\n",
@@ -3524,7 +3524,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_notify), 2, data->window->settings.notify);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_notify), 2);
   }
-  gtk_widget_set_tooltip_text (entry_notify, _("This notification will be played on keyword match or PNs. <native> is a built-in audio notification.\nYou can also specify custom commands to execute."));
+  gtk_widget_set_tooltip_text (entry_notify, _("This notification will be played on keyword match or PNs. <native> is a built-in audio notification, <none> deactivates it.\nYou can also specify custom commands to execute."));
 
   GtkWidget* label_vnotify = gtk_label_new (_("Visual Notifications:"));
   GtkWidget* entry_vnotify = gtk_combo_box_entry_new_text ();
@@ -3539,7 +3539,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_vnotify), 2, data->window->settings.vnotify);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_vnotify), 2);
   }
-  gtk_widget_set_tooltip_text (entry_vnotify, _("This notification will be played on keyword match or PNs. <native> is a built-in visual notification.\nYou can also specify custom commands to execute."));
+  gtk_widget_set_tooltip_text (entry_vnotify, _("This notification will be played on keyword match or PNs. <native> is a built-in visual notification, <none> deactivates it.\nYou can also specify custom commands to execute."));
 
 
   gtk_box_pack_start (GTK_BOX (hbox8), label_notify,FALSE,FALSE,0);
@@ -4662,11 +4662,19 @@ void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void about_cb (GtkWidget* widget, DevchatCBData* data)
 {
+  const gchar* authors[] = {"Samuel Vincent Creshal", "Fanchen", 0};
+  const gchar* artists[] = {"Silvio Walther",0};
+
   GtkWidget* dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986\nSounds and icons © Belisarius 2010");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986");
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
+  gtk_about_dialog_set_comments (GTK_ABOUT_DIALOG (dialog), _(" - Gtk+ client for X-Devchat."));
+  gtk_about_dialog_set_authors (GTK_ABOUT_DIALOG (dialog), authors);
+  gtk_about_dialog_set_artists (GTK_ABOUT_DIALOG (dialog), artists);
+  gtk_about_dialog_set_translator_credits (GTK_ABOUT_DIALOG (dialog), _("translator-credits"));
+  gtk_about_dialog_set_logo (GTK_ABOUT_DIALOG (dialog), gdk_pixbuf_new_from_file (g_build_filename (data->window->workingdir, "dcgui_48.png", NULL), NULL));
 
   gchar* license_text;
 

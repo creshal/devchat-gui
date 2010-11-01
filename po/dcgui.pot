@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-11-01 10:08+0100\n"
+"POT-Creation-Date: 2010-11-01 11:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -40,7 +40,7 @@ msgstr ""
 msgid "Raw mode"
 msgstr ""
 
-#: src/devchat_conversation.c:173
+#: src/devchat_conversation.c:173 src/devchat_window.c:568
 msgid ""
 "Send raw HTML text. Needed e.g. for browser-kicks and <!-- comments -->. Not "
 "recommended for daily use."
@@ -168,12 +168,6 @@ msgstr ""
 msgid "Not connected."
 msgstr ""
 
-#: src/devchat_window.c:568
-msgid ""
-"Send raw HTML text. Needed i.e. for browser-kicks and <!-- comments -->. Not "
-"recommended for daily use."
-msgstr ""
-
 #: src/devchat_window.c:620 src/devchat_window.c:627
 msgid "X-DEVCHAT"
 msgstr ""
@@ -185,11 +179,11 @@ msgstr ""
 #: src/devchat_window.c:1213
 msgid ""
 "#Settings file for DevchatGUI. Please do not alter the key names.\n"
-" #Note: This behaviour is different from python version 0.x, where the order "
-"of the values was the only thing important.\n"
+" #Note: This behaviour is different from python version 0.x, in which the "
+"order of the values was the only thing important.\n"
 " #Keywords and boilerplates are separated by | (u007C, vertical line).\n"
-" #Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must equal true for "
-"true, everything else will be regarded as false.\n"
+" #Truth Values (SHOWID,SHOWHIDDEN,STEALTHJOIN,AUTOJOIN) must be written as "
+"\"true\" for true, everything else (1/yes/...) will be regarded as false.\n"
 msgstr ""
 
 #: src/devchat_window.c:1270
@@ -449,7 +443,7 @@ msgstr ""
 #: src/devchat_window.c:3527
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
-"built-in audio notification.\n"
+"built-in audio notification, <none> deactivates it.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
@@ -460,7 +454,7 @@ msgstr ""
 #: src/devchat_window.c:3542
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
-"built-in visual notification.\n"
+"built-in visual notification, <none> deactivates it.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
@@ -538,43 +532,51 @@ msgstr ""
 msgid "History loading..."
 msgstr ""
 
-#: src/devchat_window.c:4889
+#: src/devchat_window.c:4673 src/main.c:44
+msgid " - Gtk+ client for X-Devchat."
+msgstr ""
+
+#: src/devchat_window.c:4676
+msgid "translator-credits"
+msgstr ""
+
+#: src/devchat_window.c:4897
 msgid "Error N: Failed to launch visual notification process."
 msgstr ""
 
-#: src/devchat_window.c:4909 src/devchat_window.c:4928
+#: src/devchat_window.c:4917 src/devchat_window.c:4936
 msgid "Error N: Failed to launch audio notification process."
 msgstr ""
 
-#: src/devchat_window.c:4973
+#: src/devchat_window.c:4981
 msgid "Change Status..."
 msgstr ""
 
-#: src/devchat_window.c:4975
+#: src/devchat_window.c:4983
 msgid "Online"
 msgstr ""
 
-#: src/devchat_window.c:4977
+#: src/devchat_window.c:4985
 msgid "Away"
 msgstr ""
 
-#: src/devchat_window.c:4979
+#: src/devchat_window.c:4987
 msgid "DND"
 msgstr ""
 
-#: src/devchat_window.c:5148
+#: src/devchat_window.c:5156
 msgid "Open image in browser"
 msgstr ""
 
-#: src/devchat_window.c:5161
+#: src/devchat_window.c:5169
 msgid "Open link in browser"
 msgstr ""
 
-#: src/devchat_window.c:5178
+#: src/devchat_window.c:5186
 msgid "Copy ID"
 msgstr ""
 
-#: src/devchat_window.c:5181
+#: src/devchat_window.c:5189
 msgid "Cite Post"
 msgstr ""
 
@@ -594,10 +596,6 @@ msgstr ""
 
 #: src/main.c:36
 msgid "Disable spellchecker."
-msgstr ""
-
-#: src/main.c:44
-msgid " - Gtk+ client for X-Devchat."
 msgstr ""
 
 #: src/main.c:48
