@@ -619,6 +619,8 @@ devchat_window_init (DevchatWindow* self)
 
   GtkWidget* main_label = gtk_label_new (_("X-DEVCHAT"));
   GtkWidget* event_box = gtk_event_box_new ();
+  gtk_event_box_set_above_child (GTK_EVENT_BOX (event_box), TRUE);
+  gtk_event_box_set_visible_window (GTK_EVENT_BOX (event_box), FALSE);
   gtk_container_add (GTK_CONTAINER (event_box), main_label);
   g_signal_connect (event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), self_data);
 
@@ -4762,12 +4764,16 @@ DevchatConversation* pm_cb (GtkWidget* widget, DevchatCBData* data)
       avatar = gtk_image_new_from_pixbuf (g_hash_table_lookup (data->window->avatars, "default"));
 
     GtkWidget* avatar_event_box = gtk_event_box_new ();
+    gtk_event_box_set_above_child (GTK_EVENT_BOX (avatar_event_box), TRUE);
+    gtk_event_box_set_visible_window (GTK_EVENT_BOX (avatar_event_box), FALSE);
     gtk_container_add (GTK_CONTAINER (avatar_event_box), avatar);
     gtk_box_pack_start (GTK_BOX (labelbox), avatar_event_box, FALSE, FALSE, 0);
     g_signal_connect (avatar_event_box, "button-release-event", G_CALLBACK (devchat_window_tab_changed_win), data);
 
     GtkWidget* label = gtk_label_new ((gchar*) data->data);
     GtkWidget* event_box = gtk_event_box_new ();
+    gtk_event_box_set_above_child (GTK_EVENT_BOX (event_box), TRUE);
+    gtk_event_box_set_visible_window (GTK_EVENT_BOX (event_box), FALSE);
     gtk_container_add (GTK_CONTAINER (event_box), label);
     gtk_box_pack_start (GTK_BOX (labelbox), event_box, TRUE, TRUE, 0);
 
