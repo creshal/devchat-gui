@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.6.2"\n')
+f.write('#define VERSION "0.6.3"\n')
 f.write('int debug;\nint real_debug;\nint no_config;\nint no_spellcheck;\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
@@ -36,12 +36,16 @@ install:
 \tinstall -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
 \tmkdir -m755 -p ${DESTDIR}/share/sounds/devchat
 \tinstall -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat
+\tfor file in share/locale/*/LC_MESSAGES/dcgui.mo;do\
+\t\tinstall -m644 $${file} ${DESTDIR}/$${file};\
+\tdone
 
 uninstall:
 \trm $(DESTDIR)/bin/devchat-gui
 \trm $(DESTDIR)/share/applications/devchat-gui.desktop
 \trm -r $(DESTDIR)/share/pixmaps/devchat
 \trm -r $(DESTDIR)/share/sounds/devchat
+\trm -r $(DESTDIR)/share/locale/*/LC_MESSAGES/dcgui.mo
 """
 
 parser = optparse.OptionParser()
@@ -51,9 +55,10 @@ parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="de
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications (default yes).")
 parser.add_option("-N","--disable-libnotify",action="store_false",dest="notify",help="Disable libnotify visual notifications (default no).")
 parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support. NOTE: UNFINISHED. WILL BREAK COMPILING AND KILL KITTEN. You have been warned (default: Don't even think about it).")
-parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=False,help="Enable translations (not implemented, default yes).")
+parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=True,help="Enable translations (default yes).")
+parser.add_option("-L","--disable-nls",action="store_false",dest="l10n",help="Disable translations (default no).")
 parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=True,help="Enable spell checking support (default yes).")
-parser.add_option("-C","--disable-spellcheck",action="store_false",dest="spell",help="Enable spell checking support (default no).")
+parser.add_option("-C","--disable-spellcheck",action="store_false",dest="spell",help="Disable spell checking support (default no).")
 
 (options,args) = parser.parse_args()
 
@@ -111,8 +116,12 @@ m.write("CCARGS = %s\n"%ccargs)
 m.write(makefile)
 m.close()
 
-print ("Creating translation binaries...")
-for f in os.listdir ("po/"):
-  os.system ("msgfmt -o share/locale/"+f.split(".")[0]+"/LC_MESSAGES/dcgui.mo "+f);
+if options.l10n:
+  print ("Creating translation binaries...")
+  for f in os.listdir ("po/"):
+    if f.split(".")[1] == "po":
+      if not os.path.exists ("share/locale/"+f.split(".")[0]+"/LC_MESSAGES"):
+        os.makedirs ("share/locale/"+f.split(".")[0]+"/LC_MESSAGES", 0o755)
+      os.system ("msgfmt -o share/locale/"+f.split(".")[0]+"/LC_MESSAGES/dcgui.mo po/"+f);
 
 print ("This was a triumph.\nI'm making a note here, huge success!\n*wanders off singing*")

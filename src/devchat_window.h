@@ -40,6 +40,8 @@
 
 #ifdef NLS
 #include <glib/gi18n.h>
+#else
+#define _(String) String
 #endif
 
 #ifdef G_OS_WIN32

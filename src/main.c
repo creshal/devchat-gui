@@ -23,8 +23,8 @@ main (int argc, char *argv[])
 {
 #ifdef NLS
   setlocale (LC_ALL, "");
-  bindtextdomain ("dcgui2", NULL);
-  textdomain ("dcgui2");
+  bindtextdomain ("dcgui", NULL);
+  textdomain ("dcgui");
 #endif
 
   GOptionEntry entries[] =

@@ -1,3 +1,4 @@
 Makefile
 _build
 src/config.h
+share/locale

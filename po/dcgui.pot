@@ -1,14 +1,18 @@
-# Strings for dcgui2 0.6.3.
-# Copyright (C) 2010 Samuel Creshal
-# This file is distributed under the same license as the dcgui2 package.
-# Samuel Creshal <creshal@arcor.de> 2010.
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: dcgui2 0.6.3\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-10-31 21:02+0100\n"
+"POT-Creation-Date: 2010-11-01 10:08+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -313,82 +317,70 @@ msgid "Devchat settings"
 msgstr ""
 
 #: src/devchat_window.c:3333
-msgid "Reset color"
-msgstr ""
-
-#: src/devchat_window.c:3334
-msgid "Reset Misc"
-msgstr ""
-
-#: src/devchat_window.c:3335
-msgid "Reset preset texts"
-msgstr ""
-
-#: src/devchat_window.c:3346
 msgid "Reset settings"
 msgstr ""
 
-#: src/devchat_window.c:3361
+#: src/devchat_window.c:3348
 msgid "Timestamp color:"
 msgstr ""
 
-#: src/devchat_window.c:3364
+#: src/devchat_window.c:3351
 msgid "Normal font color:"
 msgstr ""
 
-#: src/devchat_window.c:3373
+#: src/devchat_window.c:3360
 msgid "Greenie color:"
 msgstr ""
 
-#: src/devchat_window.c:3376
+#: src/devchat_window.c:3363
 msgid "Normal user color:"
 msgstr ""
 
-#: src/devchat_window.c:3385
+#: src/devchat_window.c:3372
 msgid "L1 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3388
+#: src/devchat_window.c:3375
 msgid "L3 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3397
+#: src/devchat_window.c:3384
 msgid "L5 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3400
+#: src/devchat_window.c:3387
 msgid "L6 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3409
+#: src/devchat_window.c:3396
 msgid "Unvisited url color:"
 msgstr ""
 
-#: src/devchat_window.c:3412
+#: src/devchat_window.c:3399
 msgid "Visited url color:"
 msgstr ""
 
-#: src/devchat_window.c:3421
+#: src/devchat_window.c:3408
 msgid "Hover url color:"
 msgstr ""
 
-#: src/devchat_window.c:3424
+#: src/devchat_window.c:3411
 msgid "Highlighted tab color:"
 msgstr ""
 
-#: src/devchat_window.c:3433
+#: src/devchat_window.c:3420
 msgid "Goldie color:"
 msgstr ""
 
-#: src/devchat_window.c:3486
+#: src/devchat_window.c:3473
 msgid "Color settings"
 msgstr ""
 
-#: src/devchat_window.c:3490
+#: src/devchat_window.c:3477
 msgid "Show message ID"
 msgstr ""
 
-#: src/devchat_window.c:3492
+#: src/devchat_window.c:3479
 msgid ""
 "Shows the internal ID of messages.\n"
 "Makes pointing at a certain post easier (and allows you to see whether "
@@ -396,126 +388,138 @@ msgid ""
 "Note that this setting only applies on newly received messages."
 msgstr ""
 
-#: src/devchat_window.c:3493
+#: src/devchat_window.c:3480
 msgid "Show hidden usernames"
 msgstr ""
 
-#: src/devchat_window.c:3495
+#: src/devchat_window.c:3482
 msgid ""
 "Shows usernames e.g. for /me actions, stealthing greenies and HTML comments "
 "<!-- --> (read: Greenie stealth posts).\n"
 "Changing this setting will apply on new tabs and newly received messages."
 msgstr ""
 
-#: src/devchat_window.c:3496
+#: src/devchat_window.c:3483
 msgid "Stealth join"
 msgstr ""
 
-#: src/devchat_window.c:3498
+#: src/devchat_window.c:3485
 msgid "Suppress own join/quit messages."
 msgstr ""
 
-#: src/devchat_window.c:3504
+#: src/devchat_window.c:3491
 msgid "Automatic join"
 msgstr ""
 
-#: src/devchat_window.c:3506
+#: src/devchat_window.c:3493
 msgid "Tint user list"
 msgstr ""
 
-#: src/devchat_window.c:3508
+#: src/devchat_window.c:3495
 msgid ""
 "Whether the userlist should be colored in the same color as the TextViews. "
 "Recommended if the font contrast would be too low else (read: bright themes "
 "like Aero/Classic for Windows®)."
 msgstr ""
 
-#: src/devchat_window.c:3509
+#: src/devchat_window.c:3496
 msgid "Remember password"
 msgstr ""
 
-#: src/devchat_window.c:3511
+#: src/devchat_window.c:3498
 msgid "Whether the password shall be saved to disk."
 msgstr ""
 
-#: src/devchat_window.c:3517
+#: src/devchat_window.c:3504
 msgid "Show tray icon"
 msgstr ""
 
-#: src/devchat_window.c:3519
+#: src/devchat_window.c:3506
 msgid "Jump to unread PMs"
 msgstr ""
 
-#: src/devchat_window.c:3520
+#: src/devchat_window.c:3507
 msgid "Whether the focus should jump to tabs with unread PMs or not."
 msgstr ""
 
-#: src/devchat_window.c:3527
+#: src/devchat_window.c:3514
 msgid "Audio notifications:"
 msgstr ""
 
-#: src/devchat_window.c:3540
+#: src/devchat_window.c:3527
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
 "built-in audio notification.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
-#: src/devchat_window.c:3542
+#: src/devchat_window.c:3529
 msgid "Visual Notifications:"
 msgstr ""
 
-#: src/devchat_window.c:3555
+#: src/devchat_window.c:3542
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
 "built-in visual notification.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
-#: src/devchat_window.c:3564
+#: src/devchat_window.c:3551
 msgid "Beep on keywords:"
 msgstr ""
 
-#: src/devchat_window.c:3566
+#: src/devchat_window.c:3553
 msgid ""
 "List of words which will trigger a notification, separated by | (u007C, "
 "vertical line)"
 msgstr ""
 
-#: src/devchat_window.c:3586
+#: src/devchat_window.c:3573
 msgid "Browser:"
 msgstr ""
 
-#: src/devchat_window.c:3589
+#: src/devchat_window.c:3576
 #, c-format
 msgid ""
 "Please enter only the browser executable name (and neccessary command line "
 "options like --new-tab), no %fu or other crazy stuff."
 msgstr ""
 
-#: src/devchat_window.c:3597
+#: src/devchat_window.c:3584
 msgid "Time between updates (in ms):"
 msgstr ""
 
-#: src/devchat_window.c:3600
+#: src/devchat_window.c:3587
 msgid "Avatar size:"
 msgstr ""
 
-#: src/devchat_window.c:3621
+#: src/devchat_window.c:3608
 msgid "Chatserver string: "
 msgstr ""
 
-#: src/devchat_window.c:3640
+#: src/devchat_window.c:3627
 msgid "Misc"
 msgstr ""
 
-#: src/devchat_window.c:3652 src/devchat_window.c:3655
+#: src/devchat_window.c:3639 src/devchat_window.c:3642
 #, c-format
 msgid "Preset text %i:"
 msgstr ""
 
-#: src/devchat_window.c:3666
+#: src/devchat_window.c:3653
 msgid "Preset texts"
+msgstr ""
+
+#: src/devchat_window.c:3659
+msgid "Reset color"
+msgstr ""
+
+#: src/devchat_window.c:3660
+msgid "Reset Misc"
+msgstr ""
+
+#: src/devchat_window.c:3661
+msgid "Reset preset texts"
 msgstr ""
 
 #: src/devchat_window.c:4204
@@ -574,48 +578,48 @@ msgstr ""
 msgid "Cite Post"
 msgstr ""
 
-#: src/main.c:26
+#: src/main.c:32
 msgid "Show verbose information"
 msgstr ""
 
-#: src/main.c:27
+#: src/main.c:33
 msgid ""
 "Show even more information, mainly from HTML parser. Do not use unless "
 "explicitly stated, since it's chattier than Clippy. You have been warned."
 msgstr ""
 
-#: src/main.c:28
+#: src/main.c:34
 msgid "Neither load config from nor save config to disk."
 msgstr ""
 
-#: src/main.c:30
+#: src/main.c:36
 msgid "Disable spellchecker."
 msgstr ""
 
-#: src/main.c:38
+#: src/main.c:44
 msgid " - Gtk+ client for X-Devchat."
 msgstr ""
 
-#: src/main.c:42
+#: src/main.c:48
 msgid "Error -2: Option parsing failed!"
 msgstr ""
 
-#: src/main.c:74
+#: src/main.c:80
 msgid ""
 "Error loading settings file. Possibly insufficient rights or corrupted "
 "content.\n"
 msgstr ""
 
-#: src/main.c:160
+#: src/main.c:166
 #, c-format
 msgid "Errors occured while loading settings: %s."
 msgstr ""
 
-#: src/main.c:200
+#: src/main.c:206
 msgid "Error -1: Could not find working dir!"
 msgstr ""
 
-#: src/main.c:275
+#: src/main.c:281
 #, c-format
 msgid "Error creating avatar directory %s."
 msgstr ""

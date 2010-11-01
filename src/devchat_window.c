@@ -3330,19 +3330,6 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (data->window->window));
   gtk_window_set_destroy_with_parent (GTK_WINDOW (dialog), TRUE);
 
-  GtkWidget* chk_reset_1 = gtk_check_button_new_with_label (_("Reset color"));
-  GtkWidget* chk_reset_2 = gtk_check_button_new_with_label (_("Reset Misc"));
-  GtkWidget* chk_reset_3 = gtk_check_button_new_with_label (_("Reset preset texts"));
-
-  GtkWidget* vboxBB = gtk_vbox_new (TRUE, 0);
-  GtkWidget* hboxBB = gtk_hbox_new (TRUE, 0);
-  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_1, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_2, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (vboxBB), hboxBB, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (vboxBB), chk_reset_3, FALSE, FALSE, 0);
-
-  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_action_area (GTK_DIALOG (dialog))), vboxBB, FALSE, FALSE, 0);
-
   gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("Reset settings"), GTK_RESPONSE_REJECT,
                                              #ifndef G_OS_WIN32
                                                GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -3667,6 +3654,19 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
 
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), nb, TRUE, TRUE, 1);
+
+
+  GtkWidget* chk_reset_1 = gtk_check_button_new_with_label (_("Reset color"));
+  GtkWidget* chk_reset_2 = gtk_check_button_new_with_label (_("Reset Misc"));
+  GtkWidget* chk_reset_3 = gtk_check_button_new_with_label (_("Reset preset texts"));
+
+  GtkWidget* hboxBB = gtk_hbox_new (FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_1, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_2, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hboxBB), chk_reset_3, FALSE, FALSE, 0);
+
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), hboxBB, FALSE, FALSE, 1);
+
   gtk_widget_show_all (dialog);
 
   gint result = gtk_dialog_run (GTK_DIALOG (dialog));
