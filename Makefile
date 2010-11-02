@@ -30,7 +30,7 @@ install:
 	install -m644 share/pixmaps/devchat/* -t ${DESTDIR}/share/pixmaps/devchat
 	mkdir -m755 -p ${DESTDIR}/share/sounds/devchat
 	install -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat
-	for file in share/locale/*/LC_MESSAGES/dcgui.mo;do		install -m644 $${file} ${DESTDIR}/$${file};	done
+	for file in share/locale/*/LC_MESSAGES/dcgui.mo;do		install -D -m644 $${file} ${DESTDIR}/$${file};	done
 
 uninstall:
 	rm $(DESTDIR)/bin/devchat-gui

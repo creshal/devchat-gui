@@ -37,7 +37,7 @@ install:
 \tmkdir -m755 -p ${DESTDIR}/share/sounds/devchat
 \tinstall -m644 share/sounds/devchat/* -t ${DESTDIR}/share/sounds/devchat
 \tfor file in share/locale/*/LC_MESSAGES/dcgui.mo;do\
-\t\tinstall -m644 $${file} ${DESTDIR}/$${file};\
+\t\tinstall -D -m644 $${file} ${DESTDIR}/$${file};\
 \tdone
 
 uninstall:
