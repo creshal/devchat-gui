@@ -128,6 +128,7 @@ void popup_copy_stuff (GtkWidget* w, DevchatCBData* data);
 void popup_insert_text (GtkWidget* w, DevchatCBData* data);
 gboolean quit_timeout_cb (DevchatCBData* data);
 void quit_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
+void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 #ifdef OTR
 OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
 void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
@@ -4529,7 +4530,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     }
 
     SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
-    soup_session_send_message (data->window->session, post);
+    soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), data);
 
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
     g_free (enc_text);
@@ -4539,6 +4540,10 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 #else
   otrl_message_free (text);
 #endif
+}
+
+void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
+{
 }
 
 void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
