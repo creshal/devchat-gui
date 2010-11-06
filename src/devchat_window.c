@@ -1138,6 +1138,8 @@ void destroy (GtkObject* widget, DevchatCBData* data)
 {
   save_settings (data->window);
 
+  gtk_status_icon_set_visible (GTK_STATUS_ICON (self->trayicon), FALSE);
+
 #ifdef NOTIFY
   notify_uninit ();
 #endif
