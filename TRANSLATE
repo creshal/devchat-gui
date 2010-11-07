@@ -1,6 +1,13 @@
 See gettext manual on how to create new and edit existing .po files.
 The .pot will be updated automatically on reconfiguring with --enable-nls.
 
+Quickstart:
+ - Get Poedit ( http://www.poedit.net/download.php ), and create a translation catalog via File → "New Catalog from POT file", select then dcgui.pot in the source archive's po folder. Check the Poedit manual if something's unclear about that.
+ - Translate all strings and save (note: If you've got other programs installed using gettext [about everything in Linux, Pidgin/GTK/Midori/several other open source programs in Windows], you can configure Poedit to provide suggestions based on their translations. I strongly recommend using them to provide a unified cross-program translation for common elements like tabs etc).
+ - Send me the resulting XX.po file by any means (bugtracker, mail).
+ - Check the repository ( http://dev.yaki-syndicate.de/git/cgit.cgi/dcgui/ ) for changes in the master POT file and translate new/changed strings if neccessary.
+It would ne nice if you leave me some address I can use to contact you directly, e.g. to translate the release notes.
+
 Notes:
  - All error messages are preceded by "Error ?: ", please do not translate this part, so that if someone uploads an error log I can recognize the error message without having to look up the translation. The rest of the message can and should be translated.
  - Sometimes, strings have trailing "...". This is intentional and indicates, that the items open an new menu/window/browser. Keep this indication, with whatever form of punctuation your language suggests for it.
