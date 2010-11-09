@@ -1138,7 +1138,7 @@ void destroy (GtkObject* widget, DevchatCBData* data)
 {
   save_settings (data->window);
 
-  gtk_status_icon_set_visible (GTK_STATUS_ICON (self->trayicon), FALSE);
+  gtk_status_icon_set_visible (GTK_STATUS_ICON (data->window->trayicon), FALSE);
 
 #ifdef NOTIFY
   notify_uninit ();
@@ -4546,6 +4546,8 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 
 void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
+  if (m->status_code != 200)
+    err (_("Error M: Error sending message!"));
 }
 
 void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
