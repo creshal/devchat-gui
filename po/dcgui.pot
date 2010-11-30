@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-11-09 08:37+0100\n"
+"POT-Creation-Date: 2010-11-30 19:59+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -520,67 +520,67 @@ msgstr ""
 msgid "Error B: Your system doesn't have a native browser!"
 msgstr ""
 
-#: src/devchat_window.c:4437
+#: src/devchat_window.c:4519
 msgid "Error O: OTR encryption failed!"
 msgstr ""
 
-#: src/devchat_window.c:4550
+#: src/devchat_window.c:4556
 msgid "Error M: Error sending message!"
 msgstr ""
 
-#: src/devchat_window.c:4628
+#: src/devchat_window.c:4634
 msgid "Choose a date"
 msgstr ""
 
-#: src/devchat_window.c:4651
+#: src/devchat_window.c:4657
 msgid "History loading..."
 msgstr ""
 
-#: src/devchat_window.c:4684 src/main.c:44
+#: src/devchat_window.c:4690 src/main.c:44
 msgid " - Gtk+ client for X-Devchat."
 msgstr ""
 
-#: src/devchat_window.c:4687
+#: src/devchat_window.c:4693
 msgid "translator-credits"
 msgstr ""
 
-#: src/devchat_window.c:4912
+#: src/devchat_window.c:4918
 msgid "Error N: Failed to launch visual notification process."
 msgstr ""
 
-#: src/devchat_window.c:4932 src/devchat_window.c:4951
+#: src/devchat_window.c:4938 src/devchat_window.c:4957
 msgid "Error N: Failed to launch audio notification process."
 msgstr ""
 
-#: src/devchat_window.c:4996
+#: src/devchat_window.c:5002
 msgid "Change Status..."
 msgstr ""
 
-#: src/devchat_window.c:4998
+#: src/devchat_window.c:5004
 msgid "Online"
 msgstr ""
 
-#: src/devchat_window.c:5000
+#: src/devchat_window.c:5006
 msgid "Away"
 msgstr ""
 
-#: src/devchat_window.c:5002
+#: src/devchat_window.c:5008
 msgid "DND"
 msgstr ""
 
-#: src/devchat_window.c:5171
+#: src/devchat_window.c:5177
 msgid "Open image in browser"
 msgstr ""
 
-#: src/devchat_window.c:5184
+#: src/devchat_window.c:5190
 msgid "Open link in browser"
 msgstr ""
 
-#: src/devchat_window.c:5201
+#: src/devchat_window.c:5207
 msgid "Copy ID"
 msgstr ""
 
-#: src/devchat_window.c:5204
+#: src/devchat_window.c:5210
 msgid "Cite Post"
 msgstr ""
 

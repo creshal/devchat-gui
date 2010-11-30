@@ -1431,11 +1431,9 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       joinmsg = g_strdup_printf ("[cyan](%s):[/cyan] /me has joined.", data->window->settings.servername);
     else
       joinmsg = g_strdup_printf ("<span class=\"chatname_green\">(%s):</span> /me has joined.", data->window->settings.servername);
-    gtk_text_buffer_set_text (data->window->input, joinmsg, -1);
+    devchat_window_text_send (data, joinmsg, NULL, 1, TRUE);
     g_free (joinmsg);
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (data->window->chk_raw), TRUE);
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
-    devchat_window_btn_send (NULL, data);
   }
 
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
@@ -1475,7 +1473,7 @@ user_list_poll (DevchatCBData* data)
 
     data->window->user_message = soup_message_new ("GET", uri);
     soup_session_queue_message (data->window->session, data->window->user_message, SOUP_SESSION_CALLBACK (user_list_get), data);
-    data->window->user_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 40, (GSourceFunc) user_list_timeout, data);
+    data->window->user_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 20, (GSourceFunc) user_list_timeout, data);
     data->window->usr_list_parsed = FALSE;
   }
   return TRUE;
@@ -1492,7 +1490,7 @@ message_list_poll (DevchatCBData* data)
     data->window->message_message = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     g_signal_connect (data->window->message_message, "got-chunk", G_CALLBACK (message_list_chunk), data);
     soup_session_queue_message (data->window->session, data->window->message_message, SOUP_SESSION_CALLBACK (message_list_get), data);
-    data->window->message_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 20, (GSourceFunc) message_list_timeout, data);
+    data->window->message_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 10, (GSourceFunc) message_list_timeout, data);
     data->window->msg_list_parsed = FALSE;
   }
   return TRUE;
@@ -1815,7 +1813,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else
   {
     data->window->errorcount++;
-    if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
+    if (data->window->errorcount > (1000/data->window->settings.update_time))
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
@@ -1974,7 +1972,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->errorcount++;
 
-    if (data->window->errorcount > (1000/data->window->settings.update_time)*10)
+    if (data->window->errorcount > (1000/data->window->settings.update_time))
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
@@ -2240,10 +2238,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
           else
             kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
-          gtk_text_buffer_set_text (self->window->input, kickmsg, -1);
+          devchat_window_text_send (self, kickmsg, NULL, 1, TRUE);
           g_free (kickmsg);
-          gtk_notebook_set_current_page (GTK_NOTEBOOK (self->window->notebook), 0);
-          devchat_window_btn_send (NULL, self);
           destroy (NULL, self);
         }
 
@@ -4307,46 +4303,12 @@ void level_changed (GtkWidget* widget, DevchatCBData* data)
   }
 }
 
-void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
-{
-  if (debug)
-    dbg ("Sending message...");
-
-  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
-  GtkTextBuffer* buf;
-  gchar* text;
-  GtkTextIter start;
-  GtkTextIter end;
-  GtkWidget* chk_raw;
-#ifdef OTR
-  gchar* target = NULL;
-#endif
-
-  if (pagenum == 0)
-  {
-    buf = data->window->input;
-    gtk_text_buffer_get_start_iter (buf, &start);
-    gtk_text_buffer_get_end_iter (buf, &end);
-    text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
-    chk_raw = data->window->chk_raw;
-  }
-  else
-  {
-  #ifndef OTR
-    gchar* target;
-  #endif
-    target = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum)));
-    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
-    buf = conv->in_buffer;
-    chk_raw = conv->chk_raw;
-    gtk_text_buffer_get_start_iter (buf, &start);
-    gtk_text_buffer_get_end_iter (buf, &end);
-
-    text = g_strconcat ("/msg ", target, " ", gtk_text_buffer_get_text (buf, &start, &end, FALSE), NULL);
-  }
-  text = g_strstrip (text);
-
-  const int smilie_count = 19;
+/*
+  Target: non-null for PMs.
+  level: non-zero for non-PMs.
+*/
+void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, gchar* sendlevel, gboolean raw)
+{  const int smilie_count = 19;
 
   GRegex* custom_smilies[smilie_count];
 
@@ -4400,6 +4362,122 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     g_free (tmp2);
   }
 
+  if (target)
+    text = g_strconcat ("/msg ", target, " ", text, NULL);
+
+
+  gchar* enc_text = "";
+
+  guchar current[2];
+  current[0] = 32;
+  current[1] = 0;
+
+  gint max = strlen (text);
+
+  for (i=0; i < max; i++)
+  {
+    current[0] = text[i];
+
+    if (real_debug) {
+      dbg_msg = g_strdup_printf ("Current char: %i\n", current[0]);
+      dbg (dbg_msg);
+      g_free (dbg_msg);
+    }
+
+    /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
+    if (current[0] == 45 || current[0] == 46
+        || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
+        || (current[0] > 96 && current[0] < 123))
+    {
+      enc_text = g_strconcat (enc_text, current, NULL);
+    }
+    else if (current[0] > 31 && current[0] < 128)
+    {
+      /*Restricted char, but valid ASCII. %escape*/
+      if (current[0] == 43)
+        enc_text = g_strconcat (enc_text, "%26%2343%3B", NULL);
+      else if (current[0] == 60)
+        if (!raw)
+          enc_text = g_strconcat (enc_text, "%26%2360%3B", NULL);
+        else
+          enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
+      else if (current[0] == 62)
+        if (!raw)
+          enc_text = g_strconcat (enc_text, "%26%2362%3B", NULL);
+        else
+          enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
+      else
+        enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
+    }
+    else if (current[0] > 193 && current[0] < 245)
+    {
+      /*UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...*/
+
+      enc_text = g_strdup_printf ("%s%%u%.4X", enc_text, g_utf8_get_char (text+i));
+
+      i++;
+      if (current[0] > 223)
+      {
+        i++;
+        if (current[0] > 239)
+          i++;
+      }
+    }
+    else if (current[0] == 10)
+    {
+      enc_text = g_strconcat (enc_text, "%0D%0A", NULL);
+    }
+    else if (debug)
+    {
+      dbg ("Invalid char in sent text. Stop that!");
+    }
+  }
+
+  if (debug) {
+    dbg_msg = g_strdup_printf ("Parsed message: %s.\n", enc_text);
+    dbg (dbg_msg);
+    g_free (dbg_msg);
+  }
+
+  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
+  soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), data);
+
+  g_free (enc_text);
+}
+
+void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
+{
+  if (debug)
+    dbg ("Sending message...");
+
+  gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
+  GtkTextBuffer* buf;
+  gchar* text;
+  GtkTextIter start;
+  GtkTextIter end;
+  GtkWidget* chk_raw;
+  gchar* target = NULL;
+
+  if (pagenum == 0)
+  {
+    buf = data->window->input;
+    gtk_text_buffer_get_start_iter (buf, &start);
+    gtk_text_buffer_get_end_iter (buf, &end);
+    text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+    chk_raw = data->window->chk_raw;
+  }
+  else
+  {
+    target = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), gtk_notebook_get_nth_page (GTK_NOTEBOOK (data->window->notebook), pagenum)));
+    DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, target);
+    buf = conv->in_buffer;
+    chk_raw = conv->chk_raw;
+    gtk_text_buffer_get_start_iter (buf, &start);
+    gtk_text_buffer_get_end_iter (buf, &end);
+    text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+  }
+  text = g_strstrip (text);
+
   if (g_strcmp0("",text) != 0)
   {
     gint i = MAX_BUF-1;
@@ -4445,80 +4523,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     }
   #endif
 
-    gchar* enc_text = "";
-
-    guchar current[2];
-    current[0] = 32;
-    current[1] = 0;
-
-    gint max = strlen (text);
-
-    for (i=0; i < max; i++)
-    {
-      current[0] = text[i];
-
-      if (real_debug) {
-        dbg_msg = g_strdup_printf ("Current char: %i\n", current[0]);
-        dbg (dbg_msg);
-        g_free (dbg_msg);
-      }
-
-      /*Allowed: 45, 46, 48-57, 65-90, 95, 97-122*/
-      if (current[0] == 45 || current[0] == 46
-          || (current[0] > 47 && current[0] < 58) || (current[0] > 64 && current[0] < 91) || current[0] == 95
-          || (current[0] > 96 && current[0] < 123))
-      {
-        enc_text = g_strconcat (enc_text, current, NULL);
-      }
-      else if (current[0] > 31 && current[0] < 128)
-      {
-        /*Restricted char, but valid ASCII. %escape*/
-        if (current[0] == 43)
-          enc_text = g_strconcat (enc_text, "%26%2343%3B", NULL);
-        else if (current[0] == 60)
-          if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
-            enc_text = g_strconcat (enc_text, "%26%2360%3B", NULL);
-          else
-            enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
-        else if (current[0] == 62)
-          if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)))
-            enc_text = g_strconcat (enc_text, "%26%2362%3B", NULL);
-          else
-            enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
-        else
-          enc_text = g_strdup_printf ("%s%%%X", enc_text, current[0]);
-      }
-      else if (current[0] > 193 && current[0] < 245)
-      {
-        /*UTF8 char start. Use g_utf8_get_char to get the real char, insert as %uxxxx. Illegal by RFC and W3C, but if the server wants it...*/
-
-        enc_text = g_strdup_printf ("%s%%u%.4X", enc_text, g_utf8_get_char (text+i));
-
-        i++;
-        if (current[0] > 223)
-        {
-          i++;
-          if (current[0] > 239)
-            i++;
-        }
-      }
-      else if (current[0] == 10)
-      {
-        enc_text = g_strconcat (enc_text, "%0D%0A", NULL);
-      }
-      else if (debug)
-      {
-        dbg ("Invalid char in sent text. Stop that!");
-      }
-    }
-
-    if (debug) {
-      dbg_msg = g_strdup_printf ("Parsed message: %s.\n", enc_text);
-      dbg (dbg_msg);
-      g_free (dbg_msg);
-    }
-
-
     gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
     gchar* sendlevel;
 
@@ -4531,11 +4535,9 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       default: sendlevel = "6"; break;
     }
 
-    SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
-    soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), data);
+    devchat_window_text_send (data, text, target, sendlevel, gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)));
 
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
-    g_free (enc_text);
   }
 #ifndef OTR
   g_free (text);
@@ -5031,11 +5033,7 @@ void tray_status_change (GtkWidget* w, DevchatCBData* data)
     case 2: msg = "/dnd"; break;
     default: return;
   }
-  gtk_text_buffer_set_text (data->window->input, msg, -1);
-  gint old_page = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
-  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
-  devchat_window_btn_send (NULL, data);
-  gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), old_page);
+  devchat_window_text_send (data, msg, NULL, 1, FALSE);
 }
 
 gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatCBData* data)

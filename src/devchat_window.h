@@ -39,9 +39,9 @@
 #endif
 
 #ifdef NLS
+/*Fuck you, libintl.*/
+#include <locale.h>
 #include <glib/gi18n.h>
-#else
-#define _(String) String
 #endif
 
 #ifdef G_OS_WIN32
@@ -259,6 +259,7 @@ gboolean devchat_window_on_popup_menu ();
 gboolean devchat_window_button_press_cb ();
 void devchat_window_filter_ul_changed (GtkWidget* widget, GtkTextBuffer* data);
 void devchat_window_filter_ml_changed (GtkWidget* widget, GtkTextBuffer* data);
+void devchat_window_text_send ();
 
 G_END_DECLS
 
