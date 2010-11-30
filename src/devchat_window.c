@@ -1456,7 +1456,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       joinmsg = g_strdup_printf ("[cyan](%s):[/cyan] /me has joined.", data->window->settings.servername);
     else
       joinmsg = g_strdup_printf ("<span class=\"chatname_green\">(%s):</span> /me has joined.", data->window->settings.servername);
-    devchat_window_text_send (data, joinmsg, NULL, "1", TRUE);
+    devchat_window_text_send (data, g_strdup (joinmsg), NULL, "1", TRUE);
     g_free (joinmsg);
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
   }
@@ -2265,7 +2265,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
           else
             kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
-          devchat_window_text_send (self, kickmsg, NULL, "1", TRUE);
+          devchat_window_text_send (self, g_strdup (kickmsg), NULL, "1", TRUE);
           g_free (kickmsg);
           destroy (NULL, self);
         }
@@ -4338,7 +4338,8 @@ void level_changed (GtkWidget* widget, DevchatCBData* data)
   level: non-zero for non-PMs.
 */
 void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, gchar* sendlevel, gboolean raw)
-{  const int smilie_count = 19;
+{
+  const int smilie_count = 19;
 
   GRegex* custom_smilies[smilie_count];
 
@@ -4472,6 +4473,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
   SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
   soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), data);
 
+  g_free (text);
   g_free (enc_text);
 }
 
@@ -4565,7 +4567,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       default: sendlevel = "6"; break;
     }
 
-    devchat_window_text_send (data, text, target, sendlevel, gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)));
+    devchat_window_text_send (data, g_strdup (text), target, sendlevel, gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)));
 
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_raw), FALSE);
   }
