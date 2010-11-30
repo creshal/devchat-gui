@@ -223,6 +223,7 @@ devchat_window_init (DevchatWindow* self)
   self->message_buffer = "";
   self->moderators = g_hash_table_new (g_str_hash, g_str_equal);
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
+  self->last_notification = 0;
 
   gint j;
 
@@ -256,6 +257,24 @@ devchat_window_init (DevchatWindow* self)
 
   self->item_connect = gtk_image_menu_item_new_from_stock(GTK_STOCK_CONNECT,self->accelgroup);
   g_signal_connect (self->item_connect, "activate", G_CALLBACK (login),self_data);
+
+  self->item_status = gtk_menu_item_new_with_label (_("Change Status..."));
+  gtk_widget_set_no_show_all (self->item_status, TRUE);
+
+  GtkWidget* item_status_online = gtk_menu_item_new_with_label (_("Online"));
+  g_signal_connect (item_status_online, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (self, GINT_TO_POINTER (0)));
+  GtkWidget* item_status_away = gtk_menu_item_new_with_label (_("Away"));
+  g_signal_connect (item_status_away, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (self, GINT_TO_POINTER (1)));
+  GtkWidget* item_status_dnd = gtk_menu_item_new_with_label (_("DND"));
+  g_signal_connect (item_status_dnd, "activate", G_CALLBACK (tray_status_change), devchat_cb_data_new (self, GINT_TO_POINTER (2)));
+
+  GtkMenuShell* sub_status = GTK_MENU_SHELL(gtk_menu_new());
+  gtk_menu_shell_append(sub_status, item_status_online);
+  gtk_menu_shell_append(sub_status, item_status_away);
+  gtk_menu_shell_append(sub_status, item_status_dnd);
+
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_status), GTK_WIDGET (sub_status));
+
 
   GtkWidget* item_prefs = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES,self->accelgroup);
   g_signal_connect (item_prefs, "activate", G_CALLBACK (config_cb),self_data);
@@ -332,6 +351,10 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* item_update = gtk_menu_item_new_with_label (_("Check for update..."));
   g_signal_connect (item_update, "activate", G_CALLBACK (popup_open_link), update_data);
 
+  DevchatCBData* faq_data = devchat_cb_data_new (self, "http://dev.yaki-syndicate.de/index.php?/faq.html");
+  GtkWidget* item_faq = gtk_menu_item_new_with_label (_("Frequently asked questions..."));
+  g_signal_connect (item_faq, "activate", G_CALLBACK (popup_open_link), faq_data);
+
   DevchatCBData* format_b = devchat_cb_data_new (self, "b");
 
   GtkWidget* item_bold = gtk_image_menu_item_new_from_stock (GTK_STOCK_BOLD,self->accelgroup);
@@ -371,6 +394,7 @@ devchat_window_init (DevchatWindow* self)
 
   GtkMenuShell* main_sub = GTK_MENU_SHELL(gtk_menu_new());
   gtk_menu_shell_append(main_sub, self->item_connect);
+  gtk_menu_shell_append(main_sub, self->item_status);
   gtk_menu_shell_append(main_sub, item_tabclose);
   gtk_menu_shell_append(main_sub, gtk_menu_item_new());
   gtk_menu_shell_append(main_sub, self->item_reconnect);
@@ -407,6 +431,7 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_item_set_submenu(menu_view,GTK_WIDGET(view_sub));
 
   GtkMenuShell* about_sub = GTK_MENU_SHELL(gtk_menu_new());
+  gtk_menu_shell_append(about_sub, item_faq);
   gtk_menu_shell_append(about_sub, item_report);
   gtk_menu_shell_append(about_sub, item_update);
   gtk_menu_shell_append(about_sub, gtk_menu_item_new());
@@ -1431,7 +1456,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       joinmsg = g_strdup_printf ("[cyan](%s):[/cyan] /me has joined.", data->window->settings.servername);
     else
       joinmsg = g_strdup_printf ("<span class=\"chatname_green\">(%s):</span> /me has joined.", data->window->settings.servername);
-    devchat_window_text_send (data, joinmsg, NULL, 1, TRUE);
+    devchat_window_text_send (data, joinmsg, NULL, "1", TRUE);
     g_free (joinmsg);
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
   }
@@ -1442,6 +1467,8 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   gtk_widget_show_all (data->window->inputbar);
   gtk_widget_hide (data->window->item_connect);
   gtk_widget_show (data->window->item_reconnect);
+  gtk_widget_set_no_show_all (data->window->item_status, FALSE);
+  gtk_widget_show_all (data->window->item_status);
   if (debug)
     dbg ("Starting requests...");
 
@@ -2238,7 +2265,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
           else
             kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
-          devchat_window_text_send (self, kickmsg, NULL, 1, TRUE);
+          devchat_window_text_send (self, kickmsg, NULL, "1", TRUE);
           g_free (kickmsg);
           destroy (NULL, self);
         }
@@ -2521,9 +2548,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
         if (g_strcmp0 (content, "") != 0)
         {
-          gchar* content_s = g_strchomp (content);
-          gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content_s, -1);
-          g_free (content_s);
+          gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
           content = "";
         }
 
@@ -2645,7 +2670,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         if (g_strcmp0 (top->name,"font")==0)
         {
         if (real_debug) {
-          dbg_msg = g_strdup_printf ("Found font tag! Attribute:%s ",((DevchatHTMLAttr*) top->attrs->data)->name);
+          dbg_msg = g_strdup_printf ("Found font tag! Attribute: %s\n",((DevchatHTMLAttr*) top->attrs->data)->name);
           dbg (dbg_msg);
           g_free (dbg_msg);
         }
@@ -2685,7 +2710,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           GtkTextIter fnord;
 
           gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
-
           gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, "\n", -1);
         }
         else if (g_strcmp0 (top->name,"span")==0)
@@ -2718,8 +2742,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             gtk_widget_set_tooltip_text (img, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
 
             GtkTextIter fnord;
-            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
-            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, " ", -1);
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
             GtkTextChildAnchor* a = gtk_text_buffer_create_child_anchor (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
@@ -2772,8 +2794,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             }
 
             GtkTextIter fnord;
-            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
-            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, " ", -1);
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord);
 
             GtkWidget* img = gtk_image_new_from_file (filename);
@@ -2882,8 +2902,6 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             GtkTextIter end;
 
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
-            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, " ", -1);
-            gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
 
             gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
@@ -2909,9 +2927,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           if (g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, &start_pp, FALSE), " ") != 0
               && g_strcmp0 (gtk_text_buffer_get_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start_prev, &start, FALSE), " ") != 0)
           {
-            gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, " ", -1);
             gtk_text_buffer_get_iter_at_mark (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &start, top->start_mark);
-            gtk_text_iter_forward_char (&start);
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
           }
 
@@ -3190,6 +3206,20 @@ void parse_message (gchar* message_d, DevchatCBData* data)
   }
 
   g_free (plus);
+
+  if (debug)
+    dbg ("Removing trailing whitespace from message...");
+
+  GtkTextIter chomp_iter, chomp_end;
+  gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &chomp_iter);
+  chomp_end = chomp_iter;
+  gtk_text_iter_backward_char (&chomp_iter);
+
+  while (g_unichar_isspace (gtk_text_iter_get_char (&chomp_iter)))
+    gtk_text_iter_backward_char (&chomp_iter);
+
+  if (gtk_text_iter_forward_char (&chomp_iter))
+    gtk_text_buffer_delete (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &chomp_iter, &chomp_end);
 
   if (debug)
     dbg ("Parsing done.");
@@ -4893,6 +4923,12 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
 {
   if (!data->window->dnd)
   {
+    if (time (NULL) - data->window->last_notification < 2)
+      return;
+    else
+      data->window->last_notification = time (NULL);
+
+
     if (g_strcmp0(data->window->settings.vnotify,"<native>") == 0)
     {
       if (!gtk_widget_get_visible (data->window->window))
@@ -5033,7 +5069,7 @@ void tray_status_change (GtkWidget* w, DevchatCBData* data)
     case 2: msg = "/dnd"; break;
     default: return;
   }
-  devchat_window_text_send (data, msg, NULL, 1, FALSE);
+  devchat_window_text_send (data, g_strdup (msg), NULL, "1", FALSE);
 }
 
 gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatCBData* data)

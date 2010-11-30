@@ -169,6 +169,7 @@ struct _DevchatWindow
   GtkWidget* outputwidget;
   GtkWidget* inputwidget;
   GtkWidget* item_connect;
+  GtkWidget* item_status;
   GtkWidget* item_l3;
   GtkWidget* item_l5;
   GtkWidget* item_reconnect;
@@ -209,6 +210,7 @@ struct _DevchatWindow
   GHashTable* moderators;
 
   gint errorcount;
+  time_t last_notification;
 
   gchar* message_buffer;
   guint message_timeout_id;
