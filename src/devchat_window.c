@@ -243,7 +243,7 @@ devchat_window_init (DevchatWindow* self)
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
   self->last_notification = 0;
 #ifdef INGAME
-  self->settings.TCFolder = NULL;
+  self->settings.TCFolder = "";
   self->ingame_lid = -1;
   self->ingame_userlist = "";
   self->ingame_messagelist = "";
@@ -5612,7 +5612,7 @@ void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gch
 
 void ingame_flush_data (DevchatCBData* data)
 {
-  if (data->window->settings.TCFolder)
+  if (g_strcmp0 (data->window->settings.TCFolder, "") != 0)
   {
     const gchar* filename = g_build_filename (data->window->settings.TCFolder, "t", _("7641-L044.xml"), NULL);
 
