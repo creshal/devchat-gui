@@ -1680,7 +1680,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
           data->window->users_online = g_slist_prepend (data->window->users_online, g_strdup (uid));
 
-          if ((g_strcmp0("Away: STEALTH",status) != 0) || (data->window->settings.showhidden))
+          if (data->window->settings.showhidden == TRUE || ( (g_strcmp0("STEALTH",status) != 0) && (g_strcmp0("Away: STEALTH",status) != 0)))
           {
 
             if (!g_slist_find_custom (data->window->users_without_avatar,uid, (GCompareFunc) user_lookup) && !g_hash_table_lookup (data->window->avatars, uid))
