@@ -1640,10 +1640,6 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     data->window->user_message = NULL;
     g_source_remove (data->window->user_timeout_id);
 
-  #ifdef INGAME
-    ingame_clear_user_list (data);
-  #endif
-
     gchar* userlist = g_strdup (m->response_body->data);
     if (userlist)
     {
@@ -2830,7 +2826,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
             if (real_debug)
               dbg ("Found smilie in database.");
           #ifdef INGAME
-            retval = g_strconcat(retval, smilie, NULL);
+            retval = g_strconcat(retval, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value, NULL);
           #endif
 
             GtkWidget* img = gtk_image_new_from_file (smilie);
@@ -2974,7 +2970,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
             }
 
           #ifdef INGAME
-            retval = g_strconcat(retval, "[url]", comment, "[/url]", NULL);
+            retval = g_strconcat(retval, "[url]", tagname_d, "[/url]", NULL);
           #endif
 
             if (!gtk_text_tag_table_lookup (table, tagname))
@@ -5563,16 +5559,18 @@ void ingame_update_status (DevchatCBData* data, gint status)
 
 void ingame_clear_user_list (DevchatCBData* data)
 {
-  if (data->window->ingame_userlist)
+  if (g_strcmp0 (data->window->ingame_userlist, "") != 0)
     g_free (data->window->ingame_userlist);
-  data->window->ingame_userlist = NULL;
+  data->window->ingame_userlist = "";
+  data->window->ingame_usercount = 0;
 }
 
 void ingame_clear_message_list (DevchatCBData* data)
 {
-  if (data->window->ingame_messagelist)
+  if (g_strcmp0 (data->window->ingame_messagelist, "") != 0)
     g_free (data->window->ingame_messagelist);
-  data->window->ingame_messagelist = NULL;
+  data->window->ingame_messagelist = "";
+  data->window->ingame_lid = 0;
 }
 
 void ingame_append_user (DevchatCBData* data, gchar* user)
