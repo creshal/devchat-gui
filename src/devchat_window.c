@@ -232,7 +232,6 @@ devchat_window_init (DevchatWindow* self)
   self->settings.avatar_size = 12;
   self->settings.update_time = 1000;
   self->settings.keywords = NULL;
-  self->settings.TCFolder = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
   self->buf_current = 0;
@@ -244,6 +243,7 @@ devchat_window_init (DevchatWindow* self)
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
   self->last_notification = 0;
 #ifdef INGAME
+  self->settings.TCFolder = NULL;
   self->ingame_lid = -1;
   self->ingame_userlist = NULL;
   self->ingame_messagelist = NULL;
