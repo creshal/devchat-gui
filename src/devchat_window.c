@@ -1302,6 +1302,9 @@ void save_settings (DevchatWindow* w)
                                  "NOTIFY=",w->settings.notify, "\n",
                                  "VNOTIFY=",w->settings.vnotify, "\n",
                                  "SERVER_NAME=",w->settings.servername, "\n",
+                               #ifdef INGAME
+                                 "TC_FOLDER=",w->settings.TCFolder, "\n",
+                               #endif
                                  g_strdup_printf("WIDTH=%i\n", w->settings.width),
                                  g_strdup_printf("HEIGHT=%i\n", w->settings.height),
                                  g_strdup_printf("X=%i\n", w->settings.x),
@@ -1647,7 +1650,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
         dbg ("Got non-empty userlist.");
 
     #ifdef INGAME
-      ingame_clear_user_list (self);
+      ingame_clear_user_list (data);
     #endif
 
 
@@ -3936,6 +3939,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
       gchar* rc_line = "gtk-theme-name=\"MS-Windows\"\r\n";
       g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, -1, NULL);
     #endif
+    #ifdef INGAME
+      data->window->settings.TCFolder = g_strdup (gtk_entry_get_text (GTK_ENTRY (entry_tc)));
+    #endif
 
       gchar** keywords = g_strsplit (gtk_entry_get_text(GTK_ENTRY(entry_keywords)), "|", 0);
       gint i;
@@ -5540,12 +5546,23 @@ void get_ingame_messages (DevchatCBData* data)
     g_remove (filename);
   #ifdef DEBUG
     debug (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
-  #else
-    err (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
   #endif
 
-    /*XXX*/
+    gchar** messages = g_strsplit (message_lines, "\n", -1);
 
+    int i;
+
+    for (i = 0; messages[i]; i++)
+    {
+      gchar** message = g_strsplit (messages[i], ";;", 4);
+
+      if (message[0] && message[1] && message[2] && message[3])
+        devchat_window_text_send (data, message[3], message[2], message[1], g_strcmp0(message[0], "1") == 0);
+
+      g_strfreev (message);
+    }
+
+    g_strfreev (messages);
     g_free (message_lines);
   }
   else if (debug)
