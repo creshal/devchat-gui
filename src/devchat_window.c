@@ -1494,7 +1494,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   }
 
 #ifdef INGAME
-  g_timeout_add_seconds (2, (GSourceFunc) get_ingame_messages, self);
+  g_timeout_add_seconds (2, (GSourceFunc) get_ingame_messages, data);
   ingame_update_status (data, INGAME_STATUS_ONLINE);
 #endif
 
@@ -4515,7 +4515,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
     g_free (tmp2);
   }
 
-  if (target && g_strcmp0 (level, "0") == 0)
+  if (target && g_strcmp0 (sendlevel, "0") == 0)
     text = g_strconcat ("/msg ", target, " ", text, NULL);
 
 
@@ -5533,7 +5533,7 @@ void dbg(gchar* message)
 }
 
 #ifdef INGAME
-void get_ingame_messages (DevchatCBData* data)
+gboolean get_ingame_messages (DevchatCBData* data)
 {
   gchar* message_lines;
   const gchar* filename = g_build_filename (g_get_user_special_dir (G_USER_DIRECTORY_DOCUMENTS), "EGOSOFT", "X3TC", "log07642.txt", NULL);
