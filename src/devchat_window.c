@@ -245,8 +245,8 @@ devchat_window_init (DevchatWindow* self)
 #ifdef INGAME
   self->settings.TCFolder = NULL;
   self->ingame_lid = -1;
-  self->ingame_userlist = NULL;
-  self->ingame_messagelist = NULL;
+  self->ingame_userlist = "";
+  self->ingame_messagelist = "";
   self->ingame_usercount = 0;
 #endif
 
@@ -1646,6 +1646,11 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       if (debug)
         dbg ("Got non-empty userlist.");
 
+    #ifdef INGAME
+      ingame_clear_user_list (self);
+    #endif
+
+
       xmlTextReaderPtr userparser = xmlReaderForMemory (userlist,strlen(userlist),"",NULL,(XML_PARSE_RECOVER|XML_PARSE_NOENT));
       xmlParserCtxtPtr ctxt = xmlCreateDocParserCtxt ((xmlChar*) userlist);
 
@@ -2086,10 +2091,6 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
   xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
   gchar* currenttime = current_time ();
-
-#ifdef INGAME
-  ingame_clear_message_list (self);
-#endif
 
   while (xmlTextReaderRead (msgparser) == 1)
   {
