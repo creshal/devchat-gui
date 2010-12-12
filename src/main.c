@@ -132,7 +132,7 @@ main (int argc, char *argv[])
           self->settings.jumptab = g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "JUMP_TAB", &e),"true") == 0;
       #ifdef INGAME
         if (g_key_file_has_key (keyfile, g, "TC_FOLDER", &e))
-          self->settings.TCFolder = g_key_file_get_string (keyfile, g, "TC_FOLDER", &e);
+          self->settings.TCFolder = g_key_file_get_value (keyfile, g, "TC_FOLDER", &e);
       #endif
 
         gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);

@@ -158,7 +158,7 @@ int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt);
 const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol);
 #endif
 #ifdef INGAME
-void get_ingame_messages (DevchatCBData* data);
+gboolean get_ingame_messages (DevchatCBData* data);
 void ingame_update_status (DevchatCBData* data, gint status);
 void ingame_clear_user_list (DevchatCBData* data);
 void ingame_clear_message_list (DevchatCBData* data);
@@ -777,10 +777,6 @@ devchat_window_init (DevchatWindow* self)
   }
 
   g_timeout_add_seconds (4, (GSourceFunc) get_pos_size, self);
-
-#ifdef INGAME
-  g_timeout_add_seconds (1, (GSourceFunc) get_ingame_messages, self);
-#endif
 
 }
 
@@ -1498,6 +1494,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   }
 
 #ifdef INGAME
+  g_timeout_add_seconds (2, (GSourceFunc) get_ingame_messages, self);
   ingame_update_status (data, INGAME_STATUS_ONLINE);
 #endif
 
@@ -3765,7 +3762,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* label_tc = gtk_label_new (_("Terran Conflict folder:"));
   GtkWidget* entry_tc = gtk_entry_new ();
   gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client."));
-  gtk_entry_set_text (GTK_ENTRY (entry_browser), data->window->settings.TCFolder);
+  gtk_entry_set_text (GTK_ENTRY (entry_tc), data->window->settings.TCFolder);
 #endif
   gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
@@ -4518,7 +4515,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
     g_free (tmp2);
   }
 
-  if (target)
+  if (target && g_strcmp0 (level, "0") == 0)
     text = g_strconcat ("/msg ", target, " ", text, NULL);
 
 
@@ -4614,6 +4611,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
   GtkTextIter end;
   GtkWidget* chk_raw;
   gchar* target = NULL;
+  gchar* sendlevel;
 
   if (pagenum == 0)
   {
@@ -4622,6 +4620,16 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     gtk_text_buffer_get_end_iter (buf, &end);
     text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
     chk_raw = data->window->chk_raw;
+    gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
+
+    switch (level)
+    {
+      case -1:
+      case 0: sendlevel = "1"; break;
+      case 1: sendlevel = "3"; break;
+      case 2: sendlevel = "5"; break;
+      default: sendlevel = "6"; break;
+    }
   }
   else
   {
@@ -4632,6 +4640,7 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
     gtk_text_buffer_get_start_iter (buf, &start);
     gtk_text_buffer_get_end_iter (buf, &end);
     text = g_strdup (gtk_text_buffer_get_text (buf, &start, &end, FALSE));
+    sendlevel = "0";
   }
   text = g_strstrip (text);
 
@@ -4679,18 +4688,6 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
       }
     }
   #endif
-
-    gint level = gtk_combo_box_get_active (GTK_COMBO_BOX (data->window->level_box));
-    gchar* sendlevel;
-
-    switch (level)
-    {
-      case -1:
-      case 0: sendlevel = "1"; break;
-      case 1: sendlevel = "3"; break;
-      case 2: sendlevel = "5"; break;
-      default: sendlevel = "6"; break;
-    }
 
     devchat_window_text_send (data, g_strdup (text), target, sendlevel, gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_raw)));
 
@@ -5544,9 +5541,8 @@ void get_ingame_messages (DevchatCBData* data)
   if (g_file_get_contents (filename, &message_lines, NULL, NULL))
   {
     g_remove (filename);
-  #ifdef DEBUG
-    debug (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
-  #endif
+    if (debug)
+    dbg (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
 
     gchar** messages = g_strsplit (message_lines, "\n", -1);
 
@@ -5567,6 +5563,8 @@ void get_ingame_messages (DevchatCBData* data)
   }
   else if (debug)
     dbg ("Ingame logfile could not be read.\n");
+
+  return TRUE;
 }
 
 void ingame_update_status (DevchatCBData* data, gint status)
