@@ -69,6 +69,15 @@ enum {
   SETTINGS_COLOR_MAGENTA
 } params;
 
+#ifdef INGAME
+enum {
+  INGAME_STATUS_DISCONNECTED,
+  INGAME_STATUS_ONLINE,
+  INGAME_STATUS_SILENCED,
+  INGAME_STATUS_KICKED
+} ingame_status;
+#endif
+
 static void devchat_window_set_property (GObject* object, guint id, const GValue* value, GParamSpec* pspec);
 static void devchat_window_get_property (GObject* object, guint id, GValue* value, GParamSpec* pspec);
 gboolean track_window_state (GtkWidget* widget, GdkEventWindowState* s, DevchatCBData* data);
@@ -116,7 +125,7 @@ void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 gboolean user_list_poll (DevchatCBData* data);
 gboolean message_list_poll (DevchatCBData* data);
 void ce_parse (gchar* data, DevchatCBData* self, gchar* date);
-void parse_message (gchar* message, DevchatCBData* self);
+gchar* parse_message (gchar* message_d, DevchatCBData* data);
 void toggle_tray_minimize (GtkStatusIcon* icon, DevchatCBData* data);
 gchar* current_time ();
 gboolean get_pos_size (DevchatWindow* window);
@@ -147,6 +156,15 @@ void otr_still_secure (DevchatWindow* window, ConnContext* ctxt, int is_reply);
 void otr_log_message (DevchatWindow* window, gchar* message);
 int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt);
 const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol);
+#endif
+#ifdef INGAME
+void get_ingame_messages (DevchatCBData* data);
+void ingame_update_status (DevchatCBData* data, gint status);
+void ingame_clear_user_list (DevchatCBData* data);
+void ingame_clear_message_list (DevchatCBData* data);
+void ingame_append_user (DevchatCBData* data, gchar* user);
+void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gchar* time_attr, gchar* lid, gchar* message);
+void ingame_flush_data (DevchatCBData* data);
 #endif
 
 G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT)
@@ -214,6 +232,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.avatar_size = 12;
   self->settings.update_time = 1000;
   self->settings.keywords = NULL;
+  self->settings.TCFolder = NULL;
   self->firstrun = TRUE;
   self->hovertag = NULL;
   self->buf_current = 0;
@@ -224,6 +243,12 @@ devchat_window_init (DevchatWindow* self)
   self->moderators = g_hash_table_new (g_str_hash, g_str_equal);
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
   self->last_notification = 0;
+#ifdef INGAME
+  self->ingame_lid = -1;
+  self->ingame_userlist = NULL;
+  self->ingame_messagelist = NULL;
+  self->ingame_usercount = 0;
+#endif
 
   gint j;
 
@@ -752,6 +777,11 @@ devchat_window_init (DevchatWindow* self)
   }
 
   g_timeout_add_seconds (4, (GSourceFunc) get_pos_size, self);
+
+#ifdef INGAME
+  g_timeout_add_seconds (1, (GSourceFunc) get_ingame_messages, self);
+#endif
+
 }
 
 static void
@@ -1173,6 +1203,9 @@ void destroy (GtkObject* widget, DevchatCBData* data)
   {
     SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
     soup_session_queue_message (data->window->session, msg, SOUP_SESSION_CALLBACK (quit_cb), data);
+  #ifdef INGAME
+    ingame_update_status (data, INGAME_STATUS_DISCONNECTED);
+  #endif
     g_timeout_add_seconds (2, (GSourceFunc) quit_timeout_cb, data);
   }
   else
@@ -1461,6 +1494,10 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     gtk_notebook_set_current_page (GTK_NOTEBOOK (data->window->notebook), 0);
   }
 
+#ifdef INGAME
+  ingame_update_status (data, INGAME_STATUS_ONLINE);
+#endif
+
   g_signal_connect(data->window->window, "key-press-event", G_CALLBACK (hotkey_cb), data);
   gtk_widget_grab_focus(data->window->inputwidget);
   gtk_widget_hide_all (data->window->loginbar);
@@ -1603,6 +1640,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     data->window->user_message = NULL;
     g_source_remove (data->window->user_timeout_id);
 
+  #ifdef INGAME
+    ingame_clear_user_list (data);
+  #endif
+
     gchar* userlist = g_strdup (m->response_body->data);
     if (userlist)
     {
@@ -1631,6 +1672,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
           gchar* uid = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "uid");
           gchar* level = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "l");
           gchar* status = (gchar*) xmlTextReaderGetAttribute(userparser, (xmlChar*) "s");
+
+        #ifdef INGAME
+          gchar* name_ingame;
+        #endif
 
           g_hash_table_insert (data->window->users, g_strdup (name), g_strdup (uid));
           data->window->users_online = g_slist_prepend (data->window->users_online, g_strdup (uid));
@@ -1753,11 +1798,17 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
               {
                 strike = "true";
                 status_d = g_strdup (_("Do NOT disturb."));
+              #ifdef INGAME
+                name_ingame = "(d)";
+              #endif
               }
               else
               {
                 status_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) status, XML_SUBSTITUTE_BOTH, 0,0,0);
                 strike = "false";
+              #ifdef INGAME
+                name_ingame = "(a)";
+              #endif
               }
               gtk_widget_set_tooltip_text(at_btn, status_d);
               g_free (status_d);
@@ -1771,7 +1822,15 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
               gchar* at_text = g_strdup_printf (_("Poke %s"),name);
               gtk_widget_set_tooltip_text(at_btn, at_text);
               g_free (at_text);
+            #ifdef INGAME
+              name_ingame = "(o)";
+            #endif
             }
+
+          #ifdef INGAME
+            name_ingame = g_strconcat (name_ingame, name, "(", level, ")", NULL);
+          #endif
+
             gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s' strikethrough='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,strike,name,data->window->settings.color_font,level);
             gtk_label_set_markup (GTK_LABEL (label),markup);
             g_free (markup);
@@ -1797,6 +1856,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
             gtk_box_pack_start (GTK_BOX (container),pm_btn,FALSE,FALSE,0);
 
             gtk_box_pack_start (GTK_BOX (data->window->userlist),container,FALSE,FALSE,0);
+
+          #ifdef INGAME
+            ingame_append_user (data, name_ingame);
+          #endif
           }
           g_free (uid);
           g_free (name);
@@ -1819,6 +1882,10 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       }
       else
       {
+      #ifdef INGAME
+        ingame_flush_data (data);
+      #endif
+
         dbg_msg = g_strdup_printf(_("Last Update: %s"), current_time ());
         gtk_label_set_text (GTK_LABEL (data->window->statuslabel), dbg_msg);
         g_free (dbg_msg);
@@ -2023,6 +2090,10 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
   xmlTextReaderPtr msgparser = xmlReaderForMemory (msglist, strlen (msglist), "", NULL, 0);
   gchar* currenttime = current_time ();
+
+#ifdef INGAME
+  ingame_clear_message_list (self);
+#endif
 
   while (xmlTextReaderRead (msgparser) == 1)
   {
@@ -2266,6 +2337,9 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
           else
             kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
           devchat_window_text_send (self, g_strdup (kickmsg), NULL, "1", TRUE);
+        #ifdef INGAME
+          ingame_update_status (self, INGAME_STATUS_KICKED);
+        #endif
           g_free (kickmsg);
           destroy (NULL, self);
         }
@@ -2304,6 +2378,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
               gtk_widget_hide (self->window->inputbar);
               g_timeout_add_seconds ((current_time_long - silent_time_long) * 60, (GSourceFunc) gtk_widget_show_all, self->window->inputbar);
             }
+            /*XXX: TODO: (Un-)silence ingame.*/
         }
 
         if (g_strstr_len (message_up, -1, "STATUS CHANGED. NEW STATUS: DND"))
@@ -2320,7 +2395,12 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         g_free (silmsg);
       }
 
+    #ifndef INGAME
       parse_message (message_t, devchat_cb_data_new (self->window, view));
+    #else
+      gchar* ingame_message = parse_message (message_t, devchat_cb_data_new (self->window, view));
+      ingame_append_message (self, name, mode, time_attr, lid, ingame_message);
+    #endif
 
       g_free (message_t);
 
@@ -2379,6 +2459,10 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
 
   if (message_found)
   {
+  #ifdef INGAME
+    ingame_flush_data (self);
+  #endif
+
     GtkAdjustment* a = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (gtk_widget_get_parent (self->window->outputwidget)));
     if ((a->upper - (a->value + a->page_size)) < 90)
       gtk_text_view_scroll_mark_onscreen (GTK_TEXT_VIEW (self->window->outputwidget), scroll_to);
@@ -2483,7 +2567,7 @@ gboolean badass (gchar* name, DevchatCBData* data)
   return FALSE;
 }
 
-void parse_message (gchar* message_d, DevchatCBData* data)
+gchar* parse_message (gchar* message_d, DevchatCBData* data)
 {
   /*Abandon all hope, ye who enter here.*/
   enum
@@ -2495,6 +2579,10 @@ void parse_message (gchar* message_d, DevchatCBData* data)
     STATE_ATTR,
     STATE_ATTRCONT
   };
+
+#ifdef INGAME
+  gchar* retval = "";
+#endif
 
   GtkTextIter old_end;
 
@@ -2549,6 +2637,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         if (g_strcmp0 (content, "") != 0)
         {
           gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
+        #ifdef INGAME
+          retval = g_strconcat (retval, content, NULL);
+        #endif
           content = "";
         }
 
@@ -2667,6 +2758,7 @@ void parse_message (gchar* message_d, DevchatCBData* data)
         }
 
         gchar* tagname = NULL;
+
         if (g_strcmp0 (top->name,"font")==0)
         {
         if (real_debug) {
@@ -2737,6 +2829,9 @@ void parse_message (gchar* message_d, DevchatCBData* data)
           {
             if (real_debug)
               dbg ("Found smilie in database.");
+          #ifdef INGAME
+            retval = g_strconcat(retval, smilie, NULL);
+          #endif
 
             GtkWidget* img = gtk_image_new_from_file (smilie);
             gtk_widget_set_tooltip_text (img, (gchar*) ((DevchatHTMLAttr*) top->attrs->next->next->data)->value);
@@ -2756,16 +2851,19 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               dbg (dbg_msg);
               g_free (dbg_msg);
             }
+          #ifdef INGAME
+            retval = g_strconcat(retval, "[img]", uri, "[/img]", NULL);
+          #endif
 
             gchar** uri_parts = g_strsplit_set (uri, "/\\:*?\"<>|", 0); /*Stupid Win32 doesn't allow these chars in file names...*/
 
             gchar* filename = NULL;
 
-        #ifdef G_OS_WIN32
+          #ifdef G_OS_WIN32
             filename = g_build_filename (g_getenv ("TEMP"), g_strjoinv ("_",uri_parts), NULL);
-        #else
+          #else
             filename = g_build_filename ("/tmp", g_strjoinv ("_",uri_parts), NULL);
-        #endif
+          #endif
             g_strfreev (uri_parts);
 
             if (real_debug) {
@@ -2875,6 +2973,10 @@ void parse_message (gchar* message_d, DevchatCBData* data)
               g_free (dbg_msg);
             }
 
+          #ifdef INGAME
+            retval = g_strconcat(retval, "[url]", comment, "[/url]", NULL);
+          #endif
+
             if (!gtk_text_tag_table_lookup (table, tagname))
             {
               DevchatURLTag* tag = devchat_url_tag_new (tagname, data->window->settings.color_url);
@@ -2902,6 +3004,10 @@ void parse_message (gchar* message_d, DevchatCBData* data)
             GtkTextIter end;
 
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
+
+          #ifdef INGAME
+            retval = g_strconcat(retval, "\\033Z", comment, "\\033X", NULL);
+          #endif
 
             gtk_text_buffer_insert_with_tags_by_name (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, comment, -1, "time", NULL);
           }
@@ -3223,6 +3329,12 @@ void parse_message (gchar* message_d, DevchatCBData* data)
 
   if (debug)
     dbg ("Parsing done.");
+
+#ifdef INGAME
+  return retval;
+#else
+  return NULL;
+#endif
 }
 
 gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
@@ -3649,8 +3761,18 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 2, data->window->settings.servername);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 2);
   }
+#ifdef INGAME
+  GtkWidget* label_tc = gtk_label_new (_("Terran Conflict folder:"));
+  GtkWidget* entry_tc = gtk_entry_new ();
+  gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client."));
+  gtk_entry_set_text (GTK_ENTRY (entry_browser), data->window->settings.TCFolder);
+#endif
   gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
+#ifdef INGAME
+  gtk_box_pack_start (GTK_BOX (hbox13), label_tc, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox13), entry_tc, FALSE, FALSE, 0);
+#endif
 
   gtk_box_pack_start (GTK_BOX (vbox2), hbox13,FALSE,FALSE,0);
 
@@ -5409,3 +5531,95 @@ void dbg(gchar* message)
   g_printf ("%s\n", message);
 #endif
 }
+
+#ifdef INGAME
+void get_ingame_messages (DevchatCBData* data)
+{
+  gchar* message_lines;
+  const gchar* filename = g_build_filename (g_get_user_special_dir (G_USER_DIRECTORY_DOCUMENTS), "EGOSOFT", "X3TC", "log07642.txt", NULL);
+
+  if (g_file_get_contents (filename, &message_lines, NULL, NULL))
+  {
+    g_remove (filename);
+  #ifdef DEBUG
+    debug (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
+  #else
+    err (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
+  #endif
+
+    /*XXX*/
+
+    g_free (message_lines);
+  }
+  else if (debug)
+    dbg ("Ingame logfile could not be read.\n");
+}
+
+void ingame_update_status (DevchatCBData* data, gint status)
+{
+  data->window->ingame_status = status;
+  ingame_flush_data (data);
+}
+
+void ingame_clear_user_list (DevchatCBData* data)
+{
+  if (data->window->ingame_userlist)
+    g_free (data->window->ingame_userlist);
+  data->window->ingame_userlist = NULL;
+}
+
+void ingame_clear_message_list (DevchatCBData* data)
+{
+  if (data->window->ingame_messagelist)
+    g_free (data->window->ingame_messagelist);
+  data->window->ingame_messagelist = NULL;
+}
+
+void ingame_append_user (DevchatCBData* data, gchar* user)
+{
+  data->window->ingame_userlist = g_strdup_printf ("%s <t id=\"%i\">%s</t>\n", data->window->ingame_userlist, data->window->ingame_usercount, user);
+  data->window->ingame_usercount++;
+}
+
+void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gchar* time_attr, gchar* lid, gchar* message)
+{
+  data->window->ingame_lid++;
+
+  GRegex* delimiter = g_regex_new (";;", 0, 0, NULL);
+
+  gchar* message_r = g_regex_replace (delimiter, message, -1, 0, "; ;", 0, NULL);
+  data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author, mode, time_attr, lid, message_r);
+
+  g_free (message_r);
+  g_free (delimiter);
+}
+
+void ingame_flush_data (DevchatCBData* data)
+{
+  if (data->window->settings.TCFolder)
+  {
+    const gchar* filename = g_build_filename (data->window->settings.TCFolder, "t", _("7641-L044.xml"), NULL);
+
+    gchar* file_content = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+<language id=\"44\">\n\
+<page id=\"7641\">\n\
+ <t id=\"0\">%s</t>\n\
+ <t id=\"1\">%i</t>\n\
+ <t id=\"2\">%i</t>\n\
+ <t id=\"3\">%i</t>\n\
+ <t id=\"4\">%i</t>\n\
+</page>\n\
+<page id=\"7642\">\n\
+%s\n\
+</page>\n\
+<page id=\"7643\">\n\
+%s\n\
+</page>\n\
+</language>", data->window->settings.user, data->window->userlevel, data->window->ingame_status, data->window->ingame_lid, data->window->ingame_usercount, data->window->ingame_messagelist, data->window->ingame_userlist);
+
+    if (!g_file_set_contents (filename, file_content, -1, NULL))
+      err (_("Error I: Error writing text file. Check write permissions for t-folder!"));
+  }
+}
+
+#endif

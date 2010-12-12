@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.6.5"\n')
+f.write('#define VERSION "0.6.6"\n')
 f.write('int debug;\nint real_debug;\nint no_config;\nint no_spellcheck;\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
@@ -59,6 +59,7 @@ parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=Tr
 parser.add_option("-L","--disable-nls",action="store_false",dest="l10n",help="Disable translations (default no).")
 parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=True,help="Enable spell checking support (default yes).")
 parser.add_option("-C","--disable-spellcheck",action="store_false",dest="spell",help="Disable spell checking support (default no).")
+parser.add_option("-i","--enable-ingame-backend",action="store_true",dest="ingame",default=False,help="Enable ingame chat backend (default no).")
 
 (options,args) = parser.parse_args()
 
@@ -78,8 +79,10 @@ if options.l10n:
   f.write('#define NLS\n')
   os.system('xgettext -o po/dcgui.pot -C -k_ --from-code=utf-8 src/*')
 if options.spell:
-	libs += " gtkspell-2.0"
-	f.write('#define SPELLCHECK\n')
+  libs += " gtkspell-2.0"
+  f.write('#define SPELLCHECK\n')
+if options.ingame:
+  f.write('#define INGAME\n')
 
 f.close()
 print ("Checking whether build environment is sane...")

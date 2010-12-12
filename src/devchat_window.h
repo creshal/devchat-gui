@@ -116,6 +116,9 @@ typedef struct dc_settings
   gboolean showtray;
   gboolean jumptab;
   gboolean maximized;
+#ifdef INGAME
+  gchar* TCFolder;
+#endif
 } dc_settings;
 
 enum
@@ -221,6 +224,13 @@ struct _DevchatWindow
 #ifdef OTR
   OtrlUserState otr_state;
   OtrlMessageAppOps otr_funcs;
+#endif
+#ifdef INGAME
+  gchar* ingame_userlist;
+  guint ingame_usercount;
+  gchar* ingame_messagelist;
+  gint ingame_lid;
+  gint ingame_status;
 #endif
 };
 
