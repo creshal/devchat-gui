@@ -1800,7 +1800,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                 strike = "true";
                 status_d = g_strdup (_("Do NOT disturb."));
               #ifdef INGAME
-                name_ingame = "(d)";
+                name_ingame = "[d]";
               #endif
               }
               else
@@ -1808,7 +1808,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                 status_d = (gchar*) xmlStringDecodeEntities (ctxt, (xmlChar*) status, XML_SUBSTITUTE_BOTH, 0,0,0);
                 strike = "false";
               #ifdef INGAME
-                name_ingame = "(a)";
+                name_ingame = "[a]";
               #endif
               }
               gtk_widget_set_tooltip_text(at_btn, status_d);
@@ -1824,12 +1824,12 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
               gtk_widget_set_tooltip_text(at_btn, at_text);
               g_free (at_text);
             #ifdef INGAME
-              name_ingame = "(o)";
+              name_ingame = "[o]";
             #endif
             }
 
           #ifdef INGAME
-            name_ingame = g_strconcat (name_ingame, name, "(", level, ")", NULL);
+            name_ingame = g_strconcat (name_ingame, name, "[", level, "]", NULL);
           #endif
 
             gchar* markup = g_markup_printf_escaped ("<span foreground='%s' style='%s' strikethrough='%s'>%s</span> <span foreground='%s'>(%s)</span>",color,style,strike,name,data->window->settings.color_font,level);
@@ -2591,6 +2591,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
   current[0] = 32;
   current[1] = 0;
   gchar* content = "";
+  gchar* ingame_content = "";
   GSList* taglist = NULL;
   GSList* stack = g_slist_prepend (NULL, "Γ");
   gchar* known_tags[] = {"font","i","u","b","br","span","img","a","!--","div","p",NULL};
@@ -2635,7 +2636,8 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
         {
           gtk_text_buffer_insert (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end, content, -1);
         #ifdef INGAME
-          retval = g_strconcat (retval, content, NULL);
+          retval = g_strconcat (retval, ingame_content, NULL);
+          ingame_content = "";
         #endif
           content = "";
         }
@@ -2666,9 +2668,15 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
         {
           /* Not an entity, just a stray &. Every day, dozens of & are set astray by their heartless owners just because they're too lazy to care for them and wrap them in a warm, cozy, standard-compliant &amp;. Have a heart and FUCKING STOP TO BREAK MY PARSER! */
           content = g_strconcat (content, "&", NULL);
+        #ifdef INGAME
+          ingame_content = g_strconcat (ingame_content, "&amp;", NULL);
+        #endif
         }
         else
         {
+        #ifdef INGAME
+          ingame_content = g_strconcat (ingame_content, "&", entity_name, ";", NULL);
+        #endif
           guint64 charval = 0;
           if (entity_name[0] == 35)
           {
@@ -2694,7 +2702,9 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
           dbg ("Adding char to content.");
 
         content = g_strconcat (content, current, NULL);
-
+      #ifdef INGAME
+        ingame_content = g_strconcat (ingame_content, current, NULL);
+      #endif
       }
     }
     else if (state == STATE_TYPECHECK)
@@ -3105,6 +3115,9 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
             g_slist_free_1 (tmp);
 
             content = g_strconcat ("<", current_tag->name, ">", NULL);
+          #ifdef INGAME
+            retval = g_strconcat (retval, "&lt;", current_tag->name, "&gt;", NULL);
+          #endif
 
             GtkTextIter end;
             gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
@@ -3153,6 +3166,9 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
           g_slist_free_1 (tmp);
 
           content = g_strconcat ("<", current_tag->name, " ", NULL);
+        #ifdef INGAME
+          retval = g_strconcat (retval, "&lt;", current_tag->name, " ", NULL);
+        #endif
 
           GtkTextIter end;
           gtk_text_buffer_get_end_iter (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &end);
@@ -5600,12 +5616,21 @@ void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gch
   data->window->ingame_lid++;
 
   GRegex* delimiter = g_regex_new (";;", 0, 0, NULL);
+  GRegex* parenthesis_a = g_regex_new ("[(]", 0, 0, NULL);
+  GRegex* parenthesis_b = g_regex_new ("[)]", 0, 0, NULL);
+  GRegex* ampersand = g_regex_new ("&", 0, 0, NULL);
 
-  gchar* message_r = g_regex_replace (delimiter, message, -1, 0, "; ;", 0, NULL);
+  gchar* message_r = g_regex_replace_literal (delimiter, message, -1, 0, "; ;", 0, NULL);
+  message_r = g_regex_replace_literal (parenthesis_a, message_r, -1, 0, "\\(", 0, NULL);
+  message_r = g_regex_replace_literal (parenthesis_b, message_r, -1, 0, "\\)", 0, NULL);
+  message_r = g_regex_replace_literal (ampersand, message_r, -1, 0, "&amp;", 0, NULL);
   data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author, mode, time_attr, lid, message_r);
 
   g_free (message_r);
   g_free (delimiter);
+  g_free (parenthesis_a);
+  g_free (parenthesis_b);
+  g_free (ampersand);
 }
 
 void ingame_flush_data (DevchatCBData* data)
