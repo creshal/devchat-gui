@@ -2674,17 +2674,20 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
         }
         else
         {
-        #ifdef INGAME
-          ingame_content = g_strconcat (ingame_content, "&", entity_name, ";", NULL);
-        #endif
           guint64 charval = 0;
           if (entity_name[0] == 35)
           {
             charval = g_ascii_strtoull (entity_name+1,NULL,10);
+          #ifdef INGAME
+            ingame_content = g_strconcat (ingame_content, "&", entity_name, ";", NULL);
+          #endif
           }
           else
           {
             charval = GPOINTER_TO_UINT (g_hash_table_lookup (entities, entity_name));
+          #ifdef INGAME
+            ingame_content = g_strdup_printf ("%s&#%I64u;", ingame_content, charval);
+          #endif
           }
           if (charval)
           {
@@ -5618,19 +5621,16 @@ void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gch
   GRegex* delimiter = g_regex_new (";;", 0, 0, NULL);
   GRegex* parenthesis_a = g_regex_new ("[(]", 0, 0, NULL);
   GRegex* parenthesis_b = g_regex_new ("[)]", 0, 0, NULL);
-  GRegex* ampersand = g_regex_new ("&", 0, 0, NULL);
 
   gchar* message_r = g_regex_replace_literal (delimiter, message, -1, 0, "; ;", 0, NULL);
   message_r = g_regex_replace_literal (parenthesis_a, message_r, -1, 0, "\\(", 0, NULL);
   message_r = g_regex_replace_literal (parenthesis_b, message_r, -1, 0, "\\)", 0, NULL);
-  message_r = g_regex_replace_literal (ampersand, message_r, -1, 0, "&amp;", 0, NULL);
   data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author, mode, time_attr, lid, message_r);
 
   g_free (message_r);
   g_free (delimiter);
   g_free (parenthesis_a);
   g_free (parenthesis_b);
-  g_free (ampersand);
 }
 
 void ingame_flush_data (DevchatCBData* data)
