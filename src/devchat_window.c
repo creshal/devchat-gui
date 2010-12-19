@@ -5621,13 +5621,20 @@ void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gch
   GRegex* delimiter = g_regex_new (";;", 0, 0, NULL);
   GRegex* parenthesis_a = g_regex_new ("[(]", 0, 0, NULL);
   GRegex* parenthesis_b = g_regex_new ("[)]", 0, 0, NULL);
+  GRegex* ampersand = g_regex_new ("&", 0, 0, NULL);
 
   gchar* message_r = g_regex_replace_literal (delimiter, message, -1, 0, "; ;", 0, NULL);
   message_r = g_regex_replace_literal (parenthesis_a, message_r, -1, 0, "\\(", 0, NULL);
   message_r = g_regex_replace_literal (parenthesis_b, message_r, -1, 0, "\\)", 0, NULL);
-  data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author, mode, time_attr, lid, message_r);
+  message_r = g_regex_replace_literal (ampersand, message_r, -1, 0, "&amp;", 0, NULL);
+
+  gchar* author_r = g_regex_replace_literal (parenthesis_a, author, -1, 0, "\\(", 0, NULL);
+  author_r = g_regex_replace_literal (parenthesis_b, author, -1, 0, "\\)", 0, NULL);
+
+  data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author_r, mode, time_attr, lid, message_r);
 
   g_free (message_r);
+  g_free (author_r);
   g_free (delimiter);
   g_free (parenthesis_a);
   g_free (parenthesis_b);
@@ -5647,6 +5654,7 @@ void ingame_flush_data (DevchatCBData* data)
  <t id=\"2\">%i</t>\n\
  <t id=\"3\">%i</t>\n\
  <t id=\"4\">%i</t>\n\
+ <t id=\"5\">%s</t>\n\
 </page>\n\
 <page id=\"7642\">\n\
 %s\n\
@@ -5654,7 +5662,7 @@ void ingame_flush_data (DevchatCBData* data)
 <page id=\"7643\">\n\
 %s\n\
 </page>\n\
-</language>", data->window->settings.user, data->window->userlevel, data->window->ingame_status, data->window->ingame_lid, data->window->ingame_usercount, data->window->ingame_messagelist, data->window->ingame_userlist);
+</language>", data->window->settings.user, data->window->userlevel, data->window->ingame_status, data->window->ingame_lid, data->window->ingame_usercount, current_time(), data->window->ingame_messagelist, data->window->ingame_userlist);
 
     if (!g_file_set_contents (filename, file_content, -1, NULL))
       err (_("Error I: Error writing text file. Check write permissions for t-folder!"));
