@@ -5629,7 +5629,7 @@ void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gch
   message_r = g_regex_replace_literal (ampersand, message_r, -1, 0, "&amp;", 0, NULL);
 
   gchar* author_r = g_regex_replace_literal (parenthesis_a, author, -1, 0, "\\(", 0, NULL);
-  author_r = g_regex_replace_literal (parenthesis_b, author, -1, 0, "\\)", 0, NULL);
+  author_r = g_regex_replace_literal (parenthesis_b, author_r, -1, 0, "\\)", 0, NULL);
 
   data->window->ingame_messagelist = g_strdup_printf ("%s <t id=\"%i\">%s;;%s;;%s;;%s;;%s</t>\n", data->window->ingame_messagelist, data->window->ingame_lid, author_r, mode, time_attr, lid, message_r);
 
