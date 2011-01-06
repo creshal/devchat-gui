@@ -26,6 +26,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <inttypes.h>
 
 gchar* dbg_msg;
 
@@ -2591,7 +2592,9 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
   current[0] = 32;
   current[1] = 0;
   gchar* content = "";
+#ifdef INGAME
   gchar* ingame_content = "";
+#endif
   GSList* taglist = NULL;
   GSList* stack = g_slist_prepend (NULL, "Γ");
   gchar* known_tags[] = {"font","i","u","b","br","span","img","a","!--","div","p",NULL};
@@ -2686,7 +2689,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
           {
             charval = GPOINTER_TO_UINT (g_hash_table_lookup (entities, entity_name));
           #ifdef INGAME
-            ingame_content = g_strdup_printf ("%s&#%I64u;", ingame_content, charval);
+            ingame_content = g_strdup_printf ("%s&#%"PRIu64";", ingame_content, charval);
           #endif
           }
           if (charval)
@@ -3779,9 +3782,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   }
 #ifdef INGAME
   GtkWidget* label_tc = gtk_label_new (_("Terran Conflict folder:"));
-  GtkWidget* entry_tc = gtk_entry_new ();
+  GtkWidget* entry_tc = gtk_file_chooser_button_new ("Select the Terran Conflice folder", GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
   gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client."));
-  gtk_entry_set_text (GTK_ENTRY (entry_tc), data->window->settings.TCFolder);
+  gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (entry_tc), data->window->settings.TCFolder);
 #endif
   gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
@@ -3951,12 +3954,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "color_magenta", gdk_color_to_string (&color_magenta),
                                   NULL);
 
-    #ifdef G_OS_WIN32
-      gchar* rc_line = "gtk-theme-name=\"MS-Windows\"\r\n";
-      g_file_set_contents (g_build_filename (g_getenv("USERPROFILE"), ".gtkrc-2.0", NULL), rc_line, -1, NULL);
-    #endif
     #ifdef INGAME
-      data->window->settings.TCFolder = g_strdup (gtk_entry_get_text (GTK_ENTRY (entry_tc)));
+      data->window->settings.TCFolder = g_strdup (gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (entry_tc)));
     #endif
 
       gchar** keywords = g_strsplit (gtk_entry_get_text(GTK_ENTRY(entry_keywords)), "|", 0);
@@ -4612,7 +4611,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
   }
 
   SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
-  soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), data);
+  soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), devchat_cb_data_new (data->window, g_strconcat ("&chatlevel=",sendlevel,"&textinput=", enc_text, NULL)));
 
   g_free (text);
   g_free (enc_text);
@@ -4722,7 +4721,13 @@ void devchat_window_btn_send (GtkWidget* widget, DevchatCBData* data)
 void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 {
   if (m->status_code != 200)
-    err (_("Error M: Error sending message!"));
+  {
+    err (_("Error M: Error sending message, trying to resend..."));
+
+    SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post", (gchar*) data->data, NULL));
+    if (soup_session_send_message (s, post) != 200)
+      err (_("Error M2: Error sending message, retry failed. Aborting."));
+  }
 }
 
 void devchat_window_btn_format (GtkWidget* widget, DevchatCBData* data)
@@ -4867,7 +4872,7 @@ void about_cb (GtkWidget* widget, DevchatCBData* data)
   const gchar* const* dirs = g_get_system_data_dirs ();
 
   int i;
-  gchar* license_filename;
+  gchar* license_filename = NULL;
 
   for (i=0; dirs[i]; i++)
   {
@@ -5662,10 +5667,10 @@ void ingame_flush_data (DevchatCBData* data)
 <page id=\"7643\">\n\
 %s\n\
 </page>\n\
-</language>", data->window->settings.user, data->window->userlevel, data->window->ingame_status, data->window->ingame_lid, data->window->ingame_usercount, current_time(), data->window->ingame_messagelist, data->window->ingame_userlist);
+</language>\n", data->window->settings.user, data->window->userlevel, data->window->ingame_status, data->window->ingame_lid, data->window->ingame_usercount, current_time(), data->window->ingame_messagelist, data->window->ingame_userlist);
 
     if (!g_file_set_contents (filename, file_content, -1, NULL))
-      err (_("Error I: Error writing text file. Check write permissions for t-folder!"));
+      err (g_strdup_printf(_("Error I: Error writing text file %s. Check write permissions for t-folder!"), filename));
   }
 }
 

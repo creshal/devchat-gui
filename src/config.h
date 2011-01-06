@@ -1,5 +1,5 @@
 #define APPNAME "DevchatGUI"
-#define VERSION "0.6.6"
+#define VERSION "0.7.0"
 int debug;
 int real_debug;
 int no_config;
