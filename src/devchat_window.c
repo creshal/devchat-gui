@@ -1909,7 +1909,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   else
   {
     data->window->errorcount++;
-    if (data->window->errorcount > (1000/data->window->settings.update_time))
+    if (data->window->errorcount > (TIMEOUT/data->window->settings.update_time))
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
@@ -2068,7 +2068,7 @@ void message_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     data->window->errorcount++;
 
-    if (data->window->errorcount > (1000/data->window->settings.update_time))
+    if (data->window->errorcount > (TIMEOUT/data->window->settings.update_time))
     {
       gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Connection Lost!"));
       reconnect (NULL, data);
@@ -2931,7 +2931,14 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
 
             if (p && (gdk_pixbuf_get_width (p) > 320 || gdk_pixbuf_get_height (p) > 240))
             {
-              p = gdk_pixbuf_scale_simple (p, 320, 240, GDK_INTERP_BILINEAR);
+              if (gdk_pixbuf_get_width (p) > 320)
+              {
+                p = gdk_pixbuf_scale_simple (p, 320, 320 / (gdk_pixbuf_get_width (p)*gdk_pixbuf_get_height (p)), GDK_INTERP_BILINEAR);
+              }
+              else
+              {
+                p = gdk_pixbuf_scale_simple (p, 240 / (gdk_pixbuf_get_width (p)*gdk_pixbuf_get_height (p)), 240, GDK_INTERP_BILINEAR);
+              }
               gtk_text_buffer_insert_pixbuf (gtk_text_view_get_buffer (GTK_TEXT_VIEW (data->data)), &fnord, p);
             }
             else
