@@ -3773,7 +3773,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox2), hbox11,FALSE,FALSE,0);
 
 
-  GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
+  GtkWidget* hbox13 = gtk_hbox_new (FALSE, 1);
   GtkWidget* label_msg = gtk_label_new (_("Chatserver string: "));
   GtkWidget* entry_msg = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "SovietServer");
@@ -3787,15 +3787,14 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 2, data->window->settings.servername);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 2);
   }
+  gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
+
 #ifdef INGAME
   GtkWidget* label_tc = gtk_label_new (_("Terran Conflict folder:"));
   GtkWidget* entry_tc = gtk_file_chooser_button_new ("Select the Terran Conflice folder", GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
   gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client."));
   gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (entry_tc), data->window->settings.TCFolder);
-#endif
-  gtk_box_pack_start (GTK_BOX (hbox13), label_msg, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
-#ifdef INGAME
   gtk_box_pack_start (GTK_BOX (hbox13), label_tc, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_tc, FALSE, FALSE, 0);
 #endif
