@@ -1,5 +1,5 @@
 #define APPNAME "DevchatGUI"
-#define VERSION "0.7.0"
+#define VERSION "0.9.9rc1"
 #define TIMEOUT 3000
 int debug;
 int real_debug;

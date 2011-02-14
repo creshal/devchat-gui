@@ -139,25 +139,7 @@ void popup_insert_text (GtkWidget* w, DevchatCBData* data);
 gboolean quit_timeout_cb (DevchatCBData* data);
 void quit_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
-#ifdef OTR
-OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt);
-void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol);
-int otr_is_logged_in (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient);
-void otr_inject_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient, const gchar* message);
-void otr_notify (DevchatWindow* window, OtrlNotifyLevel l, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* title, const gchar* primary, const gchar* secondary);
-int otr_display_otr_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* message);
-void otr_update_context_list (DevchatWindow* window);
-const gchar* otr_protocol_name (DevchatWindow* window, const gchar* protocol);
-const gchar* otr_protocol_name_free (DevchatWindow* window, const gchar* string);
-void otr_new_fingerprint (DevchatWindow* window, OtrlUserState us, const gchar* accname, const gchar* protocol, const gchar* username, guchar fingerprint[20]);
-void otr_write_fingerprints (DevchatWindow* window);
-void otr_gone_secure (DevchatWindow* window, ConnContext* ctxt);
-void otr_gone_insecure (DevchatWindow* window, ConnContext* ctxt);
-void otr_still_secure (DevchatWindow* window, ConnContext* ctxt, int is_reply);
-void otr_log_message (DevchatWindow* window, gchar* message);
-int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt);
-const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol);
-#endif
+void devchat_toggle_ignore_user (GtkTextBuffer* target_buffer, gchar* name);
 #ifdef INGAME
 gboolean get_ingame_messages (DevchatCBData* data);
 void ingame_update_status (DevchatCBData* data, gint status);
@@ -243,6 +225,7 @@ devchat_window_init (DevchatWindow* self)
   self->moderators = g_hash_table_new (g_str_hash, g_str_equal);
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
   self->last_notification = 0;
+  self->settings.proxy = "";
 #ifdef INGAME
   self->settings.TCFolder = "";
   self->ingame_lid = -1;
@@ -700,33 +683,6 @@ devchat_window_init (DevchatWindow* self)
 #ifdef NOTIFY
   notify_init(APPNAME);
 #endif
-#ifdef OTR
-  OTRL_INIT;
-  gchar* otr_key_filename = g_build_filename (g_get_user_config_dir (), "devchat_otr", NULL);
-  gchar* otr_fingerprint_filename = g_build_filename (g_get_user_config_dir (), "devchat_otr_fingerprints", NULL);
-  self->otr_state = otrl_userstate_create ();
-  otrl_privkey_read (self->otr_state, otr_key_filename);
-  otrl_privkey_read_fingerprints (self->otr_state, otr_fingerprint_filename, NULL, NULL); /*TODO: Callback?*/
-  /*TODO: Fill self->otr_funcs*/
-  self->otr_funcs.policy = (OtrlPolicy (*)(void *, ConnContext *)) otr_policy;
-  self->otr_funcs.create_privkey = (void (*)(void *, char const *, char const *)) otr_create_privkey;
-  self->otr_funcs.is_logged_in = (int (*)(void *, char const *, char const *, char const *)) otr_is_logged_in;
-  self->otr_funcs.inject_message = (void (*)(void *, char const *, char const *, char const *, char const *)) otr_inject_message;
-  self->otr_funcs.notify = (void (*)(void *, OtrlNotifyLevel, char const *, char const *, char const *, char const *, char const *, char const *)) otr_notify;
-  self->otr_funcs.display_otr_message = (int (*)(void *, char const *, char const *, char const *, char const *)) otr_display_otr_message;
-  self->otr_funcs.update_context_list = (void (*)(void *)) otr_update_context_list;
-  self->otr_funcs.protocol_name = (char const *(*)(void *, char const *)) otr_protocol_name;
-  self->otr_funcs.protocol_name_free = (void (*)(void *, char const *)) otr_protocol_name_free;
-  self->otr_funcs.new_fingerprint = (void (*)(void *, OtrlUserState, char const *, char const *, char const *, unsigned char *)) otr_new_fingerprint;
-  self->otr_funcs.write_fingerprints = (void (*)(void *)) otr_write_fingerprints;
-  self->otr_funcs.gone_secure = (void (*)(void *, ConnContext *)) otr_gone_secure;
-  self->otr_funcs.gone_insecure = (void (*)(void *, ConnContext *)) otr_gone_insecure;
-  self->otr_funcs.still_secure = (void (*)(void *, ConnContext *, int)) otr_still_secure;
-  self->otr_funcs.log_message = (void (*)(void *, char const *)) otr_log_message;
-  self->otr_funcs.max_message_size = (int (*)(void *, ConnContext *)) otr_max_message_size; /*8192 to keep the server load acceptable*/
-  self->otr_funcs.account_name = (char const *(*)(void *, char const *, char const *)) otr_account_name;
-  self->otr_funcs.account_name_free = (void (*)(void *, char const *)) otr_protocol_name_free;
-#endif
 
   self->users_without_avatar = NULL;
   self->firstrun = TRUE;
@@ -738,7 +694,8 @@ devchat_window_init (DevchatWindow* self)
   self->session = soup_session_async_new ();
   self->jar = soup_cookie_jar_text_new (self->jarfile, FALSE);
   soup_session_add_feature (self->session, SOUP_SESSION_FEATURE (self->jar));
-  g_object_set (self->session, "user-agent", "Mozilla/5.0 (compatible)", NULL);
+  g_object_set (self->session, SOUP_SESSION_USER_AGENT, "Mozilla/5.0 (compatible)",
+                               SOUP_SESSION_PROXY_URI, soup_uri_new (self->settings.proxy), NULL);
 
   gchar* cookies = soup_cookie_jar_get_cookies (self->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
   if (cookies)
@@ -1299,6 +1256,7 @@ void save_settings (DevchatWindow* w)
                                  "NOTIFY=",w->settings.notify, "\n",
                                  "VNOTIFY=",w->settings.vnotify, "\n",
                                  "SERVER_NAME=",w->settings.servername, "\n",
+                                 "PROXY=",w->settings.proxy, "\n",
                                #ifdef INGAME
                                  "TC_FOLDER=",w->settings.TCFolder, "\n",
                                #endif
@@ -3679,7 +3637,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox14), chk_jmp,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox14), gtk_vbox_new (FALSE,0),TRUE,TRUE,0);
 
-  GtkWidget* hbox8 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox8 = gtk_hbox_new (TRUE, 1);
   GtkWidget* label_notify = gtk_label_new (_("Audio notifications:"));
   GtkWidget* entry_notify = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_notify), 0, "<native>");
@@ -3716,7 +3674,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox8), label_vnotify,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox8), entry_vnotify,TRUE,TRUE,0);
 
-  GtkWidget* hbox9 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox9 = gtk_hbox_new (TRUE, 1);
   GtkWidget* label_keywords = gtk_label_new (_("Beep on keywords:"));
   GtkWidget* entry_keywords = gtk_entry_new ();
   gtk_widget_set_tooltip_text (entry_keywords, _("List of words which will trigger a notification, separated by | (u007C, vertical line)"));
@@ -3740,16 +3698,26 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     g_free (keywords_string);
 
   GtkWidget* label_browser = gtk_label_new (_("Browser:"));
-  GtkWidget* entry_browser = gtk_entry_new ();
-  gtk_entry_set_text (GTK_ENTRY (entry_browser), data->window->settings.browser);
-  gtk_widget_set_tooltip_text (entry_browser, _("Please enter only the browser executable name (and neccessary command line options like --new-tab), no %fu or other crazy stuff."));
+  GtkWidget* entry_browser = gtk_combo_box_entry_new_text ();
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_browser), 0, "<native>");
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_browser), 1, "<none>");
+  if (g_strcmp0 (data->window->settings.browser, "<native>") == 0)
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_browser), 0);
+  else if (g_strcmp0 (data->window->settings.browser, "<none>") == 0)
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_browser), 1);
+  else
+  {
+    gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_browser), 2, data->window->settings.browser);
+    gtk_combo_box_set_active (GTK_COMBO_BOX (entry_browser), 2);
+  }
+  gtk_widget_set_tooltip_text (entry_browser, _("Please note that <native> is only supported on Microsoft Windows®, Debian and Debian derivates. You can specify the uri with %s if it's *not* the last parameter (i.e.: weird-browser %s --some-option)."));
 
   gtk_box_pack_start (GTK_BOX (hbox9), label_keywords,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), entry_keywords,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), label_browser,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), entry_browser,TRUE,TRUE,0);
 
-  GtkWidget* hbox11 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox11 = gtk_hbox_new (TRUE, 1);
   GtkWidget* label_update = gtk_label_new (_("Time between updates (in ms):"));
   GtkWidget* scale_update = gtk_spin_button_new_with_range (200.0, 2000.0, 50.0);
   gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_update), data->window->settings.update_time);
@@ -3758,8 +3726,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_spin_button_set_value (GTK_SPIN_BUTTON (scale_avas), data->window->settings.avatar_size);
 
   gtk_box_pack_start (GTK_BOX (hbox11), label_update,FALSE,FALSE,0);
-  gtk_box_pack_start (GTK_BOX (hbox11), scale_update,FALSE,FALSE,0);
-  gtk_box_pack_end (GTK_BOX (hbox11), scale_avas,FALSE,FALSE,0);
+  gtk_box_pack_start (GTK_BOX (hbox11), scale_update,TRUE,TRUE,0);
+  gtk_box_pack_end (GTK_BOX (hbox11), scale_avas,TRUE,TRUE,0);
   gtk_box_pack_end (GTK_BOX (hbox11), label_avas,FALSE,FALSE,0);
 
 
@@ -3773,7 +3741,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (vbox2), hbox11,FALSE,FALSE,0);
 
 
-  GtkWidget* hbox13 = gtk_hbox_new (FALSE, 1);
+  GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
   GtkWidget* label_msg = gtk_label_new (_("Chatserver string: "));
   GtkWidget* entry_msg = gtk_combo_box_entry_new_text ();
   gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "SovietServer");
@@ -3797,10 +3765,21 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (entry_tc), data->window->settings.TCFolder);
   gtk_box_pack_start (GTK_BOX (hbox13), label_tc, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_tc, FALSE, FALSE, 0);
+#else
+  gtk_box_pack_start (GTK_BOX (hbox13), gtk_label_new (NULL), FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox13), gtk_label_new (NULL), FALSE, FALSE, 0);
 #endif
 
   gtk_box_pack_start (GTK_BOX (vbox2), hbox13,FALSE,FALSE,0);
 
+  GtkWidget* hbox_proxy = gtk_hbox_new (FALSE, 1);
+  GtkWidget* label_proxy = gtk_label_new (_("Proxy settings: "));
+  GtkWidget* entry_proxy = gtk_entry_new ();
+  gtk_widget_set_tooltip_text (entry_proxy, _("Only HTTP-proxies are supported. Format is http://[username[:password]@]proxy-name[:Port]."));
+  gtk_box_pack_start (GTK_BOX (hbox_proxy), label_proxy, FALSE, FALSE, 4);
+  gtk_box_pack_start (GTK_BOX (hbox_proxy), entry_proxy, TRUE, TRUE, 0);
+  
+  gtk_box_pack_start (GTK_BOX (vbox2), hbox_proxy,FALSE,FALSE,0);
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new (_("Misc")));
 
@@ -3893,6 +3872,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                     NULL);
         g_slist_free (data->window->settings.keywords);
         data->window->settings.keywords = NULL;
+        data->window->settings.proxy = "";
         data->window->settings.update_time = data->window->settings_backup.update_time;
         data->window->settings.avatar_size = data->window->settings_backup.avatar_size;
         data->window->settings.store_pass = data->window->settings_backup.store_pass;
@@ -3948,7 +3928,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "autojoin", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_aj)),
                                   "stealthjoin", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_sj)),
                                   "coloruser", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_cu)),
-                                  "browser", gtk_entry_get_text (GTK_ENTRY (entry_browser)),
+                                  "browser", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_browser)),
                                   "notify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_notify)),
                                   "vnotify", gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_vnotify)),
                                   "trayicon", gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_tray)),
@@ -3960,6 +3940,8 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
                                   "color_magenta", gdk_color_to_string (&color_magenta),
                                   NULL);
 
+      data->window->settings.proxy = g_strdup (gtk_entry_get_text(GTK_ENTRY(entry_proxy)));
+      g_object_set (data->window->session, SOUP_SESSION_PROXY_URI, soup_uri_new (data->window->settings.proxy), NULL);
     #ifdef INGAME
       data->window->settings.TCFolder = g_strdup (gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (entry_tc)));
     #endif
@@ -4383,7 +4365,7 @@ void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data)
     }
     else
     {
-      gchar* commandline = g_strconcat ("/usr/bin/x-www-browser ", uri, NULL);
+      gchar* commandline = g_strdup_printf ("/usr/bin/x-www-browser %s", uri);
       g_spawn_command_line_async (commandline, NULL);
       g_free (commandline);
     }
@@ -4391,7 +4373,11 @@ void launch_browser (GtkWidget* fnord, gchar* uri, DevchatCBData* data)
   }
   else if (g_strcmp0 (data->window->settings.browser,"<none>") != 0)
   {
-    gchar* commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
+    gchar* commandline;
+    if (g_strstr_len (data->window->settings.browser, -1, "%s"))
+      commandline = g_strdup_printf (data->window->settings.browser, uri);
+    else
+      commandline = g_strconcat (data->window->settings.browser," ", uri, NULL);
     g_spawn_command_line_async (commandline, NULL);
     g_free (commandline);
   }
@@ -4448,6 +4434,24 @@ void devchat_window_filter_ml_changed (GtkWidget* widget, GtkTextBuffer* data)
             g_object_set (tag, "invisible", TRUE, NULL);
             g_object_set (tag, "paragraph-background-set", FALSE, NULL);
     default: break;
+  }
+}
+
+void devchat_toggle_ignore_user (GtkTextBuffer* target_buffer, gchar* name)
+{
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (target_buffer);
+  gchar* tagname = g_strconcat ("name-", name, NULL);
+  GtkTextTag* tag = gtk_text_tag_table_lookup (t, tagname);
+
+  if (tag)
+  {
+    gboolean is_set = FALSE;
+    g_object_get (tag, "invisible", &is_set, NULL);
+
+    if (is_set)
+      g_object_set (tag, "invisible", FALSE, NULL);
+    else
+      g_object_set (tag, "invisible", TRUE, NULL);
   }
 }
 
@@ -5466,63 +5470,6 @@ void popup_insert_text (GtkWidget* w, DevchatCBData* data)
   gtk_text_buffer_insert_at_cursor (buf, (gchar*) data->data, -1);
   gtk_widget_grab_focus (in_view);
 }
-
-#ifdef OTR
-OtrlPolicy otr_policy (DevchatWindow* window, ConnContext* ctxt)
-{}
-
-void otr_create_privkey (DevchatWindow* window, const gchar* accname, const gchar* protocol)
-{}
-
-int otr_is_logged_in (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient)
-{}
-
-void otr_inject_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* recipient, const gchar* message)
-{}
-
-void otr_notify (DevchatWindow* window, OtrlNotifyLevel l, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* title, const gchar* primary, const gchar* secondary)
-{}
-
-int otr_display_otr_message (DevchatWindow* window, const gchar* accname, const gchar* protocol, const gchar* username, const gchar* message)
-{}
-
-void otr_update_context_list (DevchatWindow* window)
-{}
-
-const gchar* otr_protocol_name (DevchatWindow* window, const gchar* protocol)
-{}
-
-const gchar* otr_protocol_name_free (DevchatWindow* window, const gchar* string)
-{}
-
-void otr_new_fingerprint (DevchatWindow* window, OtrlUserState us, const gchar* accname, const gchar* protocol, const gchar* username, guchar fingerprint[20])
-{}
-
-void otr_write_fingerprints (DevchatWindow* window)
-{}
-
-void otr_gone_secure (DevchatWindow* window, ConnContext* ctxt)
-{}
-
-void otr_gone_insecure (DevchatWindow* window, ConnContext* ctxt)
-{}
-
-void otr_still_secure (DevchatWindow* window, ConnContext* ctxt, int is_reply)
-{}
-
-void otr_log_message (DevchatWindow* window, gchar* message)
-{}
-
-int otr_max_message_size (DevchatWindow* window, ConnContext* ctxt)
-{
-  return 8192;
-}
-
-const gchar* otr_account_name (DevchatWindow* window, const gchar* accname, const gchar* protocol)
-{
-
-}
-#endif
 
 gchar* current_time ()
 {

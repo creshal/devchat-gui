@@ -116,6 +116,7 @@ typedef struct dc_settings
   gboolean showtray;
   gboolean jumptab;
   gboolean maximized;
+  gchar* proxy;
 #ifdef INGAME
   gchar* TCFolder;
 #endif

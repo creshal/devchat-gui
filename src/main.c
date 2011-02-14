@@ -134,6 +134,8 @@ main (int argc, char *argv[])
         if (g_key_file_has_key (keyfile, g, "TC_FOLDER", &e))
           self->settings.TCFolder = g_key_file_get_value (keyfile, g, "TC_FOLDER", &e);
       #endif
+        if (g_key_file_has_key (keyfile, g, "PROXY", &e))
+          self->settings.proxy = g_key_file_get_value (keyfile, g, "PROXY", &e);
 
         gchar** keywords = g_strsplit (g_key_file_get_string (keyfile, g, "KEYWORDS", &e), "|", 0);
         int i;

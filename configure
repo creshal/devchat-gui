@@ -3,7 +3,7 @@ import optparse,os,sys
 f = open("src/config.h","w")
 
 f.write('#define APPNAME "DevchatGUI"\n')
-f.write('#define VERSION "0.7.0"\n')
+f.write('#define VERSION "0.9.9rc1"\n')
 f.write('#define TIMEOUT 3000\nint debug;\nint real_debug;\nint no_config;\nint no_spellcheck;\n')
 
 libs = "gtk+-2.0 libxml-2.0 libsoup-2.4"
@@ -54,7 +54,6 @@ parser.add_option("-d","--enable-debug",action="store_true",dest="debugS",defaul
 parser.add_option("-s","--enable-debugging-symbols",action="store_true",dest="debugS",default=False,help="Add debugging symbols. Useful for automated debugging (default no).")
 parser.add_option("-n","--enable-libnotify",action="store_true",dest="notify",default=True,help="Enable libnotify visual notifications (default yes).")
 parser.add_option("-N","--disable-libnotify",action="store_false",dest="notify",help="Disable libnotify visual notifications (default no).")
-parser.add_option("-o","--enable-otr",action="store_true",dest="otr",default=False,help="Enable Off-The-Record encryption support. NOTE: UNFINISHED. WILL BREAK COMPILING AND KILL KITTEN. You have been warned (default: Don't even think about it).")
 parser.add_option("-l","--enable-nls",action="store_true",dest="l10n",default=True,help="Enable translations (default yes).")
 parser.add_option("-L","--disable-nls",action="store_false",dest="l10n",help="Disable translations (default no).")
 parser.add_option("-c","--enable-spellcheck",action="store_true",dest="spell",default=True,help="Enable spell checking support (default yes).")
@@ -72,9 +71,6 @@ if options.debugS:
 if options.notify:
   libs += " libnotify"
   f.write('#ifndef G_OS_WIN32\n#define NOTIFY\n#endif\n')
-if options.otr:
-  libs += " libotr"
-  f.write('#define OTR\n')
 if options.l10n:
   f.write('#define NLS\n')
   os.system('xgettext -o po/dcgui.pot -C -k_ --from-code=utf-8 src/*')
