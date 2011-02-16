@@ -3778,7 +3778,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_widget_set_tooltip_text (entry_proxy, _("Only HTTP-proxies are supported. Format is http://[username[:password]@]proxy-name[:Port]."));
   gtk_box_pack_start (GTK_BOX (hbox_proxy), label_proxy, FALSE, FALSE, 4);
   gtk_box_pack_start (GTK_BOX (hbox_proxy), entry_proxy, TRUE, TRUE, 0);
-  
+
   gtk_box_pack_start (GTK_BOX (vbox2), hbox_proxy,FALSE,FALSE,0);
 
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new (_("Misc")));
@@ -4434,24 +4434,6 @@ void devchat_window_filter_ml_changed (GtkWidget* widget, GtkTextBuffer* data)
             g_object_set (tag, "invisible", TRUE, NULL);
             g_object_set (tag, "paragraph-background-set", FALSE, NULL);
     default: break;
-  }
-}
-
-void devchat_toggle_ignore_user (GtkTextBuffer* target_buffer, gchar* name)
-{
-  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (target_buffer);
-  gchar* tagname = g_strconcat ("name-", name, NULL);
-  GtkTextTag* tag = gtk_text_tag_table_lookup (t, tagname);
-
-  if (tag)
-  {
-    gboolean is_set = FALSE;
-    g_object_get (tag, "invisible", &is_set, NULL);
-
-    if (is_set)
-      g_object_set (tag, "invisible", FALSE, NULL);
-    else
-      g_object_set (tag, "invisible", TRUE, NULL);
   }
 }
 

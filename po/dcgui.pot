@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-02-14 11:58+0100\n"
+"POT-Creation-Date: 2011-02-16 12:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -104,19 +104,19 @@ msgstr ""
 msgid "_Help"
 msgstr ""
 
-#: src/devchat_window.c:270 src/devchat_window.c:5192
+#: src/devchat_window.c:270 src/devchat_window.c:5174
 msgid "Change Status..."
 msgstr ""
 
-#: src/devchat_window.c:273 src/devchat_window.c:5194
+#: src/devchat_window.c:273 src/devchat_window.c:5176
 msgid "Online"
 msgstr ""
 
-#: src/devchat_window.c:275 src/devchat_window.c:5196
+#: src/devchat_window.c:275 src/devchat_window.c:5178
 msgid "Away"
 msgstr ""
 
-#: src/devchat_window.c:277 src/devchat_window.c:5198
+#: src/devchat_window.c:277 src/devchat_window.c:5180
 msgid "DND"
 msgstr ""
 
@@ -560,63 +560,63 @@ msgstr ""
 msgid "Error B: Your system doesn't have a native browser!"
 msgstr ""
 
-#: src/devchat_window.c:4709
+#: src/devchat_window.c:4691
 msgid "Error O: OTR encryption failed!"
 msgstr ""
 
-#: src/devchat_window.c:4735
+#: src/devchat_window.c:4717
 msgid "Error M: Error sending message, trying to resend..."
 msgstr ""
 
-#: src/devchat_window.c:4739
+#: src/devchat_window.c:4721
 msgid "Error M2: Error sending message, retry failed. Aborting."
 msgstr ""
 
-#: src/devchat_window.c:4818
+#: src/devchat_window.c:4800
 msgid "Choose a date"
 msgstr ""
 
-#: src/devchat_window.c:4841
+#: src/devchat_window.c:4823
 msgid "History loading..."
 msgstr ""
 
-#: src/devchat_window.c:4874 src/main.c:44
+#: src/devchat_window.c:4856 src/main.c:44
 msgid " - Gtk+ client for X-Devchat."
 msgstr ""
 
-#: src/devchat_window.c:4877
+#: src/devchat_window.c:4859
 msgid "translator-credits"
 msgstr ""
 
-#: src/devchat_window.c:5108
+#: src/devchat_window.c:5090
 msgid "Error N: Failed to launch visual notification process."
 msgstr ""
 
-#: src/devchat_window.c:5128 src/devchat_window.c:5147
+#: src/devchat_window.c:5110 src/devchat_window.c:5129
 msgid "Error N: Failed to launch audio notification process."
 msgstr ""
 
-#: src/devchat_window.c:5363
+#: src/devchat_window.c:5345
 msgid "Open image in browser"
 msgstr ""
 
-#: src/devchat_window.c:5376
+#: src/devchat_window.c:5358
 msgid "Open link in browser"
 msgstr ""
 
-#: src/devchat_window.c:5393
+#: src/devchat_window.c:5375
 msgid "Copy ID"
 msgstr ""
 
-#: src/devchat_window.c:5396
+#: src/devchat_window.c:5378
 msgid "Cite Post"
 msgstr ""
 
-#: src/devchat_window.c:5605
+#: src/devchat_window.c:5587
 msgid "7641-L044.xml"
 msgstr ""
 
-#: src/devchat_window.c:5626
+#: src/devchat_window.c:5608
 #, c-format
 msgid ""
 "Error I: Error writing text file %s. Check write permissions for t-folder!"
