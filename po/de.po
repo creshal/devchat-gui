@@ -519,7 +519,7 @@ msgstr "Browser"
 #: src/devchat_window.c:3713
 #, c-format
 msgid "Please note that <native> is only supported on Microsoft Windows®, Debian and Debian derivates. You can specify the uri with %s if it's *not* the last parameter (i.e.: weird-browser %s --some-option)."
-msgstr "Hinweis: <native> wird nur unter Microsoft Windows®, Debian und Debian-Derivaten unterstützt. Wenn die URL nicht der letzte Parameter sein soll, kann die Position mit %s angegeben werden (Bspw.: seltsamer-browser %s --eine-option),"
+msgstr "Hinweis: <native> wird nur unter Microsoft Windows®, Debian und Debian-Derivaten unterstützt. Wenn die URL nicht der letzte Parameter sein soll, kann die Position mit %s angegeben werden (Bspw.: seltsamer-browser %s --eine-option)."
 
 #: src/devchat_window.c:3721
 msgid "Time between updates (in ms):"
