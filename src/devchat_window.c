@@ -139,7 +139,6 @@ void popup_insert_text (GtkWidget* w, DevchatCBData* data);
 gboolean quit_timeout_cb (DevchatCBData* data);
 void quit_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
 void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data);
-void devchat_toggle_ignore_user (GtkTextBuffer* target_buffer, gchar* name);
 #ifdef INGAME
 gboolean get_ingame_messages (DevchatCBData* data);
 void ingame_update_status (DevchatCBData* data, gint status);
