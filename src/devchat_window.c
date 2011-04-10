@@ -5073,7 +5073,7 @@ void notify(gchar* title, gchar* body, GdkPixbuf* icon, DevchatCBData* data)
       if (!gtk_widget_get_visible (data->window->window))
         gtk_status_icon_set_blinking (GTK_STATUS_ICON (data->window->trayicon), TRUE);
   #ifdef NOTIFY
-      NotifyNotification* note = notify_notification_new(title,body,NULL,NULL);
+      NotifyNotification* note = notify_notification_new(title,body,NULL);
       if (icon)
         notify_notification_set_icon_from_pixbuf(note,icon);
       notify_notification_add_action(note, "0", "Show", NOTIFY_ACTION_CALLBACK (notify_cb), data, NULL);
