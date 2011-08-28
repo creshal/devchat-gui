@@ -3976,7 +3976,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
   GtkWidget* entry;
   GtkWidget* button;
   GtkWidget* orig_button;
-  gboolean start_set;
 
   if (pagenum == 0)
   {
@@ -3984,7 +3983,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
     entry = data->window->search_entry;
     button = data->window->search_button;
     orig_button = data->window->btn_send;
-    start_set = data->window->search_start_set;
   }
   else
   {
@@ -3994,7 +3992,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
     button = conv->search_button;
     entry = conv->search_entry;
     orig_button = conv->btn_send;
-    start_set = conv->search_start_set;
   }
 
   gboolean is_visible;
@@ -4012,8 +4009,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
     gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KP_Enter, 0);
     gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
     gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
-
-    start_set = FALSE;
   }
   else
   {
@@ -4023,7 +4018,6 @@ void find (GtkWidget* widget, DevchatCBData* data)
     gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
     gtk_widget_hide_all (bar);
     gtk_widget_set_no_show_all (bar, TRUE);
-    start_set = FALSE;
   }
 }
 
@@ -4148,7 +4142,6 @@ void go_forum(GtkWidget* widget, DevchatCBData* data)
 
 void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
 {
-  const gchar* target_name;
   GtkWidget* notebook_child;
   if (data->data)
   {
@@ -4161,7 +4154,6 @@ void devchat_window_close_tab(GtkWidget* widget, DevchatCBData* data)
     else
       return;
   }
-  target_name = g_strdup (gtk_notebook_get_menu_label_text (GTK_NOTEBOOK (data->window->notebook), notebook_child));
 
   gtk_widget_hide_all (notebook_child);
 }
