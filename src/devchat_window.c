@@ -1926,7 +1926,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       {
         gchar* match = g_match_info_fetch(result,0);
 
-        if (!g_str_has_prefix(match,"<img src=\"http://www.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
+        if (!g_str_has_prefix(match,"<img src=\"http://forum.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
         {
           if (debug) {
             dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
