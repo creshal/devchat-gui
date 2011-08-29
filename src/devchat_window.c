@@ -286,7 +286,7 @@ devchat_window_init (DevchatWindow* self)
 
   GtkWidget* item_prefs = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES,self->accelgroup);
   g_signal_connect (item_prefs, "activate", G_CALLBACK (config_cb),self_data);
-  gtk_widget_add_accelerator(item_prefs, "activate", self->accelgroup, GDK_P, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_prefs, "activate", self->accelgroup, GDK_KEY_P, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* edit_profile = devchat_cb_data_new (self, GINT_TO_POINTER (URL_PROFILE_EDIT));
 
@@ -317,28 +317,28 @@ devchat_window_init (DevchatWindow* self)
   GtkWidget* item_tabclose = gtk_image_menu_item_new_with_label (_("Close tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tabclose), gtk_image_new_from_stock(GTK_STOCK_CLOSE,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tabclose, "activate", G_CALLBACK (devchat_window_close_tab), self_data);
-  gtk_widget_add_accelerator(item_tabclose, "activate", self->accelgroup, GDK_W, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_tabclose, "activate", self->accelgroup, GDK_KEY_W, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   self->item_reconnect = gtk_image_menu_item_new_with_label (_("Reconnect"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (self->item_reconnect), gtk_image_new_from_stock(GTK_STOCK_REFRESH,GTK_ICON_SIZE_MENU));
   g_signal_connect (self->item_reconnect, "activate", G_CALLBACK (reconnect), self_data);
   gtk_widget_set_no_show_all(self->item_reconnect,TRUE);
-  gtk_widget_add_accelerator(self->item_reconnect, "activate", self->accelgroup, GDK_R, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(self->item_reconnect, "activate", self->accelgroup, GDK_KEY_R, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   GtkWidget* item_disconnect = gtk_image_menu_item_new_from_stock (GTK_STOCK_QUIT,self->accelgroup);
   g_signal_connect (item_disconnect, "activate", G_CALLBACK (destroy), self_data);
-  gtk_widget_add_accelerator(item_disconnect, "activate", self->accelgroup, GDK_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_disconnect, "activate", self->accelgroup, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   GtkWidget* item_tab_next = gtk_image_menu_item_new_with_label (_("Next Tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tab_next), gtk_image_new_from_stock(GTK_STOCK_GO_FORWARD,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tab_next, "activate", G_CALLBACK (next_tab), self_data);
-  gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_Page_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-  gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_Tab, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_KEY_Page_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_tab_next, "activate", self->accelgroup, GDK_KEY_Tab, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   GtkWidget* item_tab_prev = gtk_image_menu_item_new_with_label (_("Previous Tab"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_tab_prev), gtk_image_new_from_stock(GTK_STOCK_GO_BACK,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_tab_prev, "activate", G_CALLBACK (prev_tab), self_data);
-  gtk_widget_add_accelerator(item_tab_prev, "activate", self->accelgroup, GDK_Page_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_tab_prev, "activate", self->accelgroup, GDK_KEY_Page_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   GtkWidget* item_his = gtk_image_menu_item_new_with_label (_("Show History..."));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_his), gtk_image_new_from_icon_name("appointment-new",GTK_ICON_SIZE_MENU));
@@ -367,33 +367,33 @@ devchat_window_init (DevchatWindow* self)
 
   GtkWidget* item_bold = gtk_image_menu_item_new_from_stock (GTK_STOCK_BOLD,self->accelgroup);
   g_signal_connect (item_bold, "activate", G_CALLBACK (devchat_window_btn_format), format_b);
-  gtk_widget_add_accelerator(item_bold, "activate", self->accelgroup, GDK_B, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_bold, "activate", self->accelgroup, GDK_KEY_B, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_i = devchat_cb_data_new (self, "i");
 
   GtkWidget* item_italic = gtk_image_menu_item_new_from_stock (GTK_STOCK_ITALIC,self->accelgroup);
   g_signal_connect (item_italic, "activate", G_CALLBACK (devchat_window_btn_format), format_i);
-  gtk_widget_add_accelerator(item_italic, "activate", self->accelgroup, GDK_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_italic, "activate", self->accelgroup, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_u = devchat_cb_data_new (self, "u");
 
   GtkWidget* item_line = gtk_image_menu_item_new_from_stock (GTK_STOCK_UNDERLINE,self->accelgroup);
   g_signal_connect (item_line, "activate", G_CALLBACK (devchat_window_btn_format), format_u);
-  gtk_widget_add_accelerator(item_line, "activate", self->accelgroup, GDK_U, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_line, "activate", self->accelgroup, GDK_KEY_U, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_img = devchat_cb_data_new (self, "img");
 
   GtkWidget* item_pict = gtk_image_menu_item_new_with_mnemonic (_("I_mage"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_pict), gtk_image_new_from_icon_name("image-x-generic",GTK_ICON_SIZE_MENU));
   g_signal_connect (item_pict, "activate", G_CALLBACK (devchat_window_btn_format), format_img);
-  gtk_widget_add_accelerator(item_pict, "activate", self->accelgroup, GDK_M, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_pict, "activate", self->accelgroup, GDK_KEY_M, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   DevchatCBData* format_url = devchat_cb_data_new (self, "url");
 
   GtkWidget* item_link = gtk_image_menu_item_new_with_mnemonic (_("_Link"));
   gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM (item_link), gtk_image_new_from_stock(GTK_STOCK_JUMP_TO,GTK_ICON_SIZE_MENU));
   g_signal_connect (item_link, "activate", G_CALLBACK (devchat_window_btn_format), format_url);
-  gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  gtk_widget_add_accelerator(item_link, "activate", self->accelgroup, GDK_KEY_L, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
   self->item_smilies = gtk_menu_item_new_with_mnemonic (_("_Smilies..."));
   self->item_presets = gtk_menu_item_new_with_mnemonic (_("_Preset texts..."));
@@ -502,7 +502,7 @@ devchat_window_init (DevchatWindow* self)
   g_signal_connect (self->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (self, self->search_entry));
   GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (self, self->searchbar));
-  gtk_widget_add_accelerator (btn_bar_close, "clicked", self->accelgroup, GDK_Escape, 0, 0);
+  gtk_widget_add_accelerator (btn_bar_close, "clicked", self->accelgroup, GDK_KEY_Escape, 0, 0);
   gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_entry, TRUE, TRUE, 1);
   gtk_box_pack_start (GTK_BOX (self->searchbar), self->search_button, FALSE, FALSE, 0);
   gtk_box_pack_end (GTK_BOX (self->searchbar), btn_bar_close, FALSE, FALSE, 1);
@@ -587,12 +587,12 @@ devchat_window_init (DevchatWindow* self)
 
   self->btn_send = gtk_button_new_from_stock(GTK_STOCK_OK);
   g_signal_connect (self->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send),self_data);
-  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_Return, 0, 0);
-  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_KP_Enter, 0, 0);
+  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_KEY_Return, 0, 0);
+  gtk_widget_add_accelerator(self->btn_send, "clicked", self->accelgroup, GDK_KEY_KP_Enter, 0, 0);
 
   GtkWidget* btn_quit = gtk_button_new_from_stock(GTK_STOCK_QUIT);
   g_signal_connect (btn_quit, "clicked", G_CALLBACK (destroy),self_data);
-  gtk_widget_add_accelerator(btn_quit, "clicked", self->accelgroup, GDK_Q, GDK_CONTROL_MASK, 0);
+  gtk_widget_add_accelerator(btn_quit, "clicked", self->accelgroup, GDK_KEY_Q, GDK_CONTROL_MASK, 0);
 
   gtk_box_pack_end (GTK_BOX(self->inputbar),btn_quit,FALSE,FALSE,0);
   gtk_box_pack_end (GTK_BOX(self->inputbar),gtk_vseparator_new(),FALSE,FALSE,0);
@@ -638,8 +638,8 @@ devchat_window_init (DevchatWindow* self)
 
   self->btn_connect = gtk_button_new_from_stock (GTK_STOCK_CONNECT);
   g_signal_connect (self->btn_connect, "clicked", G_CALLBACK (login), self_data);
-  gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_Return, 0, 0);
-  gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_KP_Enter, 0, 0);
+  gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_KEY_Return, 0, 0);
+  gtk_widget_add_accelerator(self->btn_connect, "activate", self->accelgroup, GDK_KEY_KP_Enter, 0, 0);
 
   gtk_box_pack_start (GTK_BOX(hbox2),self->user_entry,TRUE,TRUE,0);
   gtk_box_pack_start (GTK_BOX(hbox2),self->pass_entry,TRUE,TRUE,0);
@@ -3324,7 +3324,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
 {
   if (key->type == GDK_KEY_PRESS && (key->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
   {
-    if (key->keyval == GDK_Up) /*Shamelessly copied from browser client.*/
+    if (key->keyval == GDK_KEY_Up) /*Shamelessly copied from browser client.*/
     {
       gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
       GtkTextBuffer* buf;
@@ -3367,7 +3367,7 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
 
       gtk_text_buffer_set_text (buf, data->window->buffer[data->window->buf_current], -1);
     }
-    else if (key->keyval == GDK_Down) /*Shamelessly copied from browser client.*/
+    else if (key->keyval == GDK_KEY_Down) /*Shamelessly copied from browser client.*/
     {
       gint pagenum = gtk_notebook_get_current_page (GTK_NOTEBOOK (data->window->notebook));
       GtkTextBuffer* buf;
@@ -3413,13 +3413,13 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
     else if (data->window->userlevel > 1)
     {
       GdkColor new_bg;
-      if (key->keyval == GDK_1 || key->keyval == GDK_KP_1)
+      if (key->keyval == GDK_KEY_1 || key->keyval == GDK_KEY_KP_1)
       {
         gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 0);
         gdk_color_parse (data->window->settings.color_l1, &new_bg);
         gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
       }
-      else if (key->keyval == GDK_3 || key->keyval == GDK_KP_3)
+      else if (key->keyval == GDK_KEY_3 || key->keyval == GDK_KEY_KP_3)
       {
         gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 1);
         gdk_color_parse (data->window->settings.color_l3, &new_bg);
@@ -3427,13 +3427,13 @@ gboolean hotkey_cb (GtkWidget* w, GdkEventKey* key, DevchatCBData* data)
       }
       else if (data->window->userlevel > 3)
       {
-        if (key->keyval == GDK_5 || key->keyval == GDK_KP_5)
+        if (key->keyval == GDK_KEY_5 || key->keyval == GDK_KEY_KP_5)
         {
           gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 2);
           gdk_color_parse (data->window->settings.color_l5, &new_bg);
           gtk_widget_modify_base (data->window->inputwidget, GTK_STATE_NORMAL, &new_bg);
         }
-        else if (data->window->userlevel > 5 && (key->keyval == GDK_6 || key->keyval == GDK_KP_6))
+        else if (data->window->userlevel > 5 && (key->keyval == GDK_KEY_6 || key->keyval == GDK_KEY_KP_6))
         {
           gtk_combo_box_set_active (GTK_COMBO_BOX (data->window->level_box), 3);
           gdk_color_parse (data->window->settings.color_l6, &new_bg);
@@ -4005,17 +4005,17 @@ void find (GtkWidget* widget, DevchatCBData* data)
     gtk_widget_grab_focus (entry);
     gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
 
-    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_Return, 0);
-    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KP_Enter, 0);
-    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
-    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
+    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KEY_Return, 0);
+    gtk_widget_remove_accelerator (orig_button, data->window->accelgroup, GDK_KEY_KP_Enter, 0);
+    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_KEY_Return, 0, 0);
+    gtk_widget_add_accelerator (button, "clicked", data->window->accelgroup, GDK_KEY_KP_Enter, 0, 0);
   }
   else
   {
-    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
-    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
-    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
-    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
+    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KEY_Return, 0);
+    gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KEY_KP_Enter, 0);
+    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KEY_Return, 0, 0);
+    gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KEY_KP_Enter, 0, 0);
     gtk_widget_hide_all (bar);
     gtk_widget_set_no_show_all (bar, TRUE);
   }
@@ -4109,10 +4109,10 @@ void devchat_window_close_search (GtkWidget* widget, DevchatCBData* data)
     button = conv->search_button;
   }
 
-  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_Return, 0);
-  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KP_Enter, 0);
-  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_Return, 0, 0);
-  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KP_Enter, 0, 0);
+  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KEY_Return, 0);
+  gtk_widget_remove_accelerator (button, data->window->accelgroup, GDK_KEY_KP_Enter, 0);
+  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KEY_Return, 0, 0);
+  gtk_widget_add_accelerator(orig_button, "clicked", data->window->accelgroup, GDK_KEY_KP_Enter, 0, 0);
 
   gtk_widget_hide_all (data->data);
   gtk_widget_set_no_show_all (data->data, TRUE);
@@ -5005,7 +5005,7 @@ void devchat_window_refresh_presets (DevchatWindow* self)
   {
     GtkWidget* item = gtk_menu_item_new_with_label (self->settings.presets[i]);
     g_signal_connect (item, "activate", G_CALLBACK (ins_preset), devchat_cb_data_new (self, self->settings.presets[i]));
-    gtk_widget_add_accelerator (item, "activate", self->accelgroup, i==9? GDK_0 : GDK_1+i, GDK_MOD1_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator (item, "activate", self->accelgroup, i==9? GDK_KEY_0 : GDK_KEY_1+i, GDK_MOD1_MASK, GTK_ACCEL_VISIBLE);
     gtk_menu_shell_append (GTK_MENU_SHELL (preset_sub), item);
   }
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (self->item_presets), preset_sub);

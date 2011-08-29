@@ -68,7 +68,7 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
   g_signal_connect (obj->search_button, "clicked", G_CALLBACK (devchat_window_find), devchat_cb_data_new (parent, obj->search_entry));
   GtkWidget* btn_bar_close = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   g_signal_connect (btn_bar_close, "clicked", G_CALLBACK (devchat_window_close_search), devchat_cb_data_new (parent, obj->searchbar));
-  gtk_widget_add_accelerator (btn_bar_close, "clicked", parent->accelgroup, GDK_Escape, 0, 0);
+  gtk_widget_add_accelerator (btn_bar_close, "clicked", parent->accelgroup, GDK_KEY_Escape, 0, 0);
   gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_entry, TRUE, TRUE, 1);
   gtk_box_pack_start (GTK_BOX (obj->searchbar), obj->search_button, FALSE, FALSE, 0);
   gtk_box_pack_end (GTK_BOX (obj->searchbar), btn_bar_close, FALSE, FALSE, 1);
@@ -158,12 +158,12 @@ devchat_conversation_new (gboolean is_history, DevchatWindow* parent)
 
     obj->btn_send = gtk_button_new_from_stock (GTK_STOCK_OK);
     g_signal_connect (obj->btn_send, "clicked", G_CALLBACK (devchat_window_btn_send), parent_data);
-    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_Return, 0, 0);
-    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_KP_Enter, 0, 0);
+    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_KEY_Return, 0, 0);
+    gtk_widget_add_accelerator (obj->btn_send, "clicked", parent->accelgroup, GDK_KEY_KP_Enter, 0, 0);
 
     GtkWidget* btn_quit = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
     g_signal_connect (btn_quit, "clicked", G_CALLBACK (devchat_window_close_tab), parent_data);
-    gtk_widget_add_accelerator(btn_quit, "clicked", parent->accelgroup, GDK_W, GDK_CONTROL_MASK, 0);
+    gtk_widget_add_accelerator(btn_quit, "clicked", parent->accelgroup, GDK_KEY_W, GDK_CONTROL_MASK, 0);
 
     gtk_box_pack_end (GTK_BOX(hbox),btn_quit,FALSE,FALSE,0);
     gtk_box_pack_end (GTK_BOX(hbox),gtk_vseparator_new(),FALSE,FALSE,0);
