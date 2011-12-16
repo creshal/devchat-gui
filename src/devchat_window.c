@@ -67,7 +67,8 @@ enum {
   SETTINGS_COLOR_YELLOW,
   SETTINGS_COLOR_BLUE,
   SETTINGS_COLOR_GREEN,
-  SETTINGS_COLOR_MAGENTA
+  SETTINGS_COLOR_MAGENTA,
+  SETTINGS_IGNORE
 } params;
 
 #ifdef INGAME
@@ -148,6 +149,8 @@ void ingame_append_user (DevchatCBData* data, gchar* user);
 void ingame_append_message (DevchatCBData* data, gchar* author, gchar* mode, gchar* time_attr, gchar* lid, gchar* message);
 void ingame_flush_data (DevchatCBData* data);
 #endif
+void devchat_window_update_ignores (DevchatWindow* self);
+void set_tag_visibility (gchar* tagname, DevchatWindow* self);
 
 G_DEFINE_TYPE (DevchatWindow, devchat_window, G_TYPE_OBJECT)
 
@@ -225,6 +228,8 @@ devchat_window_init (DevchatWindow* self)
   self->jarfile = g_build_filename (g_get_user_config_dir(),"devchat_cookies.csv", NULL);
   self->last_notification = 0;
   self->settings.proxy = "";
+  self->settings.ignorelist = "";
+  self->usertags = NULL;
 #ifdef INGAME
   self->settings.TCFolder = "";
   self->ingame_lid = -1;
@@ -1268,6 +1273,7 @@ void save_settings (DevchatWindow* w)
                                  g_strdup_printf("HANDLE_WIDTH=%i\n", w->settings.handle_width),
                                  keywords_string, "\n",
                                  presets_string, "\n",
+                                 g_strdup_printf("IGNORELIST=%s\n", w->settings.ignorelist),
                                  bools_string,
                                  NULL);
   if (!g_file_set_contents (settingsfile, settings, -1, NULL) && debug)
@@ -2106,6 +2112,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
             user_level = self->window->userlevel;
             if (g_strcmp0 (name, target_name) == 0) /*Make self-PMs only appear once and cancel processing in that case*/
               continue;
+            if (g_strcmp0 (target_name, self->window->settings.ignorelist) == 0)
+              continue;
             conv = pm_cb (NULL, devchat_cb_data_new (self->window, target_name));
             gchar* tmp = message;
             message = g_strdup (message+77+strlen(target_name));
@@ -2197,7 +2205,10 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
       gchar* tagname = g_strconcat ("user-", name, NULL);
 
       if (!gtk_text_tag_table_lookup (table, tagname))
+      {
         gtk_text_buffer_create_tag (buf, tagname, NULL);
+        self->window->usertags = g_slist_append (self->window->usertags, g_strdup (tagname));
+      }
 
 
       gtk_text_buffer_get_end_iter (buf, &end);
@@ -2449,6 +2460,8 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
     self->window->firstrun = FALSE;
 
   xmlFreeTextReader (msgparser);
+
+  devchat_window_update_ignores (self->window); /*Update ignore list here in case new user tags were added*/
 
   g_free (msglist);
 }
@@ -3780,6 +3793,17 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
 
   gtk_box_pack_start (GTK_BOX (vbox2), hbox_proxy,FALSE,FALSE,0);
 
+  GtkWidget* hbox_ignore = gtk_hbox_new (FALSE, 1);
+  GtkWidget* label_ignore = gtk_label_new (_("Ignore list: "));
+  GtkWidget* entry_ignore = gtk_entry_new ();
+  gtk_entry_set_text (GTK_ENTRY (entry_ignore), data->window->settings.ignorelist);
+  gtk_widget_set_tooltip_text (entry_ignore, _("Comma-separated list of users to ignore"));
+  gtk_box_pack_start (GTK_BOX (hbox_ignore), label_ignore, FALSE, FALSE, 4);
+  gtk_box_pack_start (GTK_BOX (hbox_ignore), entry_ignore, TRUE, TRUE, 0);
+
+  gtk_box_pack_start (GTK_BOX (vbox2), hbox_ignore,FALSE,FALSE,0);
+
+
   gtk_notebook_append_page (GTK_NOTEBOOK (nb), vbox2, gtk_label_new (_("Misc")));
 
   GtkWidget* entry_preset[10];
@@ -3877,6 +3901,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
         data->window->settings.store_pass = data->window->settings_backup.store_pass;
         data->window->settings.servername = data->window->settings_backup.servername;
         data->window->settings.jumptab = data->window->settings_backup.jumptab;
+        data->window->settings.ignorelist = "";
       }
 
       if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_reset_3)))
@@ -3961,12 +3986,39 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
       data->window->settings.store_pass = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_sp));
       data->window->settings.servername = gtk_combo_box_get_active_text (GTK_COMBO_BOX (entry_msg));
       data->window->settings.jumptab = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (chk_jmp));
+      data->window->settings.ignorelist = g_strdup (gtk_entry_get_text(GTK_ENTRY(entry_ignore)));
+
+      devchat_window_update_ignores (data->window);
       devchat_window_refresh_presets (data->window);
       save_settings (data->window);
     break;
     default: break;
   }
   gtk_widget_destroy (dialog);
+}
+
+void devchat_window_update_ignores (DevchatWindow* self)
+{
+  gchar** idiots = g_strsplit (self->settings.ignorelist, ",", 0);
+  int i;
+
+  g_slist_foreach (self->usertags, (GFunc) set_tag_visibility, self);
+
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (self->output);
+  for (i = 0; idiots[i]; i++)
+  {
+    GtkTextTag* tag = gtk_text_tag_table_lookup (t, g_strconcat ("user-",idiots[i],NULL));
+    g_object_set (tag, "invisible", TRUE, NULL);
+  }
+
+  g_strfreev (idiots);
+}
+
+void set_tag_visibility (gchar* tagname, DevchatWindow* self)
+{
+  GtkTextTagTable* t = gtk_text_buffer_get_tag_table (self->output);
+  GtkTextTag* tag = gtk_text_tag_table_lookup (t, tagname);
+  g_object_set (tag, "invisible-set", FALSE, NULL);
 }
 
 void find (GtkWidget* widget, DevchatCBData* data)

@@ -165,6 +165,8 @@ main (int argc, char *argv[])
                         "color_yellow", g_key_file_get_string (keyfile, g, "COLOR_YELLOW", &e),
                         "color_magenta", g_key_file_get_string (keyfile, g, "COLOR_MAGENTA", &e), NULL);
         }
+        if (g_key_file_has_key (keyfile, g, "IGNORELIST", &e))
+          self->settings.ignorelist = g_key_file_get_string (keyfile, g, "IGNORELIST", &e);
 
         g_object_set (self, "autojoin", g_ascii_strcasecmp (g_key_file_get_string (keyfile, g, "AUTOJOIN", &e),"true") == 0, NULL);
 

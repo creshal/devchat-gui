@@ -98,6 +98,7 @@ typedef struct dc_settings
   gchar* notify;
   gchar* vnotify;
   gchar* servername;
+  gchar* ignorelist;
   gint width;
   gint height;
   gint x;
@@ -221,6 +222,7 @@ struct _DevchatWindow
   SoupMessage* message_message;
   SoupMessage* user_message;
   guint user_timeout_id;
+  GSList* usertags;
 
 #ifdef OTR
   OtrlUserState otr_state;
