@@ -3771,9 +3771,9 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   gtk_box_pack_start (GTK_BOX (hbox13), entry_msg, FALSE, FALSE, 0);
 
 #ifdef INGAME
-  GtkWidget* label_tc = gtk_label_new (_("Terran Conflict folder:"));
-  GtkWidget* entry_tc = gtk_file_chooser_button_new ("Select the Terran Conflice folder", GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
-  gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client."));
+  GtkWidget* label_tc = gtk_label_new (_("TC/AP folder:"));
+  GtkWidget* entry_tc = gtk_file_chooser_button_new (_("Select the Terran Conflict folder"), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+  gtk_widget_set_tooltip_text (entry_tc, _("Enter the full path to the TC folder, if you want to use the ingame client. Albion Prelude folder is recognized automatically."));
   gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (entry_tc), data->window->settings.TCFolder);
   gtk_box_pack_start (GTK_BOX (hbox13), label_tc, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (hbox13), entry_tc, FALSE, FALSE, 0);
@@ -5537,34 +5537,39 @@ void dbg(gchar* message)
 #ifdef INGAME
 gboolean get_ingame_messages (DevchatCBData* data)
 {
-  gchar* message_lines;
-  const gchar* filename = g_build_filename (g_get_user_special_dir (G_USER_DIRECTORY_DOCUMENTS), "EGOSOFT", "X3TC", "log07642.txt", NULL);
-
-  if (g_file_get_contents (filename, &message_lines, NULL, NULL))
+  gchar* folders[] = {"X3TC","X3AP",NULL};
+  int f;
+  for (f = 0; folders[f]; f++)
   {
-    g_remove (filename);
-    if (debug)
-    dbg (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
+    gchar* message_lines;
+    const gchar* filename = g_build_filename (g_get_user_special_dir (G_USER_DIRECTORY_DOCUMENTS), "EGOSOFT", folders[f], "log07642.txt", NULL);
 
-    gchar** messages = g_strsplit (message_lines, "\n", -1);
-
-    int i;
-
-    for (i = 0; messages[i]; i++)
+    if (g_file_get_contents (filename, &message_lines, NULL, NULL))
     {
-      gchar** message = g_strsplit (messages[i], ";;", 4);
+      g_remove (filename);
+      if (debug)
+      dbg (g_strdup_printf ("Received message list: %s.\n\n", message_lines));
 
-      if (message[0] && message[1] && message[2] && message[3])
-        devchat_window_text_send (data, message[3], message[2], message[1], g_strcmp0(message[0], "1") == 0);
+      gchar** messages = g_strsplit (message_lines, "\n", -1);
 
-      g_strfreev (message);
+      int i;
+
+      for (i = 0; messages[i]; i++)
+      {
+        gchar** message = g_strsplit (messages[i], ";;", 4);
+
+        if (message[0] && message[1] && message[2] && message[3])
+          devchat_window_text_send (data, message[3], message[2], message[1], g_strcmp0(message[0], "1") == 0);
+
+        g_strfreev (message);
+      }
+
+      g_strfreev (messages);
+      g_free (message_lines);
     }
-
-    g_strfreev (messages);
-    g_free (message_lines);
+    else if (debug)
+      dbg ("Ingame logfile could not be read.\n");
   }
-  else if (debug)
-    dbg ("Ingame logfile could not be read.\n");
 
   return TRUE;
 }
@@ -5649,6 +5654,12 @@ void ingame_flush_data (DevchatCBData* data)
 
     if (!g_file_set_contents (filename, file_content, -1, NULL))
       err (g_strdup_printf(_("Error I: Error writing text file %s. Check write permissions for t-folder!"), filename));
+
+    const gchar* addon_filename = g_build_filename (data->window->settings.TCFolder, "addon", "t", _("7641-L044.xml"), NULL);
+    if (!g_file_set_contents (addon_filename, file_content, -1, NULL))
+      err (g_strdup_printf(_("Error I: Error writing text file %s. Check write permissions for t-folder!"), addon_filename));
+
+    g_free (file_content);
   }
 }
 

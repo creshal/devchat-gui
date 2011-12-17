@@ -10,3 +10,4 @@ int no_spellcheck;
 #endif
 #define NLS
 #define SPELLCHECK
+#define INGAME
