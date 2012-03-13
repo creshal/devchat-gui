@@ -4654,7 +4654,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
     g_free (dbg_msg);
   }
 
-  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
+  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text,"&sid=",data->window->sid, NULL));
   soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), devchat_cb_data_new (data->window, g_strconcat ("&chatlevel=",sendlevel,"&textinput=", enc_text, NULL)));
 
   g_free (text);
