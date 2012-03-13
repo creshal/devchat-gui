@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-12-17 11:03+0100\n"
+"POT-Creation-Date: 2012-03-13 19:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/devchat_conversation.c:100 src/devchat_window.c:629
+#: src/devchat_conversation.c:100 src/devchat_window.c:630
 msgid "Error S: Error initialising spell checker!"
 msgstr ""
 
@@ -25,178 +25,178 @@ msgstr ""
 msgid "Insert URL"
 msgstr ""
 
-#: src/devchat_conversation.c:118 src/devchat_window.c:554
+#: src/devchat_conversation.c:118 src/devchat_window.c:555
 msgid ""
 "Insert Image\n"
 "Note that you will be killed if you insert images larger than 32*32px. You "
 "have been warned."
 msgstr ""
 
-#: src/devchat_conversation.c:141 src/devchat_window.c:571
+#: src/devchat_conversation.c:141 src/devchat_window.c:572
 msgid "Text color"
 msgstr ""
 
-#: src/devchat_conversation.c:172 src/devchat_window.c:606
+#: src/devchat_conversation.c:172 src/devchat_window.c:607
 msgid "Raw mode"
 msgstr ""
 
-#: src/devchat_conversation.c:173 src/devchat_window.c:607
+#: src/devchat_conversation.c:173 src/devchat_window.c:608
 msgid ""
 "Send raw HTML text. Needed e.g. for browser-kicks and <!-- comments -->. Not "
 "recommended for daily use."
 msgstr ""
 
-#: src/devchat_conversation.c:199 src/devchat_window.c:1367
-#: src/devchat_window.c:1391 src/devchat_window.c:1415
+#: src/devchat_conversation.c:199 src/devchat_window.c:1368
+#: src/devchat_window.c:1392 src/devchat_window.c:1416
 msgid "Filter Users"
 msgstr ""
 
-#: src/devchat_conversation.c:200 src/devchat_window.c:1368
-#: src/devchat_window.c:1392 src/devchat_window.c:1416
+#: src/devchat_conversation.c:200 src/devchat_window.c:1369
+#: src/devchat_window.c:1393 src/devchat_window.c:1417
 msgid "Userlevel <3"
 msgstr ""
 
-#: src/devchat_conversation.c:203 src/devchat_window.c:1372
-#: src/devchat_window.c:1395 src/devchat_window.c:1421
+#: src/devchat_conversation.c:203 src/devchat_window.c:1373
+#: src/devchat_window.c:1396 src/devchat_window.c:1422
 msgid "Filter Messages"
 msgstr ""
 
-#: src/devchat_conversation.c:204 src/devchat_window.c:1373
-#: src/devchat_window.c:1396 src/devchat_window.c:1422
+#: src/devchat_conversation.c:204 src/devchat_window.c:1374
+#: src/devchat_window.c:1397 src/devchat_window.c:1423
 msgid "Messagelevel <3"
 msgstr ""
 
-#: src/devchat_conversation.c:209 src/devchat_window.c:1369
-#: src/devchat_window.c:1417
+#: src/devchat_conversation.c:209 src/devchat_window.c:1370
+#: src/devchat_window.c:1418
 msgid "Userlevel <5"
 msgstr ""
 
-#: src/devchat_conversation.c:210 src/devchat_window.c:1374
-#: src/devchat_window.c:1423
+#: src/devchat_conversation.c:210 src/devchat_window.c:1375
+#: src/devchat_window.c:1424
 msgid "Messagelevel <5"
 msgstr ""
 
-#: src/devchat_conversation.c:214 src/devchat_window.c:1418
+#: src/devchat_conversation.c:214 src/devchat_window.c:1419
 msgid "Userlevel <6"
 msgstr ""
 
-#: src/devchat_conversation.c:215 src/devchat_window.c:1424
+#: src/devchat_conversation.c:215 src/devchat_window.c:1425
 msgid "Messagelevel <6"
 msgstr ""
 
-#: src/devchat_window.c:265
+#: src/devchat_window.c:266
 msgid "_Main"
 msgstr ""
 
-#: src/devchat_window.c:266
+#: src/devchat_window.c:267
 msgid "_Edit"
 msgstr ""
 
-#: src/devchat_window.c:267
+#: src/devchat_window.c:268
 msgid "_Insert"
 msgstr ""
 
-#: src/devchat_window.c:268
+#: src/devchat_window.c:269
 msgid "_Go"
 msgstr ""
 
-#: src/devchat_window.c:269
+#: src/devchat_window.c:270
 msgid "_Help"
 msgstr ""
 
-#: src/devchat_window.c:274 src/devchat_window.c:5217
+#: src/devchat_window.c:275 src/devchat_window.c:5226
 msgid "Change Status..."
 msgstr ""
 
-#: src/devchat_window.c:277 src/devchat_window.c:5219
+#: src/devchat_window.c:278 src/devchat_window.c:5228
 msgid "Online"
 msgstr ""
 
-#: src/devchat_window.c:279 src/devchat_window.c:5221
+#: src/devchat_window.c:280 src/devchat_window.c:5230
 msgid "Away"
 msgstr ""
 
-#: src/devchat_window.c:281 src/devchat_window.c:5223
+#: src/devchat_window.c:282 src/devchat_window.c:5232
 msgid "DND"
 msgstr ""
 
-#: src/devchat_window.c:298
+#: src/devchat_window.c:299
 msgid "Edit profile..."
 msgstr ""
 
-#: src/devchat_window.c:307
+#: src/devchat_window.c:308
 msgid "Open DevNet fora..."
 msgstr ""
 
-#: src/devchat_window.c:313
+#: src/devchat_window.c:314
 msgid "Open betatest fora..."
 msgstr ""
 
-#: src/devchat_window.c:319
+#: src/devchat_window.c:320
 msgid "Open forum..."
 msgstr ""
 
-#: src/devchat_window.c:322
+#: src/devchat_window.c:323
 msgid "Close tab"
 msgstr ""
 
-#: src/devchat_window.c:327
+#: src/devchat_window.c:328
 msgid "Reconnect"
 msgstr ""
 
-#: src/devchat_window.c:337
+#: src/devchat_window.c:338
 msgid "Next Tab"
 msgstr ""
 
-#: src/devchat_window.c:343
+#: src/devchat_window.c:344
 msgid "Previous Tab"
 msgstr ""
 
-#: src/devchat_window.c:348
+#: src/devchat_window.c:349
 msgid "Show History..."
 msgstr ""
 
-#: src/devchat_window.c:356
+#: src/devchat_window.c:357
 msgid "Report a bug..."
 msgstr ""
 
-#: src/devchat_window.c:364
+#: src/devchat_window.c:365
 msgid "Check for update..."
 msgstr ""
 
-#: src/devchat_window.c:368
+#: src/devchat_window.c:369
 msgid "Frequently asked questions..."
 msgstr ""
 
-#: src/devchat_window.c:391
+#: src/devchat_window.c:392
 msgid "I_mage"
 msgstr ""
 
-#: src/devchat_window.c:398
+#: src/devchat_window.c:399
 msgid "_Link"
 msgstr ""
 
-#: src/devchat_window.c:403
+#: src/devchat_window.c:404
 msgid "_Smilies..."
 msgstr ""
 
-#: src/devchat_window.c:404
+#: src/devchat_window.c:405
 msgid "_Preset texts..."
 msgstr ""
 
-#: src/devchat_window.c:471
+#: src/devchat_window.c:472
 msgid "Not connected."
 msgstr ""
 
-#: src/devchat_window.c:659 src/devchat_window.c:668
+#: src/devchat_window.c:660 src/devchat_window.c:669
 msgid "X-DEVCHAT"
 msgstr ""
 
-#: src/devchat_window.c:718
+#: src/devchat_window.c:719
 msgid "Determining user level..."
 msgstr ""
 
-#: src/devchat_window.c:1234
+#: src/devchat_window.c:1235
 msgid ""
 "#Settings file for DevchatGUI. Please do not alter the key names.\n"
 " #Note: This behaviour is different from python version 0.x, in which the "
@@ -206,195 +206,195 @@ msgid ""
 "\"true\" for true, everything else (1/yes/...) will be regarded as false.\n"
 msgstr ""
 
-#: src/devchat_window.c:1296
+#: src/devchat_window.c:1297
 msgid "Logging in..."
 msgstr ""
 
-#: src/devchat_window.c:1310
+#: src/devchat_window.c:1311
 msgid "Error L: Login failed."
 msgstr ""
 
-#: src/devchat_window.c:1311
+#: src/devchat_window.c:1312
 msgid "Login failed."
 msgstr ""
 
-#: src/devchat_window.c:1320
+#: src/devchat_window.c:1321
 msgid "Error C: Login failed, limit reached."
 msgstr ""
 
-#: src/devchat_window.c:1323
+#: src/devchat_window.c:1324
 msgid ""
 "Login failed, account locked. Please visit the forum and re-activate "
 "manually."
 msgstr ""
 
-#: src/devchat_window.c:1333
+#: src/devchat_window.c:1334
 msgid "Login successful! Determining user level..."
-msgstr ""
-
-#: src/devchat_window.c:1362 src/devchat_window.c:1387
-#: src/devchat_window.c:1409
-msgid "Level 1"
 msgstr ""
 
 #: src/devchat_window.c:1363 src/devchat_window.c:1388
 #: src/devchat_window.c:1410
+msgid "Level 1"
+msgstr ""
+
+#: src/devchat_window.c:1364 src/devchat_window.c:1389
+#: src/devchat_window.c:1411
 msgid "Level 3"
 msgstr ""
 
-#: src/devchat_window.c:1364 src/devchat_window.c:1411
+#: src/devchat_window.c:1365 src/devchat_window.c:1412
 msgid "Level 5"
 msgstr ""
 
-#: src/devchat_window.c:1412
+#: src/devchat_window.c:1413
 msgid "Level 6"
 msgstr ""
 
-#: src/devchat_window.c:1476
+#: src/devchat_window.c:1485
 msgid "Waiting for messages..."
 msgstr ""
 
-#: src/devchat_window.c:1701
+#: src/devchat_window.c:1710
 msgid ""
 "Error D: Error stat()ing avatar file! Trying to re-download it. If problem "
 "persists, check permissions for avatar directory."
 msgstr ""
 
-#: src/devchat_window.c:1736
+#: src/devchat_window.c:1745
 #, c-format
 msgid "View the forum profile of %s."
 msgstr ""
 
-#: src/devchat_window.c:1765
+#: src/devchat_window.c:1774
 msgid "Do NOT disturb."
 msgstr ""
 
-#: src/devchat_window.c:1787
+#: src/devchat_window.c:1796
 #, c-format
 msgid "Poke %s"
 msgstr ""
 
-#: src/devchat_window.c:1809
+#: src/devchat_window.c:1818
 #, c-format
 msgid "Open a conversation with %s."
 msgstr ""
 
-#: src/devchat_window.c:1837
+#: src/devchat_window.c:1846
 #, c-format
 msgid "%i user online"
 msgstr ""
 
-#: src/devchat_window.c:1837
+#: src/devchat_window.c:1846
 #, c-format
 msgid "%i users online"
 msgstr ""
 
-#: src/devchat_window.c:1854 src/devchat_window.c:2071
+#: src/devchat_window.c:1863 src/devchat_window.c:2080
 #, c-format
 msgid "Last Update: %s"
 msgstr ""
 
-#: src/devchat_window.c:1877 src/devchat_window.c:2036
+#: src/devchat_window.c:1886 src/devchat_window.c:2045
 msgid "Connection Lost!"
 msgstr ""
 
-#: src/devchat_window.c:1968
+#: src/devchat_window.c:1977
 #, c-format
 msgid "Error D: Error while saving avatar: %s."
 msgstr ""
 
-#: src/devchat_window.c:2270
+#: src/devchat_window.c:2279
 #, c-format
 msgid "...was mentioned by %s."
 msgstr ""
 
-#: src/devchat_window.c:2869
+#: src/devchat_window.c:2878
 #, c-format
 msgid "Error D: Error while saving image: %s.\n"
 msgstr ""
 
-#: src/devchat_window.c:2874
+#: src/devchat_window.c:2883
 #, c-format
 msgid "Error D: Error downloading image %s: %i %s.\n"
 msgstr ""
 
-#: src/devchat_window.c:2896
+#: src/devchat_window.c:2905
 msgid "Error U: Unknown image type!"
 msgstr ""
 
-#: src/devchat_window.c:3465
+#: src/devchat_window.c:3474
 msgid "Note: Some settings will apply on restart."
 msgstr ""
 
-#: src/devchat_window.c:3468
+#: src/devchat_window.c:3477
 msgid "Devchat settings"
 msgstr ""
 
-#: src/devchat_window.c:3472
+#: src/devchat_window.c:3481
 msgid "Reset settings"
 msgstr ""
 
-#: src/devchat_window.c:3487
+#: src/devchat_window.c:3496
 msgid "Timestamp color:"
 msgstr ""
 
-#: src/devchat_window.c:3490
+#: src/devchat_window.c:3499
 msgid "Normal font color:"
 msgstr ""
 
-#: src/devchat_window.c:3499
+#: src/devchat_window.c:3508
 msgid "Greenie color:"
 msgstr ""
 
-#: src/devchat_window.c:3502
+#: src/devchat_window.c:3511
 msgid "Normal user color:"
 msgstr ""
 
-#: src/devchat_window.c:3511
+#: src/devchat_window.c:3520
 msgid "L1 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3514
+#: src/devchat_window.c:3523
 msgid "L3 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3523
+#: src/devchat_window.c:3532
 msgid "L5 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3526
+#: src/devchat_window.c:3535
 msgid "L6 background color:"
 msgstr ""
 
-#: src/devchat_window.c:3535
+#: src/devchat_window.c:3544
 msgid "Unvisited url color:"
 msgstr ""
 
-#: src/devchat_window.c:3538
+#: src/devchat_window.c:3547
 msgid "Visited url color:"
 msgstr ""
 
-#: src/devchat_window.c:3547
+#: src/devchat_window.c:3556
 msgid "Hover url color:"
 msgstr ""
 
-#: src/devchat_window.c:3550
+#: src/devchat_window.c:3559
 msgid "Highlighted tab color:"
 msgstr ""
 
-#: src/devchat_window.c:3559
+#: src/devchat_window.c:3568
 msgid "Goldie color:"
 msgstr ""
 
-#: src/devchat_window.c:3612
+#: src/devchat_window.c:3621
 msgid "Color settings"
 msgstr ""
 
-#: src/devchat_window.c:3616
+#: src/devchat_window.c:3625
 msgid "Show message ID"
 msgstr ""
 
-#: src/devchat_window.c:3618
+#: src/devchat_window.c:3627
 msgid ""
 "Shows the internal ID of messages.\n"
 "Makes pointing at a certain post easier (and allows you to see whether "
@@ -402,97 +402,97 @@ msgid ""
 "Note that this setting only applies on newly received messages."
 msgstr ""
 
-#: src/devchat_window.c:3619
+#: src/devchat_window.c:3628
 msgid "Show hidden usernames"
 msgstr ""
 
-#: src/devchat_window.c:3621
+#: src/devchat_window.c:3630
 msgid ""
 "Shows usernames e.g. for /me actions, stealthing greenies and HTML comments "
 "<!-- --> (read: Greenie stealth posts).\n"
 "Changing this setting will apply on new tabs and newly received messages."
 msgstr ""
 
-#: src/devchat_window.c:3622
+#: src/devchat_window.c:3631
 msgid "Stealth join"
 msgstr ""
 
-#: src/devchat_window.c:3624
+#: src/devchat_window.c:3633
 msgid "Suppress own join/quit messages."
 msgstr ""
 
-#: src/devchat_window.c:3630
+#: src/devchat_window.c:3639
 msgid "Automatic join"
 msgstr ""
 
-#: src/devchat_window.c:3632
+#: src/devchat_window.c:3641
 msgid "Tint user list"
 msgstr ""
 
-#: src/devchat_window.c:3634
+#: src/devchat_window.c:3643
 msgid ""
 "Whether the userlist should be colored in the same color as the TextViews. "
 "Recommended if the font contrast would be too low else (read: bright themes "
 "like Aero/Classic for Windows®)."
 msgstr ""
 
-#: src/devchat_window.c:3635
+#: src/devchat_window.c:3644
 msgid "Remember password"
 msgstr ""
 
-#: src/devchat_window.c:3637
+#: src/devchat_window.c:3646
 msgid "Whether the password shall be saved to disk."
 msgstr ""
 
-#: src/devchat_window.c:3643
+#: src/devchat_window.c:3652
 msgid "Show tray icon"
 msgstr ""
 
-#: src/devchat_window.c:3645
+#: src/devchat_window.c:3654
 msgid "Jump to unread PMs"
 msgstr ""
 
-#: src/devchat_window.c:3646
+#: src/devchat_window.c:3655
 msgid "Whether the focus should jump to tabs with unread PMs or not."
 msgstr ""
 
-#: src/devchat_window.c:3653
+#: src/devchat_window.c:3662
 msgid "Audio notifications:"
 msgstr ""
 
-#: src/devchat_window.c:3666
+#: src/devchat_window.c:3675
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
 "built-in audio notification, <none> deactivates it.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
-#: src/devchat_window.c:3668
+#: src/devchat_window.c:3677
 msgid "Visual Notifications:"
 msgstr ""
 
-#: src/devchat_window.c:3681
+#: src/devchat_window.c:3690
 msgid ""
 "This notification will be played on keyword match or PNs. <native> is a "
 "built-in visual notification, <none> deactivates it.\n"
 "You can also specify custom commands to execute."
 msgstr ""
 
-#: src/devchat_window.c:3690
+#: src/devchat_window.c:3699
 msgid "Beep on keywords:"
 msgstr ""
 
-#: src/devchat_window.c:3692
+#: src/devchat_window.c:3701
 msgid ""
 "List of words which will trigger a notification, separated by | (u007C, "
 "vertical line)"
 msgstr ""
 
-#: src/devchat_window.c:3712
+#: src/devchat_window.c:3721
 msgid "Browser:"
 msgstr ""
 
-#: src/devchat_window.c:3725
+#: src/devchat_window.c:3734
 #, c-format
 msgid ""
 "Please note that <native> is only supported on Microsoft Windows®, Debian "
@@ -500,136 +500,136 @@ msgid ""
 "parameter (i.e.: weird-browser %s --some-option)."
 msgstr ""
 
-#: src/devchat_window.c:3733
+#: src/devchat_window.c:3742
 msgid "Time between updates (in ms):"
 msgstr ""
 
-#: src/devchat_window.c:3736
+#: src/devchat_window.c:3745
 msgid "Avatar size:"
 msgstr ""
 
-#: src/devchat_window.c:3757
+#: src/devchat_window.c:3766
 msgid "Chatserver string: "
 msgstr ""
 
-#: src/devchat_window.c:3774
+#: src/devchat_window.c:3783
 msgid "TC/AP folder:"
 msgstr ""
 
-#: src/devchat_window.c:3775
+#: src/devchat_window.c:3784
 msgid "Select the Terran Conflict folder"
 msgstr ""
 
-#: src/devchat_window.c:3776
+#: src/devchat_window.c:3785
 msgid ""
 "Enter the full path to the TC folder, if you want to use the ingame client. "
 "Albion Prelude folder is recognized automatically."
 msgstr ""
 
-#: src/devchat_window.c:3788
+#: src/devchat_window.c:3797
 msgid "Proxy settings: "
 msgstr ""
 
-#: src/devchat_window.c:3790
+#: src/devchat_window.c:3799
 msgid ""
 "Only HTTP-proxies are supported. Format is http://[username[:password]@]"
 "proxy-name[:Port]."
 msgstr ""
 
-#: src/devchat_window.c:3797
+#: src/devchat_window.c:3806
 msgid "Ignore list: "
 msgstr ""
 
-#: src/devchat_window.c:3800
+#: src/devchat_window.c:3809
 msgid "Comma-separated list of users to ignore"
 msgstr ""
 
-#: src/devchat_window.c:3807
+#: src/devchat_window.c:3816
 msgid "Misc"
 msgstr ""
 
-#: src/devchat_window.c:3819 src/devchat_window.c:3822
+#: src/devchat_window.c:3828 src/devchat_window.c:3831
 #, c-format
 msgid "Preset text %i:"
 msgstr ""
 
-#: src/devchat_window.c:3833
+#: src/devchat_window.c:3842
 msgid "Preset texts"
 msgstr ""
 
-#: src/devchat_window.c:3839
+#: src/devchat_window.c:3848
 msgid "Reset color"
 msgstr ""
 
-#: src/devchat_window.c:3840
+#: src/devchat_window.c:3849
 msgid "Reset Misc"
 msgstr ""
 
-#: src/devchat_window.c:3841
+#: src/devchat_window.c:3850
 msgid "Reset preset texts"
 msgstr ""
 
-#: src/devchat_window.c:4406
+#: src/devchat_window.c:4415
 msgid "Error B: Your system doesn't have a native browser!"
 msgstr ""
 
-#: src/devchat_window.c:4734
+#: src/devchat_window.c:4743
 msgid "Error O: OTR encryption failed!"
 msgstr ""
 
-#: src/devchat_window.c:4760
+#: src/devchat_window.c:4769
 msgid "Error M: Error sending message, trying to resend..."
 msgstr ""
 
-#: src/devchat_window.c:4764
+#: src/devchat_window.c:4773
 msgid "Error M2: Error sending message, retry failed. Aborting."
 msgstr ""
 
-#: src/devchat_window.c:4843
+#: src/devchat_window.c:4852
 msgid "Choose a date"
 msgstr ""
 
-#: src/devchat_window.c:4866
+#: src/devchat_window.c:4875
 msgid "History loading..."
 msgstr ""
 
-#: src/devchat_window.c:4899 src/main.c:44
+#: src/devchat_window.c:4908 src/main.c:44
 msgid " - Gtk+ client for X-Devchat."
 msgstr ""
 
-#: src/devchat_window.c:4902
+#: src/devchat_window.c:4911
 msgid "translator-credits"
 msgstr ""
 
-#: src/devchat_window.c:5133
+#: src/devchat_window.c:5142
 msgid "Error N: Failed to launch visual notification process."
 msgstr ""
 
-#: src/devchat_window.c:5153 src/devchat_window.c:5172
+#: src/devchat_window.c:5162 src/devchat_window.c:5181
 msgid "Error N: Failed to launch audio notification process."
 msgstr ""
 
-#: src/devchat_window.c:5388
+#: src/devchat_window.c:5397
 msgid "Open image in browser"
 msgstr ""
 
-#: src/devchat_window.c:5401
+#: src/devchat_window.c:5410
 msgid "Open link in browser"
 msgstr ""
 
-#: src/devchat_window.c:5418
+#: src/devchat_window.c:5427
 msgid "Copy ID"
 msgstr ""
 
-#: src/devchat_window.c:5421
+#: src/devchat_window.c:5430
 msgid "Cite Post"
 msgstr ""
 
-#: src/devchat_window.c:5635 src/devchat_window.c:5658
+#: src/devchat_window.c:5644 src/devchat_window.c:5667
 msgid "7641-L044.xml"
 msgstr ""
 
-#: src/devchat_window.c:5656 src/devchat_window.c:5660
+#: src/devchat_window.c:5665 src/devchat_window.c:5669
 #, c-format
 msgid ""
 "Error I: Error writing text file %s. Check write permissions for t-folder!"

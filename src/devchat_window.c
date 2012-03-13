@@ -230,6 +230,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.proxy = "";
   self->settings.ignorelist = "";
   self->usertags = NULL;
+  self->sid = NULL;
 #ifdef INGAME
   self->settings.TCFolder = "";
   self->ingame_lid = -1;
@@ -1444,6 +1445,14 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     dbg (dbg_msg);
     g_free (dbg_msg);
   }
+
+  /* Determine sid for CSRF-hardened API */
+  gchar* cookies = soup_cookie_jar_get_cookies (data->window->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
+  const gchar* sid_cookie = g_strstr_len (cookies, -1, "phpbb2mysql_sid");
+  const gchar* end_sid = g_strstr_len (sid_cookie, 64, ";");
+  int len = end_sid - sid_cookie - strlen("phpbb2mysql_sid=");
+  data->window->sid = g_strndup (sid_cookie+strlen("phpbb2mysql_sid="), len);
+  g_free (cookies);
 
   if (!data->window->settings.stealthjoin)
   {
