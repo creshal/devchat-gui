@@ -1924,7 +1924,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     else
       g_hash_table_insert (data->window->moderators, g_strdup ((gchar*) data->data), g_strdup ("n"));
 
-    GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
+    GRegex* regex = g_regex_new ("<img id=\"avatar\" src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
 
     gchar* filename = g_build_filename (data->window->avadir, data->data, NULL);
@@ -1940,16 +1940,19 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       if (g_regex_match (regex, line, 0, &result))
       {
         gchar* match = g_match_info_fetch(result,0);
+        gchar* last_quote = g_strrstr (match, "\"");
 
-        if (!g_str_has_prefix(match,"<img src=\"http://forum.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
+        if (last_quote)
         {
+          guint uri_index = last_quote - match;
+          uri_index++; //Skip the "
           if (debug) {
-            dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
+            dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match + uri_index);
             dbg (dbg_msg);
             g_free (dbg_msg);
           }
           found = TRUE;
-          ava_url = g_strdup (match+10);
+          ava_url = g_strdup (match+uri_index);
         }
         g_free (match);
       }
@@ -4579,7 +4582,6 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
 
   if (target && g_strcmp0 (sendlevel, "0") == 0)
     text = g_strconcat ("/msg ", target, " ", text, NULL);
-
 
   gchar* enc_text = "";
 
