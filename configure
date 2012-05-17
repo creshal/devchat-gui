@@ -102,7 +102,7 @@ print ("Checking for libraries...")
 
 for lib in libs.split(" "):
   print ("Checking " + lib)
-  if os.path.exists ("/usr/lib/pkgconfig/"+lib+".pc"):
+  if os.system ("pkg-config "+lib+".pc") == 0:
     print ("OK.")
   else:
     print ("ERR: Lib " + lib + " not found.")
