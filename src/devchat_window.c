@@ -230,6 +230,7 @@ devchat_window_init (DevchatWindow* self)
   self->settings.proxy = "";
   self->settings.ignorelist = "";
   self->usertags = NULL;
+  self->sid = NULL;
 #ifdef INGAME
   self->settings.TCFolder = "";
   self->ingame_lid = -1;
@@ -1445,6 +1446,14 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     g_free (dbg_msg);
   }
 
+  /* Determine sid for CSRF-hardened API */
+  gchar* cookies = soup_cookie_jar_get_cookies (data->window->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
+  const gchar* sid_cookie = g_strstr_len (cookies, -1, "phpbb2mysql_sid");
+  const gchar* end_sid = g_strstr_len (sid_cookie, 64, ";");
+  int len = end_sid - sid_cookie - strlen("phpbb2mysql_sid=");
+  data->window->sid = g_strndup (sid_cookie+strlen("phpbb2mysql_sid="), len);
+  g_free (cookies);
+
   if (!data->window->settings.stealthjoin)
   {
     gchar* joinmsg;
@@ -1915,7 +1924,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     else
       g_hash_table_insert (data->window->moderators, g_strdup ((gchar*) data->data), g_strdup ("n"));
 
-    GRegex* regex = g_regex_new ("<img src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
+    GRegex* regex = g_regex_new ("<img id=\"avatar\" src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
 
     gchar* filename = g_build_filename (data->window->avadir, data->data, NULL);
@@ -1931,16 +1940,19 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
       if (g_regex_match (regex, line, 0, &result))
       {
         gchar* match = g_match_info_fetch(result,0);
+        gchar* last_quote = g_strrstr (match, "\"");
 
-        if (!g_str_has_prefix(match,"<img src=\"http://forum.egosoft.com/") && !g_str_has_prefix(match,"<img src=\"http://stats.big-boards.com/"))
+        if (last_quote)
         {
+          guint uri_index = last_quote - match;
+          uri_index++; //Skip the "
           if (debug) {
-            dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match+10);
+            dbg_msg = g_strdup_printf ("Found something remotely resembling an avatar: %s", match + uri_index);
             dbg (dbg_msg);
             g_free (dbg_msg);
           }
           found = TRUE;
-          ava_url = g_strdup (match+10);
+          ava_url = g_strdup (match+uri_index);
         }
         g_free (match);
       }
@@ -4571,7 +4583,6 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
   if (target && g_strcmp0 (sendlevel, "0") == 0)
     text = g_strconcat ("/msg ", target, " ", text, NULL);
 
-
   gchar* enc_text = "";
 
   guchar current[2];
@@ -4645,7 +4656,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
     g_free (dbg_msg);
   }
 
-  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text, NULL));
+  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text,"&sid=",data->window->sid, NULL));
   soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), devchat_cb_data_new (data->window, g_strconcat ("&chatlevel=",sendlevel,"&textinput=", enc_text, NULL)));
 
   g_free (text);

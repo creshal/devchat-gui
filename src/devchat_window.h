@@ -224,6 +224,8 @@ struct _DevchatWindow
   guint user_timeout_id;
   GSList* usertags;
 
+  gchar* sid;
+
 #ifdef OTR
   OtrlUserState otr_state;
   OtrlMessageAppOps otr_funcs;
