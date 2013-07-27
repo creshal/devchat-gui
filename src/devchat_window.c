@@ -1305,7 +1305,7 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
   if (debug)
     dbg ("Got login response from server.");
 
-  if (g_strrstr(msg->response_body->data,"invalid password"))
+  if (msg->status_code == SOUP_STATUS_CANCELLED || g_strrstr(msg->response_body->data,"invalid password"))
   {
     err (_("Error L: Login failed."));
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Login failed."));
