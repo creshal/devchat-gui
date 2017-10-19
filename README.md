@@ -1,3 +1,5 @@
+# Broken, go bother https://github.com/UFeindschiff/devchat-gui for an updated version
+
 #Intro
 DevchatGUI (or dcgui) is a graphical client for the X-Devchat of EGOSOFT. It's based on Gtk+ and offers (or is planned to offer) several improvements over the normal browser client, e.g. tabbed PMs and several graphical improvements (Avatars in the user list, themeable colors etc.).
 
